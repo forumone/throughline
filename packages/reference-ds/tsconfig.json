@@ -1,0 +1,17 @@
+{
+  "extends": "@forumone/throughline-tsconfig/react.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "dist",
+    "storybook-static",
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx"
+  ]
+}
