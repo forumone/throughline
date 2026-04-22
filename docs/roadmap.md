@@ -10,8 +10,8 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | --- | --- | --- |
 | [C0](#c0--monorepo-scaffold) | Monorepo Scaffold | ✅ Done |
 | [C1](#c1--plugin-architecture) | Plugin Architecture | ✅ Done |
-| [C2](#c2--design-contract-package) | Design Contract Package | ⏳ Next |
-| [C3](#c3--reference-design-system) | Reference Design System | ⏸ Not started |
+| [C2](#c2--design-contract-package) | Design Contract Package | ✅ Done |
+| [C3](#c3--reference-design-system) | Reference Design System | ⏳ Next |
 | [C4](#c4--core-plumbing-package) | Core Plumbing Package | ⏸ Not started |
 | [C5](#c5--component-server) | Component Server | ⏸ Not started |
 | [C6](#c6--publishing-server) | Publishing Server | ⏸ Not started |
@@ -75,7 +75,24 @@ Spec: `docs/spec/C2-design-contract.md`
 
 Goal: Build the package that defines what it means to be an AI-ready design system. Exports the Zod schema for component contracts, the manifest format, the manifest loader, the CI lint rules. Every future design system satisfies this.
 
-_Acceptance criteria to be filled in when this phase starts._
+- [x] `packages/design-contract/` scaffolded (package.json, tsconfig, vitest config, src)
+- [x] `ComponentContractSchema` defined with every section (identity, composition, content, tokens, accessibility, examples, behavior)
+- [x] `ManifestSchema` defines the aggregated JSON with `contractVersion` literal-gated at `1.0.0`
+- [x] `LoadedManifest` exposes `getComponent`, `requireComponent`, `listComponents`, `listByCategory`, `listCategories`, `getToken`
+- [x] `loadManifest` validates and returns `LoadedManifest`; throws with path-qualified errors
+- [x] `loadManifestFromUrl` fetches and validates a remote manifest
+- [x] `lintManifest` reports errors (unknown components/tokens/story IDs) and warnings (empty anti-examples, brief intent)
+- [x] `formatLintIssues` and `assertManifestClean` helpers
+- [x] Main entry exports schema + manifest + loader; `/lint` subpath exports lint helpers
+- [x] 43 tests across schema/manifest/loader/lint; all passing
+- [x] README with authoring, loading, linting examples
+- [x] Changeset committed; package ready to publish as 0.1.0
+
+Notes:
+
+- Package name is `@forumone/throughline-design-contract` (spec says `claude-cms-design-contract`).
+- Recursive `ContentField` schema uses `z.lazy` with explicit `z.ZodType<Output, Def, Input>` three-generic form because `exactOptionalPropertyTypes: true` + `.default(false)` on `required` make input and output diverge.
+- `_fixtures.ts` holds test fixtures and is excluded from the emitted `dist/`.
 
 ## C3 — Reference Design System
 
