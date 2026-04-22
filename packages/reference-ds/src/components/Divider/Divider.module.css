@@ -1,0 +1,18 @@
+.divider {
+  border: 0;
+  border-top: 1px solid var(--color-border-default);
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.compact {
+  margin-block: var(--spacing-6);
+}
+
+.default {
+  margin-block: var(--spacing-12);
+}
+
+.spacious {
+  margin-block: var(--spacing-24);
+}

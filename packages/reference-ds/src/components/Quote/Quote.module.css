@@ -1,0 +1,59 @@
+.figure {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: var(--spacing-10) var(--spacing-container);
+  text-align: center;
+}
+
+.quote {
+  margin: 0 0 var(--spacing-6);
+  font-style: italic;
+}
+
+.quote p {
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-snug);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.large .quote p {
+  font-size: var(--font-size-4xl);
+  line-height: var(--line-height-tight);
+}
+
+.quote p::before {
+  content: '\201C';
+  margin-right: 0.1em;
+}
+
+.quote p::after {
+  content: '\201D';
+  margin-left: 0.1em;
+}
+
+.attribution {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: normal;
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.role::before {
+  content: '\00B7';
+  margin: 0 0.25em;
+}

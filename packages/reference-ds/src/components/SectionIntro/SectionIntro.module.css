@@ -1,0 +1,36 @@
+.intro {
+  max-width: 48rem;
+  padding: 0 var(--spacing-container);
+  margin: 0 auto;
+}
+
+.start {
+  text-align: start;
+  margin-inline-start: 0;
+}
+
+.center {
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-2);
+}
+
+.headline {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  margin-bottom: var(--spacing-3);
+}
+
+.body {
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}

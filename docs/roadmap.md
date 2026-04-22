@@ -11,8 +11,8 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C0](#c0--monorepo-scaffold) | Monorepo Scaffold | ✅ Done |
 | [C1](#c1--plugin-architecture) | Plugin Architecture | ✅ Done |
 | [C2](#c2--design-contract-package) | Design Contract Package | ✅ Done |
-| [C3](#c3--reference-design-system) | Reference Design System | ⏳ Next |
-| [C4](#c4--core-plumbing-package) | Core Plumbing Package | ⏸ Not started |
+| [C3](#c3--reference-design-system) | Reference Design System | ✅ Done |
+| [C4](#c4--core-plumbing-package) | Core Plumbing Package | ⏳ Next |
 | [C5](#c5--component-server) | Component Server | ⏸ Not started |
 | [C6](#c6--publishing-server) | Publishing Server | ⏸ Not started |
 | [C7](#c7--approvals-server) | Approvals Server | ⏸ Not started |
@@ -100,9 +100,28 @@ Spec: `docs/spec/C3-reference-ds.md`
 
 Goal: A brand-neutral design system with 10–12 components, full contracts, generated manifest, Storybook, and CI validation. Test fixture for core + demonstration of contract compliance + starting template for clients without their own DS.
 
+- [x] `packages/reference-ds/` scaffolded with Storybook 10, vitest + jsdom + Testing Library, shared tsconfig/eslint
+- [x] 12 components: Hero, SectionIntro, Prose, MediaBlock, Card, CardGrid, CTASection, Stats, FAQ, Quote, Divider, Spacer
+- [x] Every component has React + CSS Modules + Storybook stories + unit tests + `ComponentContract`
+- [x] Token system (colors, typography, spacing, radii) as TS constants with `build-tokens-css.ts` generating `tokens.css` + `prefers-color-scheme: dark` override
+- [x] `scripts/build-manifest.ts` discovers contracts, validates against `ManifestSchema`, writes `dist/manifest.json`
+- [x] `scripts/validate.ts` runs `lintManifest` against the manifest and consumes `storybook-static/index.json` for storyId resolution
+- [x] Storybook builds cleanly with `addon-a11y`; index.json contains every story referenced by a contract
+- [x] Main entry exports all 12 components; `./manifest`, `./styles.css`, `./tokens` subpath exports
+- [x] Unit tests for every component (render + key semantics/ARIA)
+- [x] README, changeset for 0.1.0
+- [x] `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm test` green from root
+- [ ] Storybook deployment (Vercel or Chromatic) — deferred to a follow-up PR
+- [ ] CI runs `build-storybook` + `validate` — deferred to a follow-up PR
+
 Notes:
 
-- Wire Storybook's `/manifests/components.json` output into the CI lint step: collect every `stories[].id` and pass as `availableStoryIds` to `lintManifest`. Gives us "does this `storyId` resolve?" for free. See the design-contract README's "Relationship to Storybook AI manifests" section for the pattern.
+- Package name is `@forumone/throughline-reference-ds` (spec says `claude-cms-reference-ds`).
+- Storybook `^10.3.5` on `@storybook/react-vite`; spec's `addon-essentials` is rolled into SB 10 core and not listed separately.
+- CSS Modules type declaration lives at `src/css-modules.d.ts`.
+- Contracts explicitly set defaulted fields (`behavior`, `antiExamples`) because the output type of `ComponentContract` is stricter than the input type under `exactOptionalPropertyTypes: true`.
+- Storybook story IDs derive from each story's `title`; multi-word components use space-separated titles (`'Section Intro'` → `section-intro--default`) so the IDs match the contracts.
+- Gesso (`forumone/nextjs-project`) was not reused: only 5/12 components overlap, it's coupled to `@storybook/nextjs`, has no contracts, and lives inside a monolithic Next.js template. It informed naming conventions only. The lint integration pattern from the previous note (Storybook's `index.json` → `availableStoryIds`) is wired into `scripts/validate.ts`.
 
 ## C4 — Core Plumbing Package
 
