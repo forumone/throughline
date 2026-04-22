@@ -65,8 +65,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build reference-ds
-        run: pnpm --filter @forumone/throughline-reference-ds build
+      - name: Build reference-ds and its workspace dependencies
+        # Using turbo (not pnpm --filter) so design-contract builds first;
+        # reference-ds's contract files import from it at type-check time.
+        run: pnpm turbo run build --filter=@forumone/throughline-reference-ds
 
       - name: Build Storybook
         run: pnpm --filter @forumone/throughline-reference-ds build-storybook
