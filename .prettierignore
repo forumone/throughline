@@ -1,0 +1,9 @@
+dist
+build
+.next
+.turbo
+node_modules
+pnpm-lock.yaml
+CHANGELOG.md
+docs/spec
+*.tsbuildinfo
