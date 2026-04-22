@@ -40,7 +40,7 @@ pnpm lint
 pnpm format      # prettier --write .
 ```
 
-Run a single package's scripts with `pnpm --filter <name> <script>`, e.g. `pnpm --filter @forumone/throughline-smoke-test test`.
+Run a single package's scripts with `pnpm --filter <name> <script>`, e.g. `pnpm --filter @forumone/throughline-tsconfig build`.
 
 ## Publishing
 
