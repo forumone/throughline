@@ -4,5 +4,8 @@ export { Prose, type ProseProps, type ProseSize } from './components/Prose/index
 export { MediaBlock, type MediaBlockProps, type MediaBlockAspect, type MediaBlockMedia } from './components/MediaBlock/index.js'
 export { Card, type CardProps } from './components/Card/index.js'
 export { CardGrid, type CardGridProps, type CardGridColumns } from './components/CardGrid/index.js'
+export { CTASection, type CTASectionProps, type CTASectionBackground } from './components/CTASection/index.js'
+export { Stats, type StatsProps, type StatItem } from './components/Stats/index.js'
+export { FAQ, type FAQProps, type FAQItem } from './components/FAQ/index.js'
 
 export * as tokens from './tokens/index.js'
