@@ -100,6 +100,10 @@ Spec: `docs/spec/C3-reference-ds.md`
 
 Goal: A brand-neutral design system with 10–12 components, full contracts, generated manifest, Storybook, and CI validation. Test fixture for core + demonstration of contract compliance + starting template for clients without their own DS.
 
+Notes:
+
+- Wire Storybook's `/manifests/components.json` output into the CI lint step: collect every `stories[].id` and pass as `availableStoryIds` to `lintManifest`. Gives us "does this `storyId` resolve?" for free. See the design-contract README's "Relationship to Storybook AI manifests" section for the pattern.
+
 ## C4 — Core Plumbing Package
 
 Spec: `docs/spec/C4-core-plumbing.md`

@@ -123,6 +123,28 @@ The current contract version is `1.0.0`, exported as `CONTRACT_VERSION`. Manifes
 
 When the contract evolves, this package ships a new major version with migration guidance in the changelog.
 
+## Relationship to Storybook AI manifests
+
+Storybook ships its own [AI manifest format](https://storybook.js.org/docs/ai/manifests) (`/manifests/components.json`). It is a static-analysis artifact that describes what *exists* in a Storybook — component ids, paths, props with types and JSDoc, story ids, import statements. Storybook marks it as preview / unstable.
+
+This package's contract describes what's *appropriate* — intent, composition rules, accessibility expectations, anti-examples, token consumption. Hand-authored, stable, versioned.
+
+They complement rather than overlap. Typical integration: during a design system's CI, parse Storybook's `components.json`, collect every `stories[].id`, and pass the set to `lintManifest` as `availableStoryIds`. That gives you the "does this `storyId` resolve to a real story?" check for free:
+
+```typescript
+import storybookManifest from './storybook-static/manifests/components.json'
+import contractManifest from './dist/manifest.json'
+import { lintManifest } from '@forumone/throughline-design-contract/lint'
+
+const availableStoryIds = new Set(
+  Object.values(storybookManifest.components).flatMap((c: { stories: Array<{ id: string }> }) =>
+    c.stories.map((s) => s.id),
+  ),
+)
+
+const issues = lintManifest(contractManifest, { availableStoryIds })
+```
+
 ## Related packages
 
 - `@forumone/throughline-reference-ds` — a reference design system that satisfies this contract (C3).
