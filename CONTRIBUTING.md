@@ -46,6 +46,12 @@ Run a single package's scripts with `pnpm --filter <name> <script>`, e.g. `pnpm 
 
 You do not publish directly. The release workflow (`.github/workflows/release.yml`) opens a "Version Packages" PR whenever unreleased changesets exist on `main`. Merging that PR publishes to npm with provenance.
 
-Required repo secrets:
+Authentication to npm uses [trusted publishing (OIDC)](https://docs.npmjs.com/trusted-publishers), not a long-lived token. The release workflow requests a short-lived token from npm at run time, proving its identity via GitHub's OIDC provider. No `NPM_TOKEN` secret is required.
 
-- `NPM_TOKEN` — granular token with publish access to the `@forumone` scope.
+npm-side configuration required once per package (or once at the `@forumone` scope, if your plan supports org-level trusted publishers):
+
+- Publisher: GitHub Actions
+- Organization: `forumone`
+- Repository: `throughline`
+- Workflow filename: `release.yml`
+- Environment: _(blank)_
