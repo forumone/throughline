@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-smoke-test",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "End-to-end verification of the build/test/publish pipeline. Will be removed once the pipeline is proven.",
   "type": "module",
   "main": "./dist/index.js",
