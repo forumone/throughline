@@ -3,7 +3,7 @@ import { Card } from '../Card/Card.js'
 import { CardGrid } from './CardGrid.js'
 
 const meta: Meta<typeof CardGrid> = {
-  title: 'CardGrid',
+  title: 'Card Grid',
   component: CardGrid,
 }
 

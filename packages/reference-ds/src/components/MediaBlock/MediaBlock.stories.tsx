@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MediaBlock } from './MediaBlock.js'
 
 const meta: Meta<typeof MediaBlock> = {
-  title: 'MediaBlock',
+  title: 'Media Block',
   component: MediaBlock,
 }
 

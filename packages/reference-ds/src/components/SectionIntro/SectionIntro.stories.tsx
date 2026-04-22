@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { SectionIntro } from './SectionIntro.js'
 
 const meta: Meta<typeof SectionIntro> = {
-  title: 'SectionIntro',
+  title: 'Section Intro',
   component: SectionIntro,
 }
 

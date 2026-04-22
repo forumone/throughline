@@ -7,5 +7,8 @@ export { CardGrid, type CardGridProps, type CardGridColumns } from './components
 export { CTASection, type CTASectionProps, type CTASectionBackground } from './components/CTASection/index.js'
 export { Stats, type StatsProps, type StatItem } from './components/Stats/index.js'
 export { FAQ, type FAQProps, type FAQItem } from './components/FAQ/index.js'
+export { Quote, type QuoteProps, type QuoteSize } from './components/Quote/index.js'
+export { Divider, type DividerProps, type DividerSpacing } from './components/Divider/index.js'
+export { Spacer, type SpacerProps, type SpacerSize } from './components/Spacer/index.js'
 
 export * as tokens from './tokens/index.js'

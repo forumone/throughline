@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CTASection } from './CTASection.js'
 
 const meta: Meta<typeof CTASection> = {
-  title: 'CTASection',
+  title: 'CTA Section',
   component: CTASection,
   parameters: { layout: 'fullscreen' },
 }
