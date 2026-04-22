@@ -45,3 +45,31 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  storybook-validate:
+    # Builds Storybook and validates the reference-ds manifest against the
+    # generated story index so every contract's storyId resolves. Runs in
+    # parallel with `verify`; adds ~45s but is the real integration test
+    # for design-contract + reference-ds.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build reference-ds
+        run: pnpm --filter @forumone/throughline-reference-ds build
+
+      - name: Build Storybook
+        run: pnpm --filter @forumone/throughline-reference-ds build-storybook
+
+      - name: Validate manifest against Storybook index
+        run: pnpm --filter @forumone/throughline-reference-ds validate
