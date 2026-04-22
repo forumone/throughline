@@ -1,0 +1,38 @@
+{
+  "name": "@forumone/throughline-playground",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Internal Next.js + Payload app used to develop and smoke-test @forumone/throughline core plugins. Never published.",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "clean": "rm -rf .next .turbo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "payload": "payload",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
+  "dependencies": {
+    "@forumone/throughline-plugin-contract": "workspace:*",
+    "@payloadcms/db-postgres": "^3.83.0",
+    "@payloadcms/next": "^3.83.0",
+    "@payloadcms/richtext-lexical": "^3.83.0",
+    "graphql": "^16.8.1",
+    "next": "^16.2.4",
+    "payload": "^3.83.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@types/node": "^20.17.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.15.0",
+    "typescript": "^5.6.0"
+  }
+}
