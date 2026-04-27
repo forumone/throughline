@@ -16,7 +16,7 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C5](#c5--component-server) | Component Server | ✅ Done |
 | [C6](#c6--publishing-server) | Publishing Server | ✅ Done |
 | [C7](#c7--approvals-server) | Approvals Server | ✅ Done |
-| [C8](#c8--audit-query-server) | Audit Query Server | ⏳ Next |
+| [C8](#c8--audit-query-server) | Audit Query Server | ✅ Done |
 | [C9](#c9--integrations-server) | Integrations Server | ⏸ Not started |
 | [C10](#c10--workflows-package) | Workflows Package | ⏸ Not started |
 | [C11](#c11--email-package) | Email Package | ⏸ Not started |
@@ -233,6 +233,20 @@ Notes:
 Spec: `docs/spec/C8-audit-query-server.md`
 
 Goal: Expose the audit log (written by C4) as conversational query tools so Claude can answer "what did I change this week?", "who published the homepage?", etc. Small package, high leverage.
+
+- [x] `packages/audit/` scaffolded with options surface (`collectionSlug`, `readAccess`) and `validateOptions` gate
+- [x] Conversational formatting helpers (`formatRelativeTime`, `formatAuditEvent`) handling user/integration/system actor variants and dropping non-string optional fields cleanly under `exactOptionalPropertyTypes`
+- [x] Five purpose-built MCP tools — `query_audit`, `get_change_history`, `who_changed_what`, `what_changed_in_range`, `get_recent_failures` — with bounded result sets, conservative defaults, and prose summaries Claude can relay directly
+- [x] Tiered access control: admin/editor for broad-scope tools; `who_changed_what` always allows self-lookup so anyone can ask about their own changes without knowing their user ID
+- [x] `auditQueryPlugin` (named to disambiguate from core's `auditPlugin`) registers the MCP handler, requires the `audit-log` capability, and fails fast if `auditPlugin` isn't installed first
+- [x] 26 unit tests covering relative-time edge cases, formatter variants, every tool's filter shape, and access denial paths via a fake Payload that applies the `equals` / `greater_than_equal` / `less_than_equal` operators we use
+- [x] Playground composes `auditQueryPlugin({})` after publishing; full root build/lint/typecheck/test green
+
+Notes:
+
+- `routePrefix` defaults to `/audit` (Payload prepends `/api`, so the endpoint is `/api/audit/mcp`).
+- The plugin layers an admin/editor gate on top of the collection's own access control. The `readAccess` option sits on the collection in core; tool-level gating is hard-coded for now and can be unified once a client has a real role-model deviation.
+- Tools take a `{ payload, collectionSlug }` deps object — same shape as the other server packages. Tools are cast through `unknown as McpToolDefinition[]` at the array level because each factory returns a narrowed `McpToolDefinition<typeof inputSchema>` for handler-input safety.
 
 ## C9 — Integrations Server
 
