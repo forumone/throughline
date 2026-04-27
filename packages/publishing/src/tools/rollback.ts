@@ -1,0 +1,94 @@
+import { z } from 'zod'
+import type { Payload } from 'payload'
+import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import { type PublishingPluginOptions, resolveCollection } from '../options.js'
+
+export interface RollbackToolDeps {
+  payload: Payload
+  options: PublishingPluginOptions
+  auditWriter: AuditWriter
+}
+
+export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
+  const inputSchema = withMeta({
+    collection: z.string(),
+    id: z.string().describe('The document ID'),
+    versionId: z.string().describe('The version ID to roll the document back to'),
+  })
+
+  return {
+    name: 'rollback',
+    description:
+      "Rolls a document back to a prior version from Payload's version history. The restored content lands as a fresh draft; call `publish` afterwards if you want it live again. Audits the rollback under publishing.rollback.",
+    inputSchema,
+    handler: async (input, ctx) => {
+      const collection = resolveCollection(deps.options, input.collection)
+
+      // Confirm the version belongs to this document before restoring.
+      const versions = await deps.payload.findVersions({
+        collection: collection.slug,
+        where: {
+          and: [{ id: { equals: input.versionId } }, { parent: { equals: input.id } }],
+        },
+        limit: 1,
+      })
+
+      if (!versions.docs[0]) {
+        await deps.auditWriter({
+          actor: { type: ctx.user ? 'user' : 'system', userId: ctx.user?.id, apiKeyName: ctx.apiKeyName },
+          action: 'publishing.rollback',
+          mcpServer: 'publishing',
+          mcpTool: 'rollback',
+          targetCollection: input.collection,
+          targetId: input.id,
+          success: false,
+          errorMessage: 'Version not found for the supplied document',
+        })
+        return {
+          restored: false,
+          reason: `Version "${input.versionId}" not found for document "${input.id}" in "${input.collection}"`,
+        }
+      }
+
+      await deps.payload.restoreVersion({
+        collection: collection.slug,
+        id: input.versionId,
+      })
+
+      await deps.options.inngest.send({
+        name: 'content/page.rolled_back',
+        data: {
+          collection: collection.slug,
+          id: input.id,
+          rolledBackBy: ctx.user?.id ?? 'system',
+          toVersionId: input.versionId,
+        },
+      })
+
+      await deps.auditWriter({
+        actor: {
+          type: ctx.user ? 'user' : 'system',
+          userId: ctx.user?.id,
+          userName: ctx.user?.name,
+          apiKeyName: ctx.apiKeyName,
+        },
+        action: 'publishing.rollback',
+        mcpServer: 'publishing',
+        mcpTool: 'rollback',
+        targetCollection: input.collection,
+        targetId: input.id,
+        prompt: input._meta?.userPrompt,
+        reasoning: input._meta?.reasoning,
+        changesSummary: `Rolled back to version ${input.versionId}`,
+        success: true,
+      })
+
+      return {
+        restored: true,
+        toVersionId: input.versionId,
+        note: 'The restored content is a draft. Call `publish` to make it live.',
+      }
+    },
+  }
+}
