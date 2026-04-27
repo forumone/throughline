@@ -17,7 +17,7 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C6](#c6--publishing-server) | Publishing Server | ✅ Done |
 | [C7](#c7--approvals-server) | Approvals Server | ✅ Done |
 | [C8](#c8--audit-query-server) | Audit Query Server | ✅ Done |
-| [C9](#c9--integrations-server) | Integrations Server | ⏸ Not started |
+| [C9](#c9--integrations-server) | Integrations Server | ✅ Done |
 | [C10](#c10--workflows-package) | Workflows Package | ⏸ Not started |
 | [C11](#c11--email-package) | Email Package | ⏸ Not started |
 | [C12](#c12--forms-package) | Forms Package | ⏸ Not started |
@@ -253,6 +253,25 @@ Notes:
 Spec: `docs/spec/C9-integrations-server.md`
 
 Goal: Plugin architecture for connecting Payload to external systems. `Integration` interface, registry, per-instance config collection, MCP tools, and a generic outbound-webhook integration as the first concrete example.
+
+- [x] `packages/integrations/` scaffolded with `Integration<Config>` contract (configFields, validateConfig, subscribes, createFunctions, mcpTools, healthcheck) and `IntegrationContext` (loadInstances, updateStatus, recordAudit) types
+- [x] `IntegrationRegistry` — synchronous, per-plugin-init, rejects duplicate ids; covered by direct unit tests
+- [x] Integrations collection with `name` / `integrationType` / `enabled` / `config` (json) / read-only `lastSyncAt` + `lastSyncStatus` + `lastError`; admin-only writes, admin/editor reads, indexes for the common queries
+- [x] beforeChange hook runs the registered integration's `validateConfig` before write; rejects unknown types with the registered list in the error message
+- [x] Webhook integration: HMAC-SHA256 via Web Crypto with RFC 4231 known-answer test vectors pinned to lock the wire format, configurable event filter, includeFullPayload toggle, timeoutSeconds, HEAD-based healthcheck (also accepts 405)
+- [x] Webhook Inngest functions: `webhook-deliver` subscribes to all framework events, retries 5x, isolates failures via per-instance step.run; `webhook-manual-trigger` listens for `integration/manual-sync` from the trigger_sync tool
+- [x] Five MCP tools (`list_integrations`, `get_integration_status`, `trigger_sync` admin-only, `test_integration`, `list_integration_types`) with conservative limits; every consequential call writes audit
+- [x] Plugin requires `audit-log` capability; exposes registry+context via Symbols (`getIntegrationRegistry` / `getIntegrationContext`) so the client app's Inngest endpoint can serve integration functions
+- [x] `docs/integrations-wiring.md` documents the Inngest-endpoint composition pattern with a copy-pasteable snippet
+- [x] 36 unit tests covering registry, options, collection access + validation, HMAC vectors, payload extraction, webhook validateConfig, and every MCP tool's happy + access-denied paths via fake Payload + fake Inngest helpers
+- [x] Playground composes `integrationsPlugin({ inngest })` after auditQueryPlugin; full root build/lint/typecheck/test green
+
+Notes:
+
+- Inngest 4.x's `createFunction` takes a single options object with a `triggers` array (the spec's three-arg form is from older Inngest releases).
+- `trigger_sync` is admin-only because triggering an outbound POST is a write-side action even though it doesn't change configuration. Read tools (status, list, test) only need editor.
+- Outbound headers are `x-throughline-event`, `x-throughline-signature`, `x-throughline-timestamp` (the spec used `x-claude-cms-*`). Receivers verify `sha256=<hex>` against the body using the shared signing secret.
+- Plugin registers integrations into the registry but does not serve their Inngest functions; the client app composes them via `getIntegrationRegistry(payload)`. Documented as a Phase 1 wart in `docs/integrations-wiring.md`.
 
 ## C10 — Workflows Package
 
