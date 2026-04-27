@@ -7,6 +7,7 @@ import { auditPlugin, createApiKeysCollection, createInngestClient } from '@foru
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
 import { approvalsPlugin } from '@forumone/throughline-approvals'
+import { auditQueryPlugin } from '@forumone/throughline-audit'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { Manifest } from '@forumone/throughline-design-contract'
 import { buildConfig } from 'payload'
@@ -123,6 +124,7 @@ export default buildConfig({
       inngest,
       collections: [{ slug: Pages.slug }],
     }),
+    auditQueryPlugin({}),
     examplePlugin({ greeting: 'Hello from the playground' }),
   ],
 })

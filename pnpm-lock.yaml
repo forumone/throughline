@@ -29,6 +29,9 @@ importers:
       '@forumone/throughline-approvals':
         specifier: workspace:*
         version: link:../../packages/approvals
+      '@forumone/throughline-audit':
+        specifier: workspace:*
+        version: link:../../packages/audit
       '@forumone/throughline-components':
         specifier: workspace:*
         version: link:../../packages/components
