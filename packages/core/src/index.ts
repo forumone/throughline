@@ -36,6 +36,9 @@ export type { EnvVarName, BaseEnv } from './env/index.js'
 export { createInngestClient } from './events/index.js'
 export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events/index.js'
 
+export { McpMetaSchema, createMcpHandler, withMeta } from './mcp/index.js'
+export type { McpHandlerOptions, McpMeta } from './mcp/index.js'
+
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
 export { shallowDiff, generateId } from './utils/index.js'
