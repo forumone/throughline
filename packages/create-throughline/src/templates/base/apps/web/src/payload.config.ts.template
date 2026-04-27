@@ -1,0 +1,164 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { buildConfig } from 'payload'
+import type { CollectionConfig } from 'payload'
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import {
+  auditPlugin,
+  createApiKeysCollection,
+  createInngestClient,
+} from '@forumone/throughline-core'
+import { componentsPlugin } from '@forumone/throughline-components'
+import { publishingPlugin } from '@forumone/throughline-publishing'
+import { approvalsPlugin } from '@forumone/throughline-approvals'
+import { auditQueryPlugin } from '@forumone/throughline-audit'
+import { integrationsPlugin } from '@forumone/throughline-integrations'
+import { emailPlugin } from '@forumone/throughline-email'
+import { formsPlugin } from '@forumone/throughline-forms'
+{{#if useReferenceDs}}import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
+{{/if}}
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const inngest = createInngestClient({ id: '{{projectName}}' })
+
+// Users collection — extend with your own fields and SSO/auth provider.
+const Users: CollectionConfig = {
+  slug: 'users',
+  auth: true,
+  admin: { useAsTitle: 'email' },
+  fields: [
+    { name: 'name', type: 'text' },
+    {
+      name: 'roles',
+      type: 'select',
+      hasMany: true,
+      defaultValue: ['admin'],
+      options: ['admin', 'editor', 'approver', 'form-admin'],
+    },
+    {
+      name: 'groups',
+      type: 'select',
+      hasMany: true,
+      options: ['editorial', 'legal', 'communications', 'senior'],
+    },
+  ],
+}
+
+// Example Pages collection. Replace this with your real content model;
+// keep the `policy` group on collections that should require approval —
+// the approvals plugin reads that field shape.
+const Pages: CollectionConfig = {
+  slug: 'pages',
+  admin: { useAsTitle: 'title' },
+  versions: { drafts: true },
+  fields: [
+    { name: 'title', type: 'text', required: true },
+    { name: 'slug', type: 'text', required: true, unique: true },
+    {
+      name: 'seo',
+      type: 'group',
+      fields: [
+        { name: 'title', type: 'text' },
+        { name: 'description', type: 'textarea' },
+      ],
+    },
+    {
+      name: 'policy',
+      type: 'group',
+      fields: [
+        { name: 'requiresApproval', type: 'checkbox', defaultValue: false },
+        {
+          name: 'approverGroups',
+          type: 'select',
+          hasMany: true,
+          options: ['editorial', 'legal', 'communications', 'senior'],
+        },
+        { name: 'embargoedUntil', type: 'date' },
+      ],
+    },
+    { name: 'publishedAt', type: 'date' },
+    { name: 'scheduledPublishAt', type: 'date' },
+  ],
+}
+
+export default buildConfig({
+  admin: { user: 'users' },
+  editor: lexicalEditor(),
+  db: postgresAdapter({
+    pool: { connectionString: process.env.DATABASE_URI! },
+  }),
+  collections: [Users, Pages, createApiKeysCollection()],
+  secret: process.env.PAYLOAD_SECRET!,
+  typescript: {
+    outputFile: path.resolve(__dirname, 'payload-types.ts'),
+  },
+  plugins: [
+    // Order matters: audit first (so other plugins can write to it),
+    // then content plugins, then notification/forms/integrations.
+    auditPlugin({ inngest }),
+
+    componentsPlugin({
+      {{#if useReferenceDs}}manifest: { type: 'object', manifest: referenceManifest },
+      {{else}}// TODO: point at your design system manifest
+      manifest: { type: 'url', url: 'https://your-design-system.example.com/manifest.json' },
+      {{/if}}matching: { strategy: 'tfidf' },
+    }),
+
+    publishingPlugin({
+      collections: [{ slug: 'pages' }],
+      inngest,
+      // Lazy-resolve approvals at call time so plugin order doesn't matter.
+      approvalResolver: {
+        getActiveApproval: async () => null, // TODO: wire to approvals plugin
+      },
+    }),
+
+    approvalsPlugin({
+      inngest,
+      groups: [
+        { slug: 'editorial', name: 'Editorial' },
+        { slug: 'legal', name: 'Legal' },
+        { slug: 'communications', name: 'Communications' },
+        { slug: 'senior', name: 'Senior leadership' },
+      ],
+      groupResolver: {
+        // TODO: replace with your actual user/group lookup (DB query, SSO, etc.)
+        async resolveUsers(_groupSlugs) {
+          return []
+        },
+      },
+    }),
+
+    auditQueryPlugin(),
+
+    emailPlugin({
+      inngest,
+      // TODO: replace with your real user lookups
+      resolveApprover: async (_userId) => null,
+      resolveRequester: async (_userId) => null,
+      buildActionUrl: ({ token, action }) =>
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/approvals/decision?token=${token}&action=${action}`,
+      tokens: { brandName: '{{projectName}}' },
+    }),
+
+    formsPlugin({
+      inngest,
+      ipHashSecret: process.env.FORMS_IP_HASH_SECRET!,
+      // TODO: list every place a form is allowed to send to. The plugin
+      // refuses to deliver to destinations that aren't in this list.
+      allowedDestinations: [
+        // {
+        //   type: 'email',
+        //   value: 'team@example.com',
+        //   label: 'Main inbox',
+        //   description: 'General contact form destination',
+        // },
+      ],
+    }),
+
+    integrationsPlugin({ inngest }),
+  ],
+})

@@ -1,0 +1,56 @@
+import { serve } from 'inngest/next'
+import { getPayload } from 'payload'
+import config from '@/payload.config'
+import { createInngestClient } from '@forumone/throughline-core'
+import {
+  createAuditEventEchoFunction,
+  createExecuteScheduledPublishesFunction,
+  createExpireStaleApprovalsFunction,
+  createHealthcheckFunction,
+  createPayloadReachableCheck,
+  createRevalidateOnPublishFunction,
+} from '@forumone/throughline-workflows'
+import { getEmailFunctions } from '@forumone/throughline-email'
+import { getFormsFunctions } from '@forumone/throughline-forms'
+import {
+  getIntegrationContext,
+  getIntegrationRegistry,
+} from '@forumone/throughline-integrations'
+
+const inngest = createInngestClient({ id: '{{projectName}}' })
+const payload = await getPayload({ config })
+
+const emailFunctions = getEmailFunctions(payload) ?? []
+const formsFunctions = getFormsFunctions(payload) ?? []
+const integrationRegistry = getIntegrationRegistry(payload)
+const integrationContext = getIntegrationContext(payload)
+const integrationFunctions =
+  integrationRegistry && integrationContext
+    ? integrationRegistry
+        .list()
+        .flatMap((integration) => integration.createFunctions(integrationContext))
+    : []
+
+export const { GET, POST, PUT } = serve({
+  client: inngest,
+  functions: [
+    createRevalidateOnPublishFunction({ inngest, payload }),
+    createExecuteScheduledPublishesFunction({
+      inngest,
+      payload,
+      collections: [{ slug: 'pages' }],
+      publishingServerUrl: process.env.NEXT_PUBLIC_SERVER_URL!,
+      systemApiKey: process.env.PUBLISHING_SYSTEM_API_KEY!,
+    }),
+    createExpireStaleApprovalsFunction({ inngest, payload }),
+    createAuditEventEchoFunction({ inngest }),
+    createHealthcheckFunction({
+      inngest,
+      payload,
+      checks: [createPayloadReachableCheck({ payload })],
+    }),
+    ...emailFunctions,
+    ...formsFunctions,
+    ...integrationFunctions,
+  ],
+})
