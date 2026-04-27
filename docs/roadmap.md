@@ -40,12 +40,13 @@ Goal: Turborepo + pnpm workspaces + changesets + shared tooling + CI that builds
 - [x] README, CONTRIBUTING, LICENSE exist
 - [x] `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm test` all run cleanly from root
 - [x] Branch protection on main requires PR + CI
-- [ ] npm publish round-trip verified end-to-end (deferred — will be exercised by the first real published package in C2)
+- [x] npm publish round-trip verified end-to-end — `@forumone/throughline-design-contract@0.2.0` and `@forumone/throughline-reference-ds@0.2.0` live on npm via trusted publishing (OIDC)
 
 Notes:
 
 - Skipped C0.8/C0.9 smoke-test round-trip in favor of exercising the publish pipeline with the first real package (C2).
 - Removed the scaffolded `smoke-test` package in PR #6.
+- Since `@forumone` scope-level trusted publishing isn't available, every new package needs a one-time bootstrap: placeholder publish via `npx setup-npm-trusted-publish <name> --access public`, then configure a trusted publisher in the npm web UI (`npmjs.com/package/<name>/access` → GitHub Actions → owner `forumone`, repo `throughline`, workflow `release.yml`). Done once for all 12 packages currently planned (10 pre-provisioned for C4–C13, plus the 2 already published).
 
 ## C1 — Plugin Architecture
 
@@ -111,8 +112,8 @@ Goal: A brand-neutral design system with 10–12 components, full contracts, gen
 - [x] Unit tests for every component (render + key semantics/ARIA)
 - [x] README, changeset for 0.1.0
 - [x] `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm test` green from root
-- [ ] Storybook deployment (Vercel or Chromatic) — deferred to a follow-up PR
-- [ ] CI runs `build-storybook` + `validate` — deferred to a follow-up PR
+- [x] CI runs `build-storybook` + `validate` as a dedicated parallel job
+- [ ] Storybook deployment (Vercel or Chromatic) — pending account/tooling decision; tracked as a standalone follow-up
 
 Notes:
 
