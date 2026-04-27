@@ -21,8 +21,8 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C10](#c10--workflows-package) | Workflows Package | ✅ Done |
 | [C11](#c11--email-package) | Email Package | ✅ Done |
 | [C12](#c12--forms-package) | Forms Package | ✅ Done |
-| [C13](#c13--cli-scaffolder) | CLI Scaffolder | ⏸ Not started |
-| [C14](#c14--documentation-site) | Documentation Site | ⏸ Not started |
+| [C13](#c13--cli-scaffolder) | CLI Scaffolder | ✅ Done |
+| [C14](#c14--documentation-site) | Documentation (markdown only; site deferred) | ✅ Done |
 
 ---
 
@@ -350,10 +350,33 @@ Notes:
 
 Spec: `docs/spec/C13-cli.md`
 
-Goal: `create-throughline` CLI. `pnpm create @forumone/throughline my-client-site` → ready-to-run monorepo, env stubs, example collection + DS reference, first-deployment checklist. Zero to "Claude editing content" in under an hour.
+Goal: `create-throughline` CLI. `pnpm create @forumone/throughline my-client-site` → ready-to-run monorepo, env stubs, example collection + DS reference, first-deployment checklist.
 
-## C14 — Documentation Site
+- [x] `@forumone/create-throughline` published to npm (`pnpm create @forumone/throughline <name>`)
+- [x] Seven-question interactive flow via `@clack/prompts`; project name + npm scope validated
+- [x] Generator with `{{var}}` + `{{#if}}/{{else}}` template renderer; `.template` suffix stripped on write
+- [x] `templates/base/` produces a working pnpm monorepo with Next.js 16 + Payload 3.83
+- [x] `templates/with-reference-ds/` overlay re-exports the reference DS + manifest
+- [x] `templates/without-reference-ds/` overlay produces a placeholder + README
+- [x] Generated `payload.config.ts` wires all eight Throughline plugins in the right order with `TODO` markers for client-specific resolvers
+- [x] Generated `apps/web/src/app/api/inngest/route.ts` registers every framework function (revalidate, scheduled-publish, expire-approvals, audit-echo, healthcheck, email, forms, integrations)
+- [x] Generated `.env.example` lists every required secret with comments
+- [x] Post-install printer adapts to deployment + database choices and the reference-DS choice
+- [x] 36 unit tests (renderer, prompts validators, generator end-to-end)
 
-Spec: `docs/spec/C14-docs.md`
+## C14 — Documentation
 
-Goal: The documentation site that makes the framework usable by someone who didn't build it — architecture, getting started, per-package API reference, customization guides, DS-contract authoring guide. Deploys automatically as core evolves.
+Spec: `docs/spec/C14-docs.md` (live site deferred; markdown-in-repo only)
+
+Goal: Documentation that makes the framework usable by someone who didn't build it — architecture, getting started, per-package API reference, customization guides, DS-contract authoring guide.
+
+The original spec called for a Nextra-based docs site. We're shipping the *content* now (under `docs/`) and deferring the live-site publishing flow to a later phase.
+
+- [x] Top-level `docs/README.md` Diátaxis-style index
+- [x] Getting-started tutorials (4 pages): scaffolding, first Claude connection, first publish, deploying to Vercel
+- [x] Concepts (6 pages): architecture overview, plugin composition, the trust boundary, design system contracts, event-driven workflows, client-agnostic core
+- [x] How-to guides (9 pages): adding a collection, authoring contracts, theming emails, adding an integration, configuring approvers, customizing accessibility checks, migrating content, upgrading, building a plugin
+- [x] Operations (5 pages): deployment options, env vars, observability, security model, Phase 2 expansions
+- [x] Reference (13 pages): one per published package, plus an index
+- [ ] Live docs site (Nextra + Vercel deployment) — deferred to a future phase
+- [ ] Auto-generated typedoc reference replacing the hand-authored reference pages — deferred
