@@ -6,6 +6,7 @@ import { examplePlugin } from '@forumone/throughline-plugin-contract'
 import { auditPlugin, createApiKeysCollection, createInngestClient } from '@forumone/throughline-core'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
+import { approvalsPlugin } from '@forumone/throughline-approvals'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { Manifest } from '@forumone/throughline-design-contract'
 import { buildConfig } from 'payload'
@@ -105,6 +106,18 @@ export default buildConfig({
       // The plugin's Zod schema validates the shape at load time anyway.
       manifest: { type: 'object', manifest: referenceManifest as unknown as Manifest },
       matching: { strategy: 'tfidf' },
+    }),
+    approvalsPlugin({
+      inngest,
+      groups: [
+        { slug: 'editorial', name: 'Editorial review' },
+        { slug: 'legal', name: 'Legal review' },
+      ],
+      // Stub resolver for the playground — replace with a real lookup once
+      // the playground gains a `groups` field on Users.
+      groupResolver: { resolveUsers: async () => [] },
+      tokenSecret:
+        process.env.APPROVAL_TOKEN_SECRET ?? 'playground-approval-secret-change-me-change-me-change',
     }),
     publishingPlugin({
       inngest,

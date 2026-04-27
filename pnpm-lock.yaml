@@ -26,6 +26,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@forumone/throughline-approvals':
+        specifier: workspace:*
+        version: link:../../packages/approvals
       '@forumone/throughline-components':
         specifier: workspace:*
         version: link:../../packages/components

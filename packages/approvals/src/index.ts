@@ -1,5 +1,4 @@
-// Plugin and surface types are re-exported here as they are added during C7.
-// Currently only the options surface is exported.
+export { approvalsPlugin } from './plugin.js'
 
 export type {
   ApprovalsPluginOptions,
@@ -13,3 +12,25 @@ export {
   createApprovalsCollection,
 } from './collection.js'
 export type { CreateApprovalsCollectionOptions } from './collection.js'
+
+export {
+  APPROVALS_RESOLVER_SYMBOL,
+  attachApprovalResolver,
+  createApprovalResolver,
+} from './resolver.js'
+export type { CreateApprovalResolverOptions } from './resolver.js'
+
+export { createActionEndpoint } from './endpoints/action.js'
+export type { CreateActionEndpointDeps } from './endpoints/action.js'
+
+export {
+  generateActionToken,
+  verifyActionToken,
+  buildActionUrl,
+} from './tokens.js'
+export type {
+  ActionToken,
+  ActionTokenAction,
+  VerifyOptions,
+  VerifyResult,
+} from './tokens.js'
