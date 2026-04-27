@@ -4,7 +4,7 @@ MCP server that exposes a design system manifest as conversational primitives. D
 
 ## What this package provides
 
-Seven MCP tools served at `${routePrefix}/mcp` (default `/api/components/mcp`):
+Seven MCP tools served at `<api-base>/<routePrefix>/mcp`. With Payload's default API base (`/api`) and the plugin's default `routePrefix` (`/components`), the user-facing URL is `/api/components/mcp`.
 
 | Tool | Purpose |
 |---|---|

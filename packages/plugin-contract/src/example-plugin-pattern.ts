@@ -21,9 +21,11 @@ export const examplePlugin: CorePlugin<ExamplePluginOptions> = (options) => {
     // Step 1 — honour the disabled flag before doing any work.
     if (options.enabled === false) return incomingConfig
 
-    // Step 2 — apply defaults.
+    // Step 2 — apply defaults. Note: route prefixes here MUST NOT include
+    // `/api` — Payload mounts top-level endpoints under its API base
+    // (default `/api`), so the user-facing URL becomes `/api/example/mcp`.
     const greeting = options.greeting ?? 'Hello'
-    const routePrefix = options.routePrefix ?? '/api/example'
+    const routePrefix = options.routePrefix ?? '/example'
 
     // Step 3 — extend the incoming config by spreading and appending.
     //          Never replace existing arrays; always concatenate.

@@ -37,7 +37,10 @@ export const myPlugin: CorePlugin<MyPluginOptions> = (options) => (incomingConfi
   if (options.enabled === false) return incomingConfig
 
   const validated = validateOptions(options) // throws on invalid input
-  const routePrefix = validated.routePrefix ?? '/api/my-plugin'
+  // Note: routePrefix MUST NOT include `/api`. Payload mounts top-level
+  // endpoints under its API base (default `/api`), so the user-facing URL
+  // becomes `/api/my-plugin/mcp`.
+  const routePrefix = validated.routePrefix ?? '/my-plugin'
 
   return {
     ...incomingConfig,
@@ -62,10 +65,11 @@ export const myPlugin: CorePlugin<MyPluginOptions> = (options) => (incomingConfi
 }
 ```
 
-Two structural rules that are non-negotiable:
+Three structural rules that are non-negotiable:
 
 - Honour `enabled === false` before doing any work.
 - Never replace `incomingConfig.collections`, `endpoints`, or `hooks.*` arrays — always spread the existing value and append.
+- Route prefixes for top-level endpoints MUST NOT include `/api`. Payload's API base (`config.routes.api`, default `/api`) is prepended automatically, so a `path: '/api/my-plugin/mcp'` registers at `/api/api/my-plugin/mcp`.
 
 ## Options validation
 
