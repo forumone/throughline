@@ -20,7 +20,7 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C9](#c9--integrations-server) | Integrations Server | ✅ Done |
 | [C10](#c10--workflows-package) | Workflows Package | ✅ Done |
 | [C11](#c11--email-package) | Email Package | ✅ Done |
-| [C12](#c12--forms-package) | Forms Package | ⏸ Not started |
+| [C12](#c12--forms-package) | Forms Package | ✅ Done |
 | [C13](#c13--cli-scaffolder) | CLI Scaffolder | ⏸ Not started |
 | [C14](#c14--documentation-site) | Documentation Site | ⏸ Not started |
 
@@ -326,6 +326,25 @@ Notes:
 Spec: `docs/spec/C12-forms.md`
 
 Goal: Policy-aware forms. Wraps Payload's Form Builder with privacy notices, a11y, spam protection, destination allowlist, submitter confirmation. MCP tools for conversational create/update/query. Public submission endpoint + Inngest fan-out.
+
+- [x] `packages/forms/` scaffolded against `react.json` tsconfig (JSX) with options validation: required Inngest, ≥1 unique-labeled allowedDestinations with per-type value checks (email contains `@`, webhook is `https://`), `>=32`-char ipHashSecret with `FORMS_IP_HASH_SECRET` env fallback. Resolved-config object centralizes defaults so the rest of the package consumes one shape.
+- [x] Allowlist enforced at three layers — MCP tool, Forms collection's beforeChange hook (covers admin / direct-API writes), and the fan-out worker (drops + warns on labels removed by a redeploy)
+- [x] addFormPolicyFields appends a single `policy` group (privacy notice, consent toggle + label, spam protection [honeypot + per-form rate limit], destinations array with allowlist-bound select, submitter-confirmation block); does not mutate the input
+- [x] Public submit endpoint registered via Form Builder's `formOverrides` slot at `<routePrefix>/submit`; pipeline: honeypot (silent 200 if filled, so bots don't pivot) → form lookup (404 if missing) → consent (server-side; client bypass doesn't work) → rate limit (Postgres-counted per (form, ipHash) per hour, with per-form override) → persist sanitized [{field, value}] rows → fire `form/submission.received`
+- [x] IP hashing via HMAC-SHA256 / Web Crypto with the per-deployment secret so cross-deployment hash tables can't be joined; `extractClientIp` honors x-forwarded-for / x-real-ip / cf-connecting-ip with a 0.0.0.0 fallback
+- [x] Six MCP tools: `list_allowed_destinations` (omits raw values), `validate_form` (dry run), `create_form` (admin/editor; allowlist + accessibility + submitter-confirmation pointer; audits via `form.created`), `update_form_fields` (refuses to remove fields the existing submitterConfirmation references), `update_form_destinations` (replace-all semantics; rejects unknown / duplicate labels), `get_form_submissions` (defaults to redacted output; `includePii=true` requires admin or form-admin)
+- [x] Adds `form.updated` to the AUDIT_ACTIONS taxonomy in core (used by both update tools); patch bump on `@forumone/throughline-core`
+- [x] FormSubmissionEmail (admin notification with labeled field list and optional admin link) + SubmitterConfirmationEmail (auto-reply with paragraph splitting) — render to HTML and plaintext from the same React tree
+- [x] Four Inngest functions exposed via `getFormsFunctions(payload)` for the client app's Inngest endpoint to compose: `form-fan-out` (per-destination dispatch + optional submitter-confirmation), `form-email-destination` (lazy email-client lookup; throws on missing client so Inngest retries), `form-webhook-destination` (HMAC-signed POST with retry-on-non-2xx), `form-submitter-confirmation` (skip+log on misconfiguration so one bad form doesn't poison the queue)
+- [x] `formsPlugin` requires `audit-log` + `email` capabilities; refuses to init without them
+- [x] 86 unit tests across options, destinations, policy fields, honeypot, IP hashing, rate limiting, the submit endpoint, the six MCP tools, the four Inngest functions, and the two templates (HTML + plaintext)
+
+Notes:
+
+- @payloadcms/plugin-form-builder peers are version-locked to payload (3.83.0 plugin needs 3.83.0 payload), not caret-compatible. The package.json pins the exact form-builder version.
+- Inngest 4.x's `createFunction` shape (single options object with `triggers`) is used throughout. Spec used the older 3-arg form.
+- `next` and Inngest endpoint serving are the consumer's responsibility; `getFormsFunctions(payload)` returns the four functions and the README documents the wire-up.
+- No playground hookup: playground doesn't ship an Inngest endpoint and doesn't have `formBuilderPlugin` wired. The forms package is documented and tested but not exercised end-to-end here. Same Phase 2 follow-up as workflows + email.
 
 ## C13 — CLI Scaffolder
 

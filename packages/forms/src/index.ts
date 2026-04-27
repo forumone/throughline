@@ -1,4 +1,4 @@
-// Plugin and other surface exports land in subsequent commits.
+export { formsPlugin, getFormsFunctions } from './plugin.js'
 
 export {
   DEFAULT_FORMS_SLUG,
@@ -20,3 +20,31 @@ export type { DestinationLookupResult } from './destinations.js'
 
 export { addFormPolicyFields } from './policy-fields.js'
 export type { PolicyFieldsOptions } from './policy-fields.js'
+
+export {
+  createCreateFormTool,
+  createUpdateFormFieldsTool,
+  createUpdateFormDestinationsTool,
+  createGetFormSubmissionsTool,
+  createValidateFormTool,
+  createListAllowedDestinationsTool,
+} from './tools/index.js'
+
+export {
+  createFormFanOutFunction,
+  createEmailDestinationFunction,
+  createWebhookDestinationFunction,
+  createSubmitterConfirmationFunction,
+} from './functions/index.js'
+
+export {
+  FormsLayout,
+  FormSubmissionEmail,
+  SubmitterConfirmationEmail,
+} from './templates/index.js'
+export type {
+  FormsLayoutProps,
+  FormSubmissionEmailProps,
+  SubmitterConfirmationEmailProps,
+  FormSubmissionField,
+} from './templates/index.js'
