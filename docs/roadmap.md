@@ -19,7 +19,7 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C8](#c8--audit-query-server) | Audit Query Server | ✅ Done |
 | [C9](#c9--integrations-server) | Integrations Server | ✅ Done |
 | [C10](#c10--workflows-package) | Workflows Package | ✅ Done |
-| [C11](#c11--email-package) | Email Package | ⏸ Not started |
+| [C11](#c11--email-package) | Email Package | ✅ Done |
 | [C12](#c12--forms-package) | Forms Package | ⏸ Not started |
 | [C13](#c13--cli-scaffolder) | CLI Scaffolder | ⏸ Not started |
 | [C14](#c14--documentation-site) | Documentation Site | ⏸ Not started |
@@ -300,6 +300,26 @@ Notes:
 Spec: `docs/spec/C11-email.md`
 
 Goal: Resend wrapper, React Email base layout with brand tokens, transactional templates (approval request / decision / expired), and Inngest functions subscribing to C10's audit-echo events.
+
+- [x] `packages/email/` scaffolded against `react.json` tsconfig (JSX) with neutral default `EmailBrandTokens` (black on white, system sans, "Your Site"), `mergeTokens` helper, and tokens.ts JSDoc explaining why brandName lands in three places (header, From, footer)
+- [x] `validateOptions` enforces inngest + RESEND_API_KEY/EMAIL_FROM_ADDRESS env fallback + resolver functions + buildActionUrl; surfaces missing config at boot rather than at first send
+- [x] Resend client wrapper with lazy imports of both `resend` and `@react-email/render` so tests run with neither installed; per-call optional `replyTo` plus a `defaultReplyTo`
+- [x] EmailLayout shared chrome (brand-name header, dividers, footer disclaimer); sticks to React Email primitives (`Body`, `Container`, `Section`, `Hr`, `Button`) to keep Outlook / Gmail / Apple Mail consistent
+- [x] ApprovalRequestEmail with optional Why section, Preview CTA, three-action row (Approve / Request changes / Discuss), and an expiration footer line — buttons laid out in a nested HTML table because flexbox is unreliable in Outlook
+- [x] ApprovalDecisionEmail with three variants (granted / declined / changes-requested), color-coded headlines, optional decision-notes callout, decision-aware "Next step" prose, and a Preview button shown on granted/changes-requested but hidden on declined
+- [x] ApprovalExpiredEmail (intentionally plain — name, date, "ask Claude to request approval again")
+- [x] Three Inngest notification functions: `notify-approval-request` (subscribes to `notification/send-approval-request`, sends one email per approver in `notifiedApprovers` with each in its own `step.run` so bounces retry without re-sending), `notify-approval-decision` (subscribes to `notification/send-approval-decision`, maps audit action → variant, emails the requester), `notify-approval-expired` (subscribes to `approval/expired`, notifies the requester)
+- [x] `emailPlugin` exposes the email client and the three functions on the Payload instance via Symbols; `getEmailClient` and `getEmailFunctions` helpers let the client app's Inngest endpoint compose them in `serve()`
+- [x] Templates render to both HTML and plaintext from the same React tree on every send (accessibility, deliverability, HTML-refusing clients)
+- [x] 61 unit tests across tokens, options validation (env fallbacks + missing-config errors), Resend wrapper (mocked), each template (HTML + plaintext + show/hide behaviour + custom token theming), shared helpers, and each notification function (subscribe trigger, recipient routing, per-approver step.run isolation, error envelopes)
+
+Notes:
+
+- Inngest 4.x's `createFunction` takes one options object with a `triggers` array. Spec used the older 3-arg form.
+- `react.json` tsconfig (jsx: react-jsx) is required for the .tsx templates; library tsconfig isn't enough.
+- Templates expose `<!-- -->` comment markers between adjacent text + expression children (a React renderer artifact). Tests assert on identity-bearing fragments (names, titles, URLs) rather than verbatim sentences so renderer changes don't break them.
+- Brand-name centralization is deliberate: From display name falls back through `EMAIL_FROM_NAME` → `tokens.brandName` → `'Your Site'`. Same brand string the layout shows in the header.
+- No playground hookup: the playground doesn't ship an Inngest endpoint yet; the email plugin needs that to fire. Documented as a follow-up phase.
 
 ## C12 — Forms Package
 
