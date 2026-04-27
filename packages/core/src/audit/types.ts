@@ -25,6 +25,7 @@ export const AUDIT_ACTIONS = [
   'approval.expired',
   'approval.discussed',
   'form.created',
+  'form.updated',
   'form.submission_received',
   'integration.synced',
   'integration.failed',
