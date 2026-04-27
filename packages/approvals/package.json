@@ -1,0 +1,67 @@
+{
+  "name": "@forumone/throughline-approvals",
+  "version": "0.1.0",
+  "description": "Conversational approval workflow server for Throughline. Provides the approval resolver the publishing server consumes plus MCP tools for requesting and responding to approvals.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "throughline",
+    "payload",
+    "mcp",
+    "approvals",
+    "workflow"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/approvals"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/approvals#readme",
+  "bugs": {
+    "url": "https://github.com/forumone/throughline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "payload": "^3.0.0",
+    "inngest": "^4.0.0"
+  },
+  "dependencies": {
+    "@forumone/throughline-core": "workspace:*",
+    "@forumone/throughline-plugin-contract": "workspace:*",
+    "@forumone/throughline-publishing": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.15.0",
+    "inngest": "^4.2.0",
+    "payload": "^3.83.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
