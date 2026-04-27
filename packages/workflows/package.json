@@ -1,0 +1,70 @@
+{
+  "name": "@forumone/throughline-workflows",
+  "version": "0.1.0",
+  "description": "Composable Inngest function factories for the Throughline framework — revalidation, scheduled publishing, approval expiration, audit fan-out, healthcheck.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "throughline",
+    "payload",
+    "inngest",
+    "workflows"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/workflows"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/workflows#readme",
+  "bugs": {
+    "url": "https://github.com/forumone/throughline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "inngest": "^4.0.0",
+    "next": ">=15.0.0",
+    "payload": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@forumone/throughline-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.15.0",
+    "inngest": "^4.2.0",
+    "next": "^16.2.4",
+    "payload": "^3.83.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
