@@ -1,0 +1,67 @@
+{
+  "name": "@forumone/create-throughline",
+  "version": "0.1.0",
+  "description": "Scaffolder for new Throughline projects (Payload CMS + MCP servers + Inngest workflows).",
+  "type": "module",
+  "bin": {
+    "create-throughline": "./dist/bin.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -b && pnpm copy-templates && pnpm chmod-bin",
+    "copy-templates": "node ./scripts/copy-templates.mjs",
+    "chmod-bin": "node ./scripts/chmod-bin.mjs",
+    "dev": "tsc -b -w",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "throughline",
+    "payload",
+    "mcp",
+    "scaffolder",
+    "create"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/create-throughline"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/create-throughline#readme",
+  "bugs": {
+    "url": "https://github.com/forumone/throughline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.8.0",
+    "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.15.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}

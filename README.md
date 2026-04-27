@@ -10,6 +10,27 @@ Pre-1.0. APIs will change. See `docs/spec/` for the phased build plan.
 
 Published packages live in `packages/`. Each has its own README.
 
+Plugins:
+
+- `@forumone/throughline-core` — audit log, MCP auth + handler, Inngest client, env helpers
+- `@forumone/throughline-components` — components MCP server (manifest-driven content drafting)
+- `@forumone/throughline-publishing` — publishing MCP server (publish + scheduled publish, with policy gates)
+- `@forumone/throughline-approvals` — approvals MCP server + tokenized email decisions
+- `@forumone/throughline-audit` — read-only MCP query tools over the audit log
+- `@forumone/throughline-integrations` — pluggable third-party integrations (webhook included)
+- `@forumone/throughline-email` — Resend-backed transactional email + React Email templates
+- `@forumone/throughline-forms` — Form Builder wrapper with allowlisted destinations + spam/rate-limit hardening
+- `@forumone/throughline-workflows` — Inngest workflow factories (revalidate, scheduled publish, expire approvals, healthchecks)
+
+Design system:
+
+- `@forumone/throughline-design-contract` — manifest schema + lint rules
+- `@forumone/throughline-reference-ds` — brand-neutral 12-component reference design system
+
+Tooling:
+
+- `@forumone/create-throughline` — interactive scaffolder (`pnpm create @forumone/throughline my-site`)
+
 Internal, non-published config packages:
 
 - `@forumone/throughline-tsconfig` — shared TypeScript configs
@@ -18,13 +39,21 @@ Internal, non-published config packages:
 
 ## Using in a client project
 
-A client scaffolder (`create-claude-cms`) will be provided in phase C13. Until then, consume the published packages directly:
+The fastest path is the scaffolder:
+
+```bash
+pnpm create @forumone/throughline my-client-site
+```
+
+It asks a small set of questions and produces a pnpm monorepo with Payload, every Throughline plugin, and an Inngest endpoint already wired. See [`packages/create-throughline/README.md`](./packages/create-throughline/README.md).
+
+Or consume the published packages directly:
 
 ```bash
 pnpm add @forumone/throughline-core @forumone/throughline-publishing
 ```
 
-See the getting-started guide (forthcoming in C14) for a full walkthrough.
+A full getting-started guide is forthcoming in C14.
 
 ## Development
 
