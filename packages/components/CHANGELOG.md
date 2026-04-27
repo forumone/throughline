@@ -1,5 +1,11 @@
 # @forumone/throughline-components
 
+## 0.2.1
+
+### Patch Changes
+
+- [`3ff1e9f`](https://github.com/forumone/throughline/commit/3ff1e9f43fad2e15fd42f67073227259ba7e78d4) Thanks [@briangraves](https://github.com/briangraves)! - Fix: drop the `/api` prefix from `componentsPlugin`'s default `routePrefix` so the endpoint registers at `/api/components/mcp` rather than `/api/api/components/mcp`. Payload mounts top-level endpoints under its API base (`config.routes.api`, default `/api`), which the previous default doubled. Consumers who pass an explicit `routePrefix` should also drop any leading `/api`.
+
 ## 0.2.0
 
 ### Minor Changes
