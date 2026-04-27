@@ -13,8 +13,8 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C2](#c2--design-contract-package) | Design Contract Package | ✅ Done |
 | [C3](#c3--reference-design-system) | Reference Design System | ✅ Done |
 | [C4](#c4--core-plumbing-package) | Core Plumbing Package | ✅ Done |
-| [C5](#c5--component-server) | Component Server | ⏳ Next |
-| [C6](#c6--publishing-server) | Publishing Server | ⏸ Not started |
+| [C5](#c5--component-server) | Component Server | ✅ Done |
+| [C6](#c6--publishing-server) | Publishing Server | ⏳ Next |
 | [C7](#c7--approvals-server) | Approvals Server | ⏸ Not started |
 | [C8](#c8--audit-query-server) | Audit Query Server | ⏸ Not started |
 | [C9](#c9--integrations-server) | Integrations Server | ⏸ Not started |
@@ -155,6 +155,25 @@ Notes:
 Spec: `docs/spec/C5-component-server.md`
 
 Goal: First custom MCP server. Exposes a design system manifest as conversational primitives (list components, get contracts, suggest components, validate compositions, detect anti-patterns) against any contract-compliant DS.
+
+- [x] `packages/components/` scaffolded as a publishable package with a single main entry; subsystem files live in `src/`
+- [x] Plugin options: discriminated `ManifestSource` union (object | url | payload-collection) + matcher config; Zod schema with path-qualified errors
+- [x] Manifest loader supports all three sources; URL source honors `refreshInterval` and `refresh()` always re-fetches; Payload-collection source falls back to the doc itself when no `data` wrapper is present
+- [x] TF-IDF matcher with `intent` weighted twice over description; tokenizer drops short tokens + a small stop-word list; verified against the reference DS for editorial intents
+- [x] Composition validation: `forbiddenAdjacent`, `maxPerPage`, `requiredSiblings` (warning), unknown components, unknown variants
+- [x] Anti-pattern detection: per-component `antiExamples` matched by structural heuristics (multiple-class, end-of-page); de-duplicated per (blockIndex, pattern)
+- [x] Seven MCP tools: `list_components`, `get_contract`, `get_variants`, `get_tokens`, `suggest_for_intent`, `validate_composition`, `find_anti_pattern`
+- [x] Action tools take `AuditWriter` as a constructor dep so they're unit-testable without a Payload instance; every consequential call writes a `design.*` audit record with `_meta.userPrompt` / `_meta.reasoning` forwarded
+- [x] Plugin uses `requireCapability('audit-log')` and fails at init when audit isn't registered; eager manifest load surfaces source errors at deploy time, not at first request
+- [x] MCP handler attached to Payload via Symbol; endpoint at `${routePrefix}/mcp` (default `/api/components/mcp`) fetches the handler at request time
+- [x] 53 tests passing — option validation, manifest loading across all three source types (with TTL behavior), TF-IDF ranking against the real reference-ds manifest, composition rules, anti-pattern detection, every tool's happy path and error cases
+- [x] Playground composes `componentsPlugin` after `auditPlugin` and points it at `@forumone/throughline-reference-ds/manifest`; build passes
+
+Notes:
+
+- Embeddings matcher deferred per the spec's note: "Don't ship half-working embeddings." TF-IDF lands now; the matcher interface is strategy-agnostic so swapping in embeddings won't change the tool surface.
+- JSON-imported manifests need an `as unknown as Manifest` cast because TS doesn't widen JSON literal types to the schema's tuple types (e.g. `placement`). The plugin's Zod validation enforces the actual shape at load time.
+- Action tools take their `AuditWriter` as a constructor dep instead of calling `getAuditWriter` inside the handler. Cleaner composition, easier unit-testing.
 
 ## C6 — Publishing Server
 

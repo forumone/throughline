@@ -26,12 +26,21 @@ importers:
 
   apps/playground:
     dependencies:
+      '@forumone/throughline-components':
+        specifier: workspace:*
+        version: link:../../packages/components
       '@forumone/throughline-core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@forumone/throughline-design-contract':
+        specifier: workspace:*
+        version: link:../../packages/design-contract
       '@forumone/throughline-plugin-contract':
         specifier: workspace:*
         version: link:../../packages/plugin-contract
+      '@forumone/throughline-reference-ds':
+        specifier: workspace:*
+        version: link:../../packages/reference-ds
       '@payloadcms/db-postgres':
         specifier: ^3.83.0
         version: 3.83.0(@opentelemetry/api@1.9.1)(payload@3.83.0(graphql@16.13.2)(typescript@5.9.3))

@@ -4,6 +4,9 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { examplePlugin } from '@forumone/throughline-plugin-contract'
 import { auditPlugin, createApiKeysCollection, createInngestClient } from '@forumone/throughline-core'
+import { componentsPlugin } from '@forumone/throughline-components'
+import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
+import type { Manifest } from '@forumone/throughline-design-contract'
 import { buildConfig } from 'payload'
 import type { CollectionConfig } from 'payload'
 
@@ -68,6 +71,14 @@ export default buildConfig({
   },
   plugins: [
     auditPlugin({ inngest }),
+    componentsPlugin({
+      // Cast through `unknown`: the JSON literal type is structurally
+      // compatible but TS won't widen tuple types like `placement` from
+      // `string[]` to `["page" | "section" | "inline", ...]` automatically.
+      // The plugin's Zod schema validates the shape at load time anyway.
+      manifest: { type: 'object', manifest: referenceManifest as unknown as Manifest },
+      matching: { strategy: 'tfidf' },
+    }),
     examplePlugin({ greeting: 'Hello from the playground' }),
   ],
 })
