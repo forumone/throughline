@@ -1,4 +1,4 @@
-// Plugin and template exports land in subsequent commits.
+export { emailPlugin, getEmailClient, getEmailFunctions } from './plugin.js'
 
 export { createEmailClient } from './client.js'
 export type {
@@ -20,3 +20,24 @@ export type {
   ResolvedEmailEnv,
   ResolvedRecipient,
 } from './options.js'
+
+export {
+  createNotifyApprovalRequestFunction,
+  createNotifyApprovalDecisionFunction,
+  createNotifyApprovalExpiredFunction,
+} from './functions/index.js'
+
+export {
+  EmailLayout,
+  ApprovalRequestEmail,
+  ApprovalDecisionEmail,
+  ApprovalExpiredEmail,
+} from './templates/index.js'
+export type {
+  ApprovalRequestEmailProps,
+  ApprovalDecisionEmailProps,
+  ApprovalDecisionKind,
+  ApprovalExpiredEmailProps,
+  ApprovalTargetKind,
+  EmailLayoutProps,
+} from './templates/index.js'
