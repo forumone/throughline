@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual trigger so we can re-run CI on any branch when something prevents
+  # the automatic dispatch (rare; usually only matters if RELEASE_PR_TOKEN is
+  # ever revoked or scoped wrong and a release PR comes in token-less).
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
