@@ -1,6 +1,26 @@
 // Subsystems are re-exported as they are added during C4. The aggregated
 // surface here mirrors the package's `./<subpath>` exports.
 
+export {
+  AUDIT_ACTIONS,
+  AUDIT_MCP_SERVERS,
+  DEFAULT_AUDIT_SLUG,
+  auditPlugin,
+  createAuditCollection,
+  createAuditWriter,
+  getAuditWriter,
+} from './audit/index.js'
+export type {
+  AuditAction,
+  AuditActor,
+  AuditCollectionOptions,
+  AuditEventInput,
+  AuditMcpServer,
+  AuditPluginOptions,
+  AuditWriter,
+  AuditWriterOptions,
+} from './audit/index.js'
+
 export { ENV_VARS, validateBaseEnv, requireEnv, optionalEnv } from './env/index.js'
 export type { EnvVarName, BaseEnv } from './env/index.js'
 
