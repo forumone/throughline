@@ -33,6 +33,9 @@ export type { ApiKeysCollectionOptions, BearerTokenAuthenticatorOptions } from '
 export { ENV_VARS, validateBaseEnv, requireEnv, optionalEnv } from './env/index.js'
 export type { EnvVarName, BaseEnv } from './env/index.js'
 
+export { createInngestClient } from './events/index.js'
+export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events/index.js'
+
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
 export { shallowDiff, generateId } from './utils/index.js'
