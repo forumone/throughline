@@ -15,8 +15,8 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C4](#c4--core-plumbing-package) | Core Plumbing Package | ✅ Done |
 | [C5](#c5--component-server) | Component Server | ✅ Done |
 | [C6](#c6--publishing-server) | Publishing Server | ✅ Done |
-| [C7](#c7--approvals-server) | Approvals Server | ⏳ Next |
-| [C8](#c8--audit-query-server) | Audit Query Server | ⏸ Not started |
+| [C7](#c7--approvals-server) | Approvals Server | ✅ Done |
+| [C8](#c8--audit-query-server) | Audit Query Server | ⏳ Next |
 | [C9](#c9--integrations-server) | Integrations Server | ⏸ Not started |
 | [C10](#c10--workflows-package) | Workflows Package | ⏸ Not started |
 | [C11](#c11--email-package) | Email Package | ⏸ Not started |
@@ -206,6 +206,27 @@ Notes:
 Spec: `docs/spec/C7-approvals-server.md`
 
 Goal: Workflow + conversational approvals. Collection schema, MCP tools, HMAC action tokens, and the approval resolver the Publishing Server consumes.
+
+- [x] `packages/approvals/` scaffolded with options surface (groups, GroupResolver, validateOptions resolving tokenSecret)
+- [x] Approvals collection: target / request / decision / workflow-state field groups, indexes for the common queries, admin-only update + create-denied so only the plugin's tools mint records
+- [x] HMAC action tokens (`generateActionToken`, `verifyActionToken`, `buildActionUrl`) using Web Crypto so the same code works in Node and edge runtimes; constant-time signature compare; configurable max-age (default 14 days)
+- [x] Approval resolver auto-attached to Payload via `Symbol.for('@forumone/throughline/approvals-resolver')`; publishing's `approvalStep` reads it lazily so adding approvals to a config doesn't require re-wiring publishing's options
+- [x] Five MCP tools (`request_approval`, `respond_to_approval`, `get_approval_status`, `list_pending_approvals`, `list_my_requests`) with audit emission tied to the right `approval.*` actions
+- [x] Action endpoint at `/api/approvals/action` with confirmation-on-first-hit, single-use tokens via `consumedTokens`, `approval/decided` Inngest event, and audit emission
+- [x] Self-approval blocked, group-membership check on respond, pending-status guard
+- [x] Plugin uses `requireCapability('audit-log')` and fails at init when audit isn't registered
+- [x] 49 unit tests covering options validation, token round-trip + tampering + expiry, resolver mapping, every MCP tool's happy/error paths, and every action-endpoint flow (missing token, invalid token, confirmation render, decision recorded, replay rejected, already-decided no-op)
+- [x] Companion change in `@forumone/throughline-publishing`: `approvalStep` falls back to the symbol lookup. Patch bump.
+- [x] Playground composes `approvalsPlugin` between componentsPlugin and publishingPlugin; build passes
+
+Notes:
+
+- Inngest pinned to `^4.0.0` (matches the rest of the framework; spec said `^3.0.0`).
+- `routePrefix` defaults to `/approvals` (not `/api/approvals`) since Payload prepends `/api` automatically.
+- First-decision-wins is a Phase 1 deliberate choice — multi-party approvals (legal AND comms both required) are deferred until a real client needs them.
+- Action tokens are single-use and 14-day default lifetime. Replay protection is `consumedTokens` on the approval record.
+- Group resolution is left to the consumer via `groupResolver.resolveUsers`; core doesn't hardcode membership lookup logic. Playground stubs it with `[]` until the playground gains a richer Users schema.
+- Action endpoint HTML is intentionally minimal/unbranded — clients can register a custom-branded endpoint that calls into `verifyActionToken` if they want richer pages.
 
 ## C8 — Audit Query Server
 

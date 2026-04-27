@@ -16,6 +16,7 @@
     "db:down": "docker compose down"
   },
   "dependencies": {
+    "@forumone/throughline-approvals": "workspace:*",
     "@forumone/throughline-components": "workspace:*",
     "@forumone/throughline-core": "workspace:*",
     "@forumone/throughline-design-contract": "workspace:*",
