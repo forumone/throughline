@@ -1,0 +1,69 @@
+{
+  "name": "@forumone/throughline-publishing",
+  "version": "0.1.0",
+  "description": "Policy-gated publishing server for Throughline. Wraps Payload's update operation with composition, accessibility, required-field, embargo, and approval gating.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./checks": {
+      "types": "./dist/checks/index.d.ts",
+      "default": "./dist/checks/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "throughline",
+    "payload",
+    "mcp",
+    "publishing"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/publishing"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/publishing#readme",
+  "bugs": {
+    "url": "https://github.com/forumone/throughline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "payload": "^3.0.0",
+    "inngest": "^4.0.0"
+  },
+  "dependencies": {
+    "@forumone/throughline-core": "workspace:*",
+    "@forumone/throughline-plugin-contract": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.15.0",
+    "inngest": "^4.2.0",
+    "payload": "^3.83.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
