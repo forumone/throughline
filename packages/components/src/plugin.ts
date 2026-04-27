@@ -30,7 +30,11 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
     if (rawOptions.enabled === false) return incomingConfig
 
     const options = validateOptions(rawOptions)
-    const routePrefix = options.routePrefix ?? '/api/components'
+    // Payload mounts top-level endpoints under its API base (default /api),
+    // so the path passed here MUST NOT include /api itself or it ends up
+    // doubled (e.g. /api/api/components/mcp). The user-facing URL is still
+    // /api/components/mcp.
+    const routePrefix = options.routePrefix ?? '/components'
     const logger = createNamedLogger('components', options.logger ?? defaultLogger)
     const maxRecommendations = options.matching?.maxRecommendations ?? 5
 
