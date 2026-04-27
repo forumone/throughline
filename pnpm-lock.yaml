@@ -26,6 +26,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@forumone/throughline-core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@forumone/throughline-plugin-contract':
         specifier: workspace:*
         version: link:../../packages/plugin-contract
@@ -41,6 +44,9 @@ importers:
       graphql:
         specifier: ^16.8.1
         version: 16.13.2
+      inngest:
+        specifier: ^4.2.0
+        version: 4.2.4(@opentelemetry/core@2.7.0(@opentelemetry/api@1.9.1))(next@16.2.4(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(react@19.2.5)(typescript@5.9.3)(zod@3.25.76)
       next:
         specifier: ^16.2.4
         version: 16.2.4(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4)

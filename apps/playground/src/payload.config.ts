@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { examplePlugin } from '@forumone/throughline-plugin-contract'
+import { auditPlugin, createApiKeysCollection, createInngestClient } from '@forumone/throughline-core'
 import { buildConfig } from 'payload'
 import type { CollectionConfig } from 'payload'
 
@@ -15,8 +16,37 @@ const Users: CollectionConfig = {
   admin: {
     useAsTitle: 'email',
   },
-  fields: [],
+  fields: [
+    { name: 'name', type: 'text' },
+    {
+      name: 'roles',
+      type: 'select',
+      hasMany: true,
+      defaultValue: ['admin'],
+      options: [
+        { label: 'Admin', value: 'admin' },
+        { label: 'Editor', value: 'editor' },
+        { label: 'Viewer', value: 'viewer' },
+      ],
+    },
+  ],
 }
+
+const Pages: CollectionConfig = {
+  slug: 'pages',
+  admin: { useAsTitle: 'title' },
+  fields: [
+    { name: 'title', type: 'text', required: true },
+    { name: 'slug', type: 'text', required: true, unique: true },
+    { name: 'body', type: 'richText' },
+  ],
+  versions: { drafts: true },
+}
+
+const inngest = createInngestClient({
+  id: 'throughline-playground',
+  isDev: process.env.NODE_ENV !== 'production',
+})
 
 export default buildConfig({
   admin: {
@@ -25,7 +55,7 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users],
+  collections: [Users, Pages, createApiKeysCollection({ usersSlug: 'users' })],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI ?? '',
@@ -36,5 +66,8 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(__dirname, 'payload-types.ts'),
   },
-  plugins: [examplePlugin({ greeting: 'Hello from the playground' })],
+  plugins: [
+    auditPlugin({ inngest }),
+    examplePlugin({ greeting: 'Hello from the playground' }),
+  ],
 })

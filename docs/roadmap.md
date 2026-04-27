@@ -12,8 +12,8 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C1](#c1--plugin-architecture) | Plugin Architecture | ✅ Done |
 | [C2](#c2--design-contract-package) | Design Contract Package | ✅ Done |
 | [C3](#c3--reference-design-system) | Reference Design System | ✅ Done |
-| [C4](#c4--core-plumbing-package) | Core Plumbing Package | ⏳ Next |
-| [C5](#c5--component-server) | Component Server | ⏸ Not started |
+| [C4](#c4--core-plumbing-package) | Core Plumbing Package | ✅ Done |
+| [C5](#c5--component-server) | Component Server | ⏳ Next |
 | [C6](#c6--publishing-server) | Publishing Server | ⏸ Not started |
 | [C7](#c7--approvals-server) | Approvals Server | ⏸ Not started |
 | [C8](#c8--audit-query-server) | Audit Query Server | ⏸ Not started |
@@ -129,6 +129,26 @@ Notes:
 Spec: `docs/spec/C4-core-plumbing.md`
 
 Goal: The foundation every server package depends on — audit log, MCP auth pattern, shared types beyond the plugin contract, Inngest client factory, env handling, `_meta` convention. Unblocks C5–C9 to be developed in parallel.
+
+- [x] `packages/core/` scaffolded as a publishable package; subpath exports for `./audit`, `./auth`, `./events`, `./mcp`, `./env`
+- [x] Audit log: `auditPlugin` (extends Payload config, attaches writer via `Symbol.for`, registers in plugin registry), `createAuditWriter` (fire-and-forget, optional Inngest emission), `createAuditCollection` (immutable, indexed for common queries), `getAuditWriter` for peer plugins
+- [x] MCP auth: `createApiKeysCollection` (admin-only access, SHA-256 hashed keys, raw key surfaced once via `__rawKey`), `createBearerTokenAuthenticator` (validates against hashed storage, expiry-aware)
+- [x] Events: `CoreEvents` taxonomy + `FrameworkEvents` module-augmentation seam, `createInngestClient` factory
+- [x] MCP handler: `createMcpHandler` (JSON-RPC over HTTP, auth, tool dispatch, error formatting, `zod-to-json-schema` for `tools/list`)
+- [x] `_meta` helpers: `McpMetaSchema` and `withMeta(shape)` so plugin authors can attach prompt/reasoning context to any tool input
+- [x] Env conventions: `ENV_VARS` constants, `validateBaseEnv`, `requireEnv`, `optionalEnv`
+- [x] Logger: `defaultLogger` + `createNamedLogger` with tagged scoping
+- [x] Utilities: `shallowDiff`, `generateId`
+- [x] Re-exports of common contract types (`CorePlugin`, `Logger`, `McpToolDefinition`, etc.) so consumers don't need to import the plugin-contract package separately
+- [x] 71 unit tests covering every subsystem; fire-and-forget audit semantics tested explicitly
+- [x] Playground app wires `auditPlugin` and `createApiKeysCollection`, exercises the architecture end-to-end
+
+Notes:
+
+- Package name `@forumone/throughline-core` (spec said `claude-cms-core`).
+- Inngest pinned to `^4.0.0`, not the spec's `^3.0.0` (Inngest 3 is end-of-life). The constructor's `signingKey` field was removed in v4 — signing is set via env on the serve handler instead — so the factory's option list is shorter than the spec's.
+- `FrameworkEvents` has an empty body (it's the augmentation seam); the eslint `no-empty-object-type` rule is suppressed at the declaration with an explanatory comment.
+- Hashing uses Web Crypto (`crypto.subtle.digest`) so the same code runs in Node and edge runtimes.
 
 ## C5 — Component Server
 
