@@ -1,5 +1,11 @@
 # @forumone/throughline-components
 
+## 0.2.2
+
+### Patch Changes
+
+- [`123d2ea`](https://github.com/forumone/throughline/commit/123d2ea0172d9495b9e2c8e8c6039e623f5fba66) Thanks [@briangraves](https://github.com/briangraves)! - The plugin now attaches an in-process composition validator to the Payload instance under `Symbol.for('@forumone/throughline/components-validator')`. The publishing server's pipeline reads that symbol to validate compositions during the publish flow without round-tripping through the MCP transport. Adds the `'composition-validation'` capability to the plugin's registry entry.
+
 ## 0.2.1
 
 ### Patch Changes

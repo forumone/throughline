@@ -1,5 +1,13 @@
 # @forumone/throughline-playground
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`123d2ea`](https://github.com/forumone/throughline/commit/123d2ea0172d9495b9e2c8e8c6039e623f5fba66), [`123d2ea`](https://github.com/forumone/throughline/commit/123d2ea0172d9495b9e2c8e8c6039e623f5fba66)]:
+  - @forumone/throughline-components@0.2.2
+  - @forumone/throughline-publishing@0.2.0
+
 ## 0.0.3
 
 ### Patch Changes
