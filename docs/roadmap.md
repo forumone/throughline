@@ -18,7 +18,7 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C7](#c7--approvals-server) | Approvals Server | ✅ Done |
 | [C8](#c8--audit-query-server) | Audit Query Server | ✅ Done |
 | [C9](#c9--integrations-server) | Integrations Server | ✅ Done |
-| [C10](#c10--workflows-package) | Workflows Package | ⏸ Not started |
+| [C10](#c10--workflows-package) | Workflows Package | ✅ Done |
 | [C11](#c11--email-package) | Email Package | ⏸ Not started |
 | [C12](#c12--forms-package) | Forms Package | ⏸ Not started |
 | [C13](#c13--cli-scaffolder) | CLI Scaffolder | ⏸ Not started |
@@ -278,6 +278,22 @@ Notes:
 Spec: `docs/spec/C10-workflows.md`
 
 Goal: Composable Inngest functions for common async work (revalidation on publish, scheduled publishes, stale-approval expiry, audit echo, healthchecks). Clients import what they want and merge into their Inngest endpoint.
+
+- [x] `packages/workflows/` scaffolded as factories-only (no Payload plugin); next listed as an optional peer (`peerDependenciesMeta.next.optional = true`); ambient `next/cache` shim so the dynamic import typechecks under `module: NodeNext`
+- [x] Shared types module covers every factory's options surface with built-in defaults, optional id overrides, and JSDoc on each option
+- [x] `createRevalidateOnPublishFunction` subscribes to `content/page.{published,unpublished,rolled_back}` and revalidates page path / listings / sitemap; built-in URL builders for pages (home → /) and posts (/blog/:slug); `revalidate` option for non-Next.js frontends; default revalidator dynamic-imports `next/cache`
+- [x] `createExecuteScheduledPublishesFunction` cron (default every 5 min) finds `_status: draft` docs past `scheduledPublishAt`, calls Publishing Server's MCP `publish` tool with Bearer auth (env fallback `PUBLISHING_SYSTEM_API_KEY`), counts published vs blocked vs error outcomes, never throws on policy rejections
+- [x] `createExpireStaleApprovalsFunction` daily cron (2am UTC) flips pending approvals past expiresAt to `expired`, writes `approval.expired` audit via `getAuditWriter`, fires `approval/expired` Inngest event for downstream notifications; supports both string and `{ id }` requestedBy shapes
+- [x] `createAuditEventEchoFunction` subscribes to `audit/event.recorded`, fires `notification/send-approval-{request,decision}` for the approval lifecycle, runs each handler in its own step.run so fan-out failures isolate
+- [x] `createHealthcheckFunction` runs configurable checks isolated behind step.run, reports failures via `onFailure`, fires `system/healthcheck` heartbeat every tick; ships `createPayloadReachableCheck` and `createManifestReachableCheck` helpers
+- [x] 28 unit tests via fake Inngest (captures createFunction definitions and `send` events) + fake Payload (applies `equals`/`less_than`/`less_than_equal`/`exists`); covers triggers, default schedules, custom URL builders, env-fallback API key, policy-rejection counting, audit fan-out, and healthcheck onFailure routing
+
+Notes:
+
+- No playground hookup: the playground doesn't ship an Inngest endpoint yet, so workflows are documented and tested but not exercised end-to-end here. A later phase will add the endpoint and wire factories into it.
+- Inngest 4.x's `createFunction` takes a single options object with `triggers` (array) and `cron` triggers expressed as `{ cron }`. The spec used the older 3-arg form.
+- `executeScheduledPublishes` deliberately does not retry on policy errors. Cron retries on a permanent error (e.g. composition failure) would log noise without making progress; the document stays at `_status: draft` until an admin intervenes.
+- `audit-event-echo` is the single fan-out point. `email` (C11) subscribes to the `notification/send-approval-*` events fired here.
 
 ## C11 — Email Package
 
