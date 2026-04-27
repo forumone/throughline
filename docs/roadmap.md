@@ -14,8 +14,8 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C3](#c3--reference-design-system) | Reference Design System | ✅ Done |
 | [C4](#c4--core-plumbing-package) | Core Plumbing Package | ✅ Done |
 | [C5](#c5--component-server) | Component Server | ✅ Done |
-| [C6](#c6--publishing-server) | Publishing Server | ⏳ Next |
-| [C7](#c7--approvals-server) | Approvals Server | ⏸ Not started |
+| [C6](#c6--publishing-server) | Publishing Server | ✅ Done |
+| [C7](#c7--approvals-server) | Approvals Server | ⏳ Next |
 | [C8](#c8--audit-query-server) | Audit Query Server | ⏸ Not started |
 | [C9](#c9--integrations-server) | Integrations Server | ⏸ Not started |
 | [C10](#c10--workflows-package) | Workflows Package | ⏸ Not started |
@@ -180,6 +180,26 @@ Notes:
 Spec: `docs/spec/C6-publishing-server.md`
 
 Goal: The framework's trust boundary. Policy-gated publish pipeline wrapping Payload's update: composition validation, a11y checks, required-field checks, embargo, approval gating, downstream event orchestration.
+
+- [x] `packages/publishing/` scaffolded with options surface (PublishableCollection / AccessibilityCheck / ApprovalResolver), Zod-validated config, and resolveCollection helper
+- [x] Three built-in accessibility checks (alt text / heading hierarchy / link labels) + `accessibilityChecks` option for client extensions
+- [x] Seven-step pipeline (exist / composition / accessibility / required-fields / embargo / approval / execute) with `runPublishPipeline` and `runPreflightPipeline`
+- [x] Composition step calls the components plugin's validator in-process via `Symbol.for('@forumone/throughline/components-validator')`
+- [x] `beforeChange` hook injected on every publishable collection rejects direct `_status` writes unless the request carries the bypass context flag
+- [x] Five MCP tools: `publish`, `unpublish`, `schedule_publish`, `get_publish_status` (read-only), `rollback`. Each takes `_meta` and writes `publishing.*` audit records (except `get_publish_status`).
+- [x] Plugin uses `requireCapability('audit-log')` and fails at init when audit isn't registered
+- [x] MCP handler attached to Payload via Symbol; endpoint at `/api/publishing/mcp`
+- [x] 80 tests covering options validation, every accessibility check, every pipeline step, the runner, the hook, and every tool's happy/error paths
+- [x] Companion change in `@forumone/throughline-components`: composition validator now exposed via Symbol so peer plugins can call it without round-tripping through MCP. Patch bump.
+- [x] Playground composes `publishingPlugin` against a Pages collection that has seo / policy / layout / publishedAt / scheduledPublishAt fields; build passes
+
+Notes:
+
+- Inngest pinned to `^4.0.0` (matches the rest of the framework; spec said `^3.0.0` but that major is EOL).
+- `routePrefix` defaults to `/publishing` (not `/api/publishing`) — Payload prepends `/api` automatically. Documented in `building-plugins.md`.
+- Tools take `AuditWriter` as a constructor dep instead of calling `getAuditWriter` inside the handler — same pattern as components.
+- Rollback restores the version into draft and stops there; users explicitly call `publish` if they want it live. Lighter-weight than the spec's "validate-then-publish" approach but easier to reason about.
+- Built-in `heading-hierarchy` check is structural (multiple Heroes flagged) rather than rendering-based. Full a11y rendering analysis is a Phase 2 service.
 
 ## C7 — Approvals Server
 
