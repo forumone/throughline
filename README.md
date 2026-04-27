@@ -2,9 +2,13 @@
 
 A conversational content management framework. Exposes Payload CMS as a set of MCP servers so marketers can operate websites through Claude rather than a traditional admin UI.
 
+## Documentation
+
+Full documentation lives at [`docs/`](./docs/) — getting-started tutorials, conceptual explanations of the architecture, how-to guides, per-package reference, and operations docs. Start at [`docs/README.md`](./docs/README.md).
+
 ## Status
 
-Pre-1.0. APIs will change. See `docs/spec/` for the phased build plan.
+Pre-1.0. APIs will change. See [`docs/roadmap.md`](./docs/roadmap.md) for phase status and [`docs/spec/`](./docs/spec/) for the original build plan.
 
 ## Packages
 
@@ -45,7 +49,7 @@ The fastest path is the scaffolder:
 pnpm create @forumone/throughline my-client-site
 ```
 
-It asks a small set of questions and produces a pnpm monorepo with Payload, every Throughline plugin, and an Inngest endpoint already wired. See [`packages/create-throughline/README.md`](./packages/create-throughline/README.md).
+It asks a small set of questions and produces a pnpm monorepo with Payload, every Throughline plugin, and an Inngest endpoint already wired. The full walkthrough is at [`docs/getting-started/scaffolding-a-project.md`](./docs/getting-started/scaffolding-a-project.md).
 
 Or consume the published packages directly:
 
@@ -53,7 +57,7 @@ Or consume the published packages directly:
 pnpm add @forumone/throughline-core @forumone/throughline-publishing
 ```
 
-A full getting-started guide is forthcoming in C14.
+See [`docs/reference/`](./docs/reference/) for per-package reference.
 
 ## Development
 
