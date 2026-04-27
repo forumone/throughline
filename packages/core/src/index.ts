@@ -21,6 +21,15 @@ export type {
   AuditWriterOptions,
 } from './audit/index.js'
 
+export {
+  DEFAULT_API_KEYS_SLUG,
+  createApiKeysCollection,
+  createBearerTokenAuthenticator,
+  generateApiKey,
+  sha256Hex,
+} from './auth/index.js'
+export type { ApiKeysCollectionOptions, BearerTokenAuthenticatorOptions } from './auth/index.js'
+
 export { ENV_VARS, validateBaseEnv, requireEnv, optionalEnv } from './env/index.js'
 export type { EnvVarName, BaseEnv } from './env/index.js'
 
