@@ -1,0 +1,63 @@
+{
+  "name": "@forumone/throughline-audit",
+  "version": "0.1.0",
+  "description": "Read-only MCP query tools over the Throughline audit log. Pairs with core's auditPlugin (which writes records).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "throughline",
+    "payload",
+    "mcp",
+    "audit"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/audit"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/audit#readme",
+  "bugs": {
+    "url": "https://github.com/forumone/throughline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "payload": "^3.0.0"
+  },
+  "dependencies": {
+    "@forumone/throughline-core": "workspace:*",
+    "@forumone/throughline-plugin-contract": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.15.0",
+    "payload": "^3.83.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
