@@ -1,5 +1,4 @@
-// Plugin and surface types are re-exported here as they are added during C6.
-// Currently only the options surface is exported.
+export { publishingPlugin } from './plugin.js'
 
 export type {
   AccessibilityCheck,
@@ -10,3 +9,10 @@ export type {
   PublishingPluginOptions,
   ResolvedCollection,
 } from './options.js'
+
+export type {
+  PipelineContext,
+  PipelineResult,
+  PipelineStep,
+  PipelineStepResult,
+} from './pipeline/index.js'

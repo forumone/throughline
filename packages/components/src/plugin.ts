@@ -7,7 +7,7 @@ import {
   getAuditWriter,
 } from '@forumone/throughline-core'
 import { type ComponentsPluginOptions, validateOptions } from './options.js'
-import { createManifestLoader } from './manifest-source.js'
+import { createManifestLoader, type ManifestLoader } from './manifest-source.js'
 import { createTfidfMatcher } from './matching/index.js'
 import {
   createFindAntiPatternTool,
@@ -18,10 +18,22 @@ import {
   createSuggestForIntentTool,
   createValidateCompositionTool,
 } from './tools/index.js'
+import {
+  type CompositionInput,
+  type CompositionResult,
+  validateComposition,
+} from './validation/composition.js'
 
 const PLUGIN_ID = '@forumone/throughline-components'
 const PLUGIN_VERSION = '0.1.0'
 const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/components-mcp-handler')
+/**
+ * Internal IPC point: peer plugins (publishing, etc.) read this symbol from
+ * the Payload instance to call composition validation directly without
+ * going through MCP. Keep this string in lockstep with the matching constant
+ * in the publishing package.
+ */
+const VALIDATOR_SYMBOL = Symbol.for('@forumone/throughline/components-validator')
 
 type McpHandler = (request: Request) => Promise<Response>
 
@@ -100,11 +112,17 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
         })
 
         attachMcpHandler(payload, handler)
+        attachValidator(payload, loader)
 
         registry.register({
           id: PLUGIN_ID,
           version: PLUGIN_VERSION,
-          capabilities: ['component-server', 'manifest-loading', 'intent-matching'],
+          capabilities: [
+            'component-server',
+            'manifest-loading',
+            'intent-matching',
+            'composition-validation',
+          ],
         })
       },
     }
@@ -113,6 +131,24 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
 function attachMcpHandler(payload: object, handler: McpHandler): void {
   Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
     value: handler,
+    enumerable: false,
+    writable: false,
+    configurable: false,
+  })
+}
+
+/**
+ * Attaches a composition-validation function to the Payload instance under
+ * VALIDATOR_SYMBOL so peer plugins (the publishing server) can validate
+ * compositions in-process without going through the MCP transport.
+ */
+function attachValidator(payload: object, loader: ManifestLoader): void {
+  const validator = async (input: CompositionInput): Promise<CompositionResult> => {
+    const manifest = await loader.get()
+    return validateComposition(input, manifest)
+  }
+  Object.defineProperty(payload, VALIDATOR_SYMBOL, {
+    value: validator,
     enumerable: false,
     writable: false,
     configurable: false,

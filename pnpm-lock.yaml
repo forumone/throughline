@@ -38,6 +38,9 @@ importers:
       '@forumone/throughline-plugin-contract':
         specifier: workspace:*
         version: link:../../packages/plugin-contract
+      '@forumone/throughline-publishing':
+        specifier: workspace:*
+        version: link:../../packages/publishing
       '@forumone/throughline-reference-ds':
         specifier: workspace:*
         version: link:../../packages/reference-ds

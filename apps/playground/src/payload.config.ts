@@ -5,6 +5,7 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { examplePlugin } from '@forumone/throughline-plugin-contract'
 import { auditPlugin, createApiKeysCollection, createInngestClient } from '@forumone/throughline-core'
 import { componentsPlugin } from '@forumone/throughline-components'
+import { publishingPlugin } from '@forumone/throughline-publishing'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { Manifest } from '@forumone/throughline-design-contract'
 import { buildConfig } from 'payload'
@@ -41,7 +42,33 @@ const Pages: CollectionConfig = {
   fields: [
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true },
-    { name: 'body', type: 'richText' },
+    {
+      name: 'seo',
+      type: 'group',
+      fields: [
+        { name: 'title', type: 'text' },
+        { name: 'description', type: 'textarea' },
+      ],
+    },
+    {
+      name: 'policy',
+      type: 'group',
+      fields: [
+        { name: 'requiresApproval', type: 'checkbox', defaultValue: false },
+        { name: 'embargoedUntil', type: 'date' },
+        { name: 'expiresAt', type: 'date' },
+      ],
+    },
+    {
+      name: 'layout',
+      type: 'array',
+      fields: [
+        { name: 'blockType', type: 'text', required: true },
+        { name: 'variant', type: 'text' },
+      ],
+    },
+    { name: 'publishedAt', type: 'date', admin: { readOnly: true } },
+    { name: 'scheduledPublishAt', type: 'date' },
   ],
   versions: { drafts: true },
 }
@@ -78,6 +105,10 @@ export default buildConfig({
       // The plugin's Zod schema validates the shape at load time anyway.
       manifest: { type: 'object', manifest: referenceManifest as unknown as Manifest },
       matching: { strategy: 'tfidf' },
+    }),
+    publishingPlugin({
+      inngest,
+      collections: [{ slug: Pages.slug }],
     }),
     examplePlugin({ greeting: 'Hello from the playground' }),
   ],
