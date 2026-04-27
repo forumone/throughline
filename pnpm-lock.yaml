@@ -300,6 +300,43 @@ importers:
         specifier: ^8.18.0
         version: 8.59.0(eslint@9.39.4)(typescript@5.9.3)
 
+  packages/integrations:
+    dependencies:
+      '@forumone/throughline-core':
+        specifier: workspace:*
+        version: link:../core
+      '@forumone/throughline-plugin-contract':
+        specifier: workspace:*
+        version: link:../plugin-contract
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      '@forumone/throughline-eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@forumone/throughline-tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^20.17.0
+        version: 20.19.39
+      eslint:
+        specifier: ^9.15.0
+        version: 9.39.4
+      inngest:
+        specifier: ^4.2.0
+        version: 4.2.4(@opentelemetry/core@2.7.0(@opentelemetry/api@1.9.1))(next@16.2.4(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(react@19.2.5)(typescript@5.9.3)(zod@3.25.76)
+      payload:
+        specifier: ^3.83.0
+        version: 3.83.0(graphql@16.13.2)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.39)(happy-dom@20.9.0)(jsdom@29.0.2)(lightningcss@1.32.0)(sass@1.77.4)
+
   packages/plugin-contract:
     dependencies:
       payload:
