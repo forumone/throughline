@@ -1,6 +1,6 @@
 # @forumone/throughline-plugin-contract
 
-Shared type contracts every Throughline core plugin satisfies. This package is workspace-internal — it is not published to npm. Core packages import types from here so the plugin surface stays consistent across the framework.
+Shared type contracts every Throughline core plugin satisfies, plus the cross-plugin runtime registry. Core packages import from here so the plugin surface stays consistent across the framework. It is published because every core plugin imports `getPluginRegistry` from it at runtime.
 
 ## What's in here
 
