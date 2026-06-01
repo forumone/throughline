@@ -1,8 +1,17 @@
 {
   "name": "@forumone/throughline-plugin-contract",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Shared plugin and MCP contract types for @forumone/throughline core packages. Never published.",
+  "version": "0.2.0",
+  "description": "Shared plugin and MCP contract types and the cross-plugin registry for @forumone/throughline core packages.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/plugin-contract"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/plugin-contract#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

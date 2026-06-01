@@ -10,7 +10,7 @@
     "./manifest": "./src/manifest.ts"
   },
   "dependencies": {
-    "@forumone/throughline-reference-ds": "^0.1.0"
+    "@forumone/throughline-reference-ds": "^0.2.0"
   },
   "devDependencies": {
     "typescript": "^5.6.0"
