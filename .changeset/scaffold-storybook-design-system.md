@@ -11,3 +11,4 @@ Also:
 - The web app now imports the workspace design system's built manifest (`<scope>/design-system/manifest`) instead of the npm reference-ds manifest, and the root `pnpm dev` builds the design system first so the manifest exists.
 - Root scripts `storybook`, `build-storybook`, and `validate`; turbo tasks to match; `design-system` added to the workspace globs.
 - Fix: template `.gitignore` files are now authored as `gitignore` and restored on output, so they survive npm publish (previously the generated project shipped without a root `.gitignore`).
+- Fix: the generated web app now typechecks clean. Adds the `@payload-config` tsconfig path; corrects drifted plugin APIs in `route.ts` (`publishingApiKey`, `createPayloadReachableCheck()`) and `payload.config.ts` (`auditQueryPlugin({})`, `buildActionUrl` async `{ approvalId, action, approverId }`, manifest typed as `Manifest`).
