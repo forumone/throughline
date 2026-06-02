@@ -1,0 +1,49 @@
+.figure {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding: 0 var(--spacing-container);
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-tertiary);
+}
+
+.aspect16x9 {
+  aspect-ratio: 16 / 9;
+}
+
+.aspect4x3 {
+  aspect-ratio: 4 / 3;
+}
+
+.aspect-square {
+  aspect-ratio: 1 / 1;
+}
+
+.aspect-auto {
+  aspect-ratio: auto;
+}
+
+.media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aspect-auto .media {
+  position: static;
+  height: auto;
+}
+
+.caption {
+  margin-top: var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+}

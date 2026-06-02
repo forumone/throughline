@@ -1,0 +1,124 @@
+.hero {
+  padding: var(--spacing-section) 0;
+  position: relative;
+}
+
+.bg-primary {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.bg-secondary {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.bg-inverse {
+  background: var(--color-bg-inverse);
+  color: var(--color-text-inverse);
+}
+
+.container {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 var(--spacing-container);
+  display: grid;
+  gap: var(--spacing-12);
+}
+
+.split .container {
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+}
+
+.compact {
+  padding: var(--spacing-16) 0;
+}
+
+.content {
+  max-width: 42rem;
+}
+
+.eyebrow {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-3);
+}
+
+.headline {
+  font-size: var(--font-size-5xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  margin-bottom: var(--spacing-6);
+}
+
+.body {
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-8);
+}
+
+.bg-inverse .body {
+  color: var(--color-text-inverse);
+  opacity: 0.85;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-4);
+  flex-wrap: wrap;
+}
+
+.primaryCta,
+.secondaryCta {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-3) var(--spacing-6);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.primaryCta {
+  background: var(--color-brand-primary);
+  color: var(--color-text-inverse);
+}
+
+.primaryCta:hover {
+  background: var(--color-brand-primary-hover);
+}
+
+.secondaryCta {
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.bg-inverse .secondaryCta {
+  border-color: var(--color-text-inverse);
+  color: var(--color-text-inverse);
+}
+
+.secondaryCta:hover {
+  background: var(--color-bg-secondary);
+}
+
+.media img {
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 768px) {
+  .split .container {
+    grid-template-columns: 1fr;
+  }
+
+  .headline {
+    font-size: var(--font-size-4xl);
+  }
+}

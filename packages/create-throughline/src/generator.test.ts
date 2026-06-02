@@ -90,27 +90,67 @@ describe('generate (with reference DS)', () => {
     expect(webJson.name).toBe('demo-web')
   })
 
-  it('wires the reference DS dependency into apps/web', async () => {
+  it('wires the design-system workspace dependency into apps/web', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const webJson = JSON.parse(
       await readFile(join(target, 'apps/web/package.json'), 'utf-8'),
     ) as { dependencies: Record<string, string> }
-    expect(webJson.dependencies['@forumone/throughline-reference-ds']).toBeDefined()
+    expect(webJson.dependencies['@acme/design-system']).toBe('workspace:*')
+    // The npm reference-ds package is vendored, not depended on.
+    expect(webJson.dependencies['@forumone/throughline-reference-ds']).toBeUndefined()
   })
 
-  it('imports the reference manifest in payload.config.ts', async () => {
+  it('imports the design-system manifest in payload.config.ts', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
-    expect(config).toContain("from '@forumone/throughline-reference-ds/manifest'")
-    expect(config).toContain('referenceManifest')
+    expect(config).toContain("from '@acme/design-system/manifest'")
+    expect(config).toContain('designSystemManifest')
     expect(config).not.toContain('your-design-system.example.com')
   })
 
-  it('creates the design-system overlay package', async () => {
+  it('creates a top-level design-system Storybook authoring package', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
-    expect(existsSync(join(target, 'packages/design-system/package.json'))).toBe(true)
-    expect(existsSync(join(target, 'packages/design-system/src/index.ts'))).toBe(true)
-    expect(existsSync(join(target, 'packages/design-system/src/manifest.ts'))).toBe(true)
+    // Lives at the top level (a sibling of apps/), not under packages/.
+    expect(existsSync(join(target, 'design-system/package.json'))).toBe(true)
+    expect(existsSync(join(target, 'packages/design-system'))).toBe(false)
+    // Vendored, editable component source + Storybook + Foundations.
+    expect(existsSync(join(target, 'design-system/.storybook/main.ts'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/src/components/Hero/Hero.tsx'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/src/components/Hero/Hero.contract.ts'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/src/foundations/LayoutContainers.stories.tsx'))).toBe(true)
+    // .gitignore is authored as `gitignore` and restored on output.
+    expect(existsSync(join(target, 'design-system/.gitignore'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/gitignore'))).toBe(false)
+  })
+
+  it('names the design-system package from the scope (or project name)', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const scoped = JSON.parse(
+      await readFile(join(target, 'design-system/package.json'), 'utf-8'),
+    ) as { name: string }
+    expect(scoped.name).toBe('@acme/design-system')
+
+    const noScopeTarget = join(dirname(target), 'noscope')
+    await generate(
+      makeAnswers(noScopeTarget, { packageScope: '', projectName: 'demo' }),
+      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
+    )
+    const unscoped = JSON.parse(
+      await readFile(join(noScopeTarget, 'design-system/package.json'), 'utf-8'),
+    ) as { name: string }
+    expect(unscoped.name).toBe('demo-design-system')
+  })
+
+  it('adds storybook + validate scripts and lists design-system in the workspace', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const rootJson = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8')) as {
+      scripts: Record<string, string>
+    }
+    expect(rootJson.scripts.storybook).toBeDefined()
+    expect(rootJson.scripts['build-storybook']).toBeDefined()
+    expect(rootJson.scripts.validate).toBeDefined()
+    const workspace = await readFile(join(target, 'pnpm-workspace.yaml'), 'utf-8')
+    expect(workspace).toContain('design-system')
   })
 
   it('inngest endpoint registers all framework functions', async () => {
@@ -153,7 +193,7 @@ describe('generate (without reference DS)', () => {
     await rm(workDir, { recursive: true, force: true })
   })
 
-  it('omits the reference DS dependency from apps/web', async () => {
+  it('omits any design-system dependency from apps/web', async () => {
     await generate(
       makeAnswers(target, { useReferenceDs: false }),
       { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
@@ -162,18 +202,20 @@ describe('generate (without reference DS)', () => {
       await readFile(join(target, 'apps/web/package.json'), 'utf-8'),
     ) as { dependencies: Record<string, string> }
     expect(webJson.dependencies['@forumone/throughline-reference-ds']).toBeUndefined()
+    expect(webJson.dependencies['@acme/design-system']).toBeUndefined()
   })
 
-  it('writes the placeholder design-system package + README', async () => {
+  it('writes a placeholder top-level design-system package + Storybook + README', async () => {
     await generate(
       makeAnswers(target, { useReferenceDs: false }),
       { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
     )
-    expect(existsSync(join(target, 'packages/design-system/package.json'))).toBe(true)
-    expect(existsSync(join(target, 'packages/design-system/src/index.ts'))).toBe(true)
-    expect(existsSync(join(target, 'packages/design-system/README.md'))).toBe(true)
-    // No manifest re-export in the placeholder overlay.
-    expect(existsSync(join(target, 'packages/design-system/src/manifest.ts'))).toBe(false)
+    expect(existsSync(join(target, 'design-system/package.json'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/src/index.ts'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/README.md'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/.storybook/main.ts'))).toBe(true)
+    // No vendored reference components in the placeholder overlay.
+    expect(existsSync(join(target, 'design-system/src/components/Hero/Hero.tsx'))).toBe(false)
   })
 
   it('uses the URL manifest config in payload.config.ts', async () => {
@@ -184,5 +226,35 @@ describe('generate (without reference DS)', () => {
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
     expect(config).toContain('your-design-system.example.com')
     expect(config).not.toContain("from '@forumone/throughline-reference-ds/manifest'")
+  })
+})
+
+describe('vendored design-system template safety', () => {
+  // The renderer treats `{{word}}` / `{{#if}}` as template syntax. Vendored
+  // reference-DS source must not contain those patterns, or scaffolding would
+  // corrupt component files (React inline styles `style={{ ... }}` are safe —
+  // they contain spaces/colons and never match `{{word}}`).
+  const vendoredRoot = resolve(TEMPLATES_DIR, 'with-reference-ds/design-system')
+  const dangerous = /\{\{(?:\w+)\}\}|\{\{#if|\{\{\/if|\{\{else\}\}/
+
+  it('contains no renderer-colliding handlebars patterns', async () => {
+    const { readdir } = await import('node:fs/promises')
+    async function walk(dir: string): Promise<string[]> {
+      const out: string[] = []
+      for (const entry of await readdir(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules') continue
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) out.push(...(await walk(full)))
+        // Skip the one intentionally-templated file.
+        else if (entry.isFile() && !entry.name.endsWith('.template')) out.push(full)
+      }
+      return out
+    }
+    const offenders: string[] = []
+    for (const file of await walk(vendoredRoot)) {
+      const text = await readFile(file, 'utf-8')
+      if (dangerous.test(text)) offenders.push(file)
+    }
+    expect(offenders).toEqual([])
   })
 })

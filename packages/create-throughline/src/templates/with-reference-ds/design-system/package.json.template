@@ -1,0 +1,62 @@
+{
+  "name": "{{designSystemName}}",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./manifest": "./dist/manifest.json",
+    "./styles.css": "./dist/styles/index.css",
+    "./styles/tokens.css": "./dist/styles/tokens.css",
+    "./styles/reset.css": "./dist/styles/reset.css",
+    "./styles/base.css": "./dist/styles/base.css",
+    "./tokens": {
+      "types": "./dist/tokens/index.d.ts",
+      "default": "./dist/tokens/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm build:tokens-css && tsc -b && pnpm build:styles && pnpm build:manifest",
+    "build:tokens-css": "tsx scripts/build-tokens-css.ts",
+    "build:styles": "tsx scripts/build-styles.ts",
+    "build:manifest": "tsx scripts/build-manifest.ts",
+    "build-storybook": "storybook build",
+    "storybook": "storybook dev -p 6006",
+    "dev": "tsc -b -w",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "validate": "tsx scripts/validate.ts",
+    "clean": "rm -rf dist .turbo storybook-static *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@forumone/throughline-design-contract": "^0.2.0",
+    "clsx": "^2.1.1"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^10.3.5",
+    "@storybook/react-vite": "^10.3.5",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20.17.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "jsdom": "^29.0.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "storybook": "^10.3.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.0",
+    "vite": "^8.0.9",
+    "vitest": "^2.1.0"
+  }
+}

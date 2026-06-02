@@ -7,6 +7,17 @@
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
       "env": ["NODE_ENV"]
     },
+    "build-storybook": {
+      "dependsOn": ["^build"],
+      "outputs": ["storybook-static/**"]
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
+    },
+    "validate": {
+      "dependsOn": ["build"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

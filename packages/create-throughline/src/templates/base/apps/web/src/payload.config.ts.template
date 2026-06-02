@@ -16,7 +16,7 @@ import { auditQueryPlugin } from '@forumone/throughline-audit'
 import { integrationsPlugin } from '@forumone/throughline-integrations'
 import { emailPlugin } from '@forumone/throughline-email'
 import { formsPlugin } from '@forumone/throughline-forms'
-{{#if useReferenceDs}}import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
+{{#if useReferenceDs}}import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
 {{/if}}
 
 const __filename = fileURLToPath(import.meta.url)
@@ -101,7 +101,7 @@ export default buildConfig({
     auditPlugin({ inngest }),
 
     componentsPlugin({
-      {{#if useReferenceDs}}manifest: { type: 'object', manifest: referenceManifest },
+      {{#if useReferenceDs}}manifest: { type: 'object', manifest: designSystemManifest },
       {{else}}// TODO: point at your design system manifest
       manifest: { type: 'url', url: 'https://your-design-system.example.com/manifest.json' },
       {{/if}}matching: { strategy: 'tfidf' },

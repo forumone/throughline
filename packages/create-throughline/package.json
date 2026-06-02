@@ -23,6 +23,7 @@
     "build": "tsc -b && pnpm copy-templates && pnpm chmod-bin",
     "copy-templates": "node ./scripts/copy-templates.mjs",
     "chmod-bin": "node ./scripts/chmod-bin.mjs",
+    "sync-reference-ds": "tsx scripts/sync-reference-ds.ts",
     "dev": "tsc -b -w",
     "clean": "rm -rf dist .turbo *.tsbuildinfo",
     "typecheck": "tsc --noEmit",
@@ -58,6 +59,7 @@
     "@forumone/throughline-tsconfig": "workspace:*",
     "@types/node": "^20.17.0",
     "eslint": "^9.15.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   },
