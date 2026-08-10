@@ -126,6 +126,39 @@ function coerceField(
 
     case 'array': {
       if (!field.of || !Array.isArray(value)) return undefined
+
+      /*
+      An array of primitives comes back as an array of primitives.
+
+      A contract that says `tags: string[]` is expressed in the manifest as an
+      array whose `of` is a single `text` child — `[{ name: 'tag' }]` — because
+      Payload has no bare array-of-strings field and a row needs a column to
+      live in. Mapping every row to an object regardless turns `['AI']` into
+      `[{ tag: 'AI' }]`, which type-checks nowhere and renders as
+      `[object Object]`.
+
+      Every one of the 24 single-child arrays in the design system is a scalar
+      array — `KeyPoints.points`, `TagList.tags`, `AudioPlayer.speeds` (numbers,
+      hence coercing the value rather than stringifying it), `TextHero.logos`.
+      Checked against each component's own prop type, not inferred from the
+      shape. If a genuine one-field *object* row ever appears, this is where it
+      breaks, and the fix is a marker in the contract rather than a guess here.
+      */
+      const [only] = field.of
+      if (field.of.length === 1 && only && !only.of) {
+        return value
+          .map(row =>
+            coerceField(
+              component,
+              only,
+              (row as Record<string, unknown>)[only.name],
+              ctx,
+              `${path}.${only.name}`,
+            ),
+          )
+          .filter(entry => entry !== undefined)
+      }
+
       return value.map(row => {
         const source = row as Record<string, unknown>
         const out: Record<string, unknown> = {}
