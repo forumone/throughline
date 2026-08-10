@@ -29,6 +29,14 @@ export interface GenerateOptions {
   linkCollections: string[]
   resolveSelectOptions: (component: string, path: string) => readonly string[] | null
   resolveNamedOptions: (typeName: string) => readonly string[] | null
+  /**
+   * A thumbnail for the block picker, or null for none.
+   *
+   * Payload draws a generic placeholder when a block has no `imageURL`, so a
+   * palette this size renders as dozens of identical grey mountains — worse
+   * than nothing, because the uniformity implies the images carry information.
+   */
+  resolvePreview?: (component: string) => { url: string; alt: string } | null
 }
 
 export interface GeneratedBlock {
@@ -79,9 +87,12 @@ export function generateBlock(
     .map(field => toPayloadField(field, ctx))
     .filter(field => field !== null)
 
+  const preview = options.resolvePreview?.(component.name) ?? null
+
   return {
     slug: component.name,
     interfaceName: `${component.name}Block`,
+    ...(preview ? { imageURL: preview.url, imageAltText: preview.alt } : {}),
     labels: {
       singular: humanize(component.name),
       plural: humanize(component.name),
