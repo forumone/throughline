@@ -48,9 +48,7 @@ export function RenderBlocks({
 
         if (!Component || !contractFields) {
           return (
-            <Fragment key={block.id ?? index}>
-              {onUnknownBlock?.(block.blockType) ?? null}
-            </Fragment>
+            <Fragment key={block.id ?? index}>{onUnknownBlock?.(block.blockType) ?? null}</Fragment>
           )
         }
 

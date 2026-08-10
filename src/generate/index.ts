@@ -1,10 +1,5 @@
 export { generateBlock, generateBlocks, isBlockCandidate } from './blocks'
-export type {
-  GenerateOptions,
-  GeneratedBlock,
-  ManifestComponent,
-  ManifestLike,
-} from './blocks'
+export type { GenerateOptions, GeneratedBlock, ManifestComponent, ManifestLike } from './blocks'
 export { linkField, toPayloadField } from './fields'
 export type { ContentField, FieldContext } from './fields'
 export { collectSelectOptions } from './selectOptionSnapshot'

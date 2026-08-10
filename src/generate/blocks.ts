@@ -70,10 +70,7 @@ export function isBlockCandidate(component: ManifestComponent, overrides: Overri
  * Kebab-casing the slugs would make every block on every page unpublishable,
  * and the error would point at the design system rather than at the naming.
  */
-export function generateBlock(
-  component: ManifestComponent,
-  options: GenerateOptions,
-): Block {
+export function generateBlock(component: ManifestComponent, options: GenerateOptions): Block {
   const ctx: FieldContext = {
     component: component.name,
     overrides: options.overrides,
