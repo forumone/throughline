@@ -1,0 +1,30 @@
+{
+  "name": "@forumone/design-system-payload",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Turns a Throughline design-system manifest into Payload blocks, and those blocks back into React.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generate": "./src/generate/index.ts",
+    "./render": "./src/render/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "payload": "^3.87.1",
+    "react": "^19.0.0"
+  },
+  "dependencies": {
+    "@forumone/throughline-design-contract": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "payload": "^3.87.1",
+    "react": "^19.2.7",
+    "tsx": "^4.23.11",
+    "typescript": "^5.9.3"
+  }
+}
