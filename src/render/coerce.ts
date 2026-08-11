@@ -30,7 +30,16 @@ export interface LinkValue {
 export interface CoerceContext {
   overrides: Overrides
   /** Turns a stored media value into a URL. Null when it cannot be resolved. */
-  resolveMedia: (value: unknown) => MediaLike | null
+  /**
+   * Turns a stored upload into a media document.
+   *
+   * `where` names the component and field the image is for — `CardGrid` /
+   * `items.image`, `ImageHero` / `image.src`. The host uses it to decide how
+   * large the image needs to be, which it cannot know from the value alone: a
+   * card and a full-bleed hero hold the same shape and want very different
+   * numbers of pixels.
+   */
+  resolveMedia: (value: unknown, where: { component: string; path: string }) => MediaLike | null
   /** Turns an internal reference into a path. */
   resolveHref: (link: LinkValue) => string | undefined
   /** Turns Lexical state into React. Project-specific, so it is injected. */
@@ -102,7 +111,7 @@ function coerceField(
       return ctx.renderRichText(value)
 
     case 'image': {
-      const media = ctx.resolveMedia(value)
+      const media = ctx.resolveMedia(value, { component, path })
       return media?.url ?? undefined
     }
 
