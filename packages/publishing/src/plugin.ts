@@ -7,11 +7,7 @@ import {
   defaultLogger,
   getAuditWriter,
 } from '@forumone/throughline-core'
-import {
-  type PublishingPluginOptions,
-  resolveCollection,
-  validateOptions,
-} from './options.js'
+import { type PublishingPluginOptions, validateOptions } from './options.js'
 import { createBlockStatusWritesHook } from './hooks/block-status-writes.js'
 import { createRecordDraftWritesHook } from './hooks/draft-writes.js'
 import { createAdminEndpoints } from './endpoints/admin.js'
@@ -65,7 +61,7 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
           ],
         },
         ...(adminComponents
-          ? { admin: withAdminControls(collection, routePrefix, options) }
+          ? { admin: withAdminControls(collection, routePrefix) }
           : {}),
       } satisfies CollectionConfig
     })
@@ -157,9 +153,7 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
 function withAdminControls(
   collection: CollectionConfig,
   routePrefix: string,
-  options: PublishingPluginOptions,
 ): NonNullable<CollectionConfig['admin']> {
-  const resolved = resolveCollection(options, collection.slug)
   const edit = collection.admin?.components?.edit ?? {}
 
   return {
@@ -173,10 +167,7 @@ function withAdminControls(
               PublishButton: {
                 path: CLIENT_ENTRY,
                 exportName: 'PublishButton',
-                clientProps: {
-                  routePrefix,
-                  publishedAtField: resolved.publishedAtField,
-                },
+                clientProps: { routePrefix },
               },
             }
           : {}),

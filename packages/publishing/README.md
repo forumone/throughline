@@ -103,17 +103,28 @@ The plugin installs two hooks on every configured collection, and they work as a
 - `beforeOperation` records whether the update in flight is a draft write.
 - `beforeChange` rejects writes that change the **live** document's `_status`.
 
+The question they answer is not "did `_status` change" but **would this write change what the public sees**:
+
 | Write | Result |
 |---|---|
-| `draft: true` on a draft or published document | **allowed** — writes a version, live status unchanged |
-| `draft: false`, `_status: 'published'` | **blocked** — publish through the pipeline |
-| `draft: false`, `_status: 'draft'` on a published document | **blocked** — unpublish through the pipeline |
+| Any `draft: true` save | **allowed** — writes a version, the live document is untouched |
+| A field edit of a published document with nothing pending | **allowed** — status unchanged, no draft to promote |
+| A `_status: 'draft'` write to a document that was never published, or is already down | **allowed** — nothing is live |
+| `_status: 'draft'` on a live document | **blocked** — unpublish through the pipeline |
+| `_status: 'published'` on a draft document | **blocked** — publish through the pipeline |
+| A non-draft write while a draft is pending | **blocked** — this is the publish, or an accidental unpublish |
 | `draft: true` with `_status: 'published'` | **blocked** — Payload treats this as a publish, not a draft save |
 | Any write carrying `bypassPublishingServer` | **allowed** |
 
-Draft saves have to be allowed explicitly because Payload sets `data._status = 'draft'` on every `draft: true` update before `beforeChange` runs, whether or not the caller supplied it — so at that point a draft save of a published document and an unpublish look identical. The `draft` flag is read from the operation's own arguments in `beforeOperation`, which sees it the same way on the Local API, REST and GraphQL. (`req.query.draft` is only populated on the REST path, so keying on the request would cover the admin and silently miss scripts.)
+Three things about Payload's update pipeline make this less obvious than it looks, and each has caused a defect here:
 
-If you install `createBlockStatusWritesHook` yourself without the recorder, it fails closed: every status change is blocked.
+1. **`data` is the stored document merged with the caller's changes**, so `_status` is present on nearly every update. An ordinary field edit of a published page arrives carrying `_status: 'published'`. The presence of `_status` means nothing by itself.
+2. **Payload injects `data._status = 'draft'` into every `draft: true` update** before `beforeChange` runs, whether or not the caller supplied it — so a draft save of a published document is shaped exactly like an unpublish. The real `draft` flag is read in `beforeOperation`, which sees it identically on the Local API, REST and GraphQL. (`req.query.draft` is only populated on the REST path, so keying on the request would cover the admin and silently miss scripts.)
+3. **`originalDoc` is the latest version, not the live document.** Once a draft is pending on a published page, `originalDoc._status` is `'draft'` while the page is still live. Comparing the two statuses therefore reads a genuine unpublish as a harmless no-op.
+
+A consequence of (1) and (3) worth knowing: once a draft is pending, a plain `payload.update(...)` with no `draft: true` would carry the pending draft's `'draft'` status and take the page down. That is blocked. Pass `draft: true` to edit the draft, or publish through the pipeline.
+
+If you install `createBlockStatusWritesHook` yourself without the recorder, it fails closed: every status change is blocked. The behaviour above is verified against a real Payload instance in `block-status-writes.integration.test.ts`.
 
 ## Bypassing the pipeline
 

@@ -15,8 +15,6 @@ import { callPublishingEndpoint, describeBlock } from './publishing-client.js'
 export interface ThroughlinePublishButtonProps {
   /** Route prefix the plugin is mounted under. Injected via `clientProps`. */
   routePrefix?: string
-  /** Publish-timestamp field for this collection. Injected via `clientProps`. */
-  publishedAtField?: string
 }
 
 /**
@@ -39,7 +37,6 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
 
   const {
     collectionSlug,
-    data,
     hasPublishedDoc,
     hasPublishPermission,
     id,
@@ -51,7 +48,7 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
   } = useDocumentInfo()
 
   const { config } = useConfig()
-  const { reset, submit } = useForm()
+  const { submit } = useForm()
   const modified = useFormModified()
   const { t } = useTranslation()
   const [publishing, setPublishing] = useState(false)
@@ -108,13 +105,14 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
         return
       }
 
-      await reset({
-        ...(data ?? {}),
-        _status: 'published',
-        ...(props.publishedAtField && result.body.publishedAt
-          ? { [props.publishedAtField]: result.body.publishedAt }
-          : {}),
-      })
+      // Deliberately not resetting the form here. The draft save above
+      // already merged the server's response into form state, so the fields
+      // on screen are what was just written. Resetting from
+      // `useDocumentInfo().data` — the document as it was when the view
+      // mounted — would replace the editor's saved edits with the pre-edit
+      // values and read as though the publish had silently discarded them.
+      //
+      // The status indicators below are what actually needs updating.
       setHasPublishedDoc(true)
       setUnpublishedVersionCount(0)
       setMostRecentVersionIsAutosaved(false)
@@ -137,12 +135,9 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
   }, [
     api,
     collectionSlug,
-    data,
     id,
     modified,
-    props.publishedAtField,
     publishing,
-    reset,
     routePrefix,
     serverURL,
     setHasPublishedDoc,
