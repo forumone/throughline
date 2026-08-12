@@ -32,6 +32,36 @@ describe('runPublishPipeline', () => {
     expect(send).toHaveBeenCalled()
   })
 
+  it('carries a step warning through to the result without failing the publish', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const send = vi.fn(async () => {
+      throw new Error('Inngest API Error: 401 Event key not found')
+    })
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send } as unknown as Inngest,
+      document: passingDoc(),
+    })
+    attachComponentValidator(ctx.payload, async () => ({ valid: true, issues: [] }))
+
+    const result = await runPublishPipeline(ctx)
+
+    expect(result.success).toBe(true)
+    expect(result.publishedAt).toEqual(expect.any(String))
+    expect(result.warnings?.[0]).toContain('content/page.published')
+  })
+
+  it('omits warnings entirely when every step is clean', async () => {
+    const ctx = makeContext({
+      payload: { update: vi.fn(async () => ({ id: 'p1' })) } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: passingDoc(),
+    })
+    attachComponentValidator(ctx.payload, async () => ({ valid: true, issues: [] }))
+
+    expect((await runPublishPipeline(ctx)).warnings).toBeUndefined()
+  })
+
   it('stops at the first failing step and reports it', async () => {
     const update = vi.fn(async () => ({ id: 'p1' }))
     const send = vi.fn(async () => ({}))

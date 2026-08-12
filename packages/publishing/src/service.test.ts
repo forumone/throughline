@@ -150,6 +150,94 @@ describe('createPublishingService', () => {
     expect(updateArgs).not.toHaveProperty('user')
   })
 
+  // Reported against 0.3.0: with no valid INNGEST_EVENT_KEY the publish
+  // returned 500 on a document that was published, and the audit event was
+  // never written.
+  it('reports a publish as successful when only the event emission fails', async () => {
+    const deps = makeDeps({
+      document: publishableDoc,
+      inngestSend: vi.fn(async () => {
+        throw new Error('Inngest API Error: 401 Event key not found')
+      }),
+    })
+    const service = createPublishingService(deps)
+
+    const result = await service.publish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: toAuthenticatedUser(editor), enforceAccessAs: editor, channel: 'admin' },
+    })
+
+    expect(result.published).toBe(true)
+    expect(result.publishedAt).toEqual(expect.any(String))
+    expect(result.warnings?.[0]).toContain('content/page.published')
+    // The write happened, and the audit trail records it.
+    expect(deps.spies.payloadUpdate).toHaveBeenCalledTimes(1)
+    expect(deps.auditMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'publishing.publish', success: true }),
+    )
+  })
+
+  it('logs the warning rather than staying silent about it', async () => {
+    const warn = vi.fn()
+    const deps = makeDeps({
+      document: publishableDoc,
+      inngestSend: vi.fn(async () => {
+        throw new Error('Event key not found')
+      }),
+    })
+    const service = createPublishingService({
+      ...deps,
+      logger: { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() },
+    })
+
+    await service.publish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+
+    expect(warn).toHaveBeenCalledWith(
+      'Publish completed with warnings',
+      expect.objectContaining({ warnings: [expect.stringContaining('Event key not found')] }),
+    )
+  })
+
+  it('reports an unpublish as successful when only the event emission fails', async () => {
+    const deps = makeDeps({
+      document: { ...publishableDoc, _status: 'published' },
+      inngestSend: vi.fn(async () => {
+        throw new Error('Inngest API Error: 401 Event key not found')
+      }),
+    })
+    const service = createPublishingService(deps)
+
+    const result = await service.unpublish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: toAuthenticatedUser(editor), enforceAccessAs: editor, channel: 'admin' },
+    })
+
+    expect(result.unpublished).toBe(true)
+    expect(result.warnings?.[0]).toContain('content/page.unpublished')
+    expect(deps.auditMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'publishing.unpublish', success: true }),
+    )
+  })
+
+  it('carries no warnings on a clean publish', async () => {
+    const deps = makeDeps({ document: publishableDoc })
+    const service = createPublishingService(deps)
+
+    const result = await service.publish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+
+    expect(result.warnings).toBeUndefined()
+  })
+
   it('unpublishes a published document and fires the event', async () => {
     const deps = makeDeps({ document: { ...publishableDoc, _status: 'published' } })
     const service = createPublishingService(deps)

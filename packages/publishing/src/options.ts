@@ -56,6 +56,15 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
   collections: PublishableCollection[]
   /** Optional: extra accessibility checks beyond the built-ins. */
   accessibilityChecks?: AccessibilityCheck[]
+  /**
+   * Optional: names of built-in accessibility checks to skip —
+   * `'alt-text'`, `'heading-hierarchy'`, `'link-labels'`.
+   *
+   * `accessibilityChecks` only appends, so without this a built-in that
+   * misfires on a host's content shape blocks every publish until the
+   * plugin ships a fix. Switch one off here and supply your own.
+   */
+  disableAccessibilityChecks?: string[]
   /** Optional: resolver consulted when a document's policy requires approval. */
   approvalResolver?: ApprovalResolver
   /** Required: Inngest client used to fire publishing events. */

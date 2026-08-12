@@ -113,9 +113,21 @@ It skips composition, accessibility, required-field, embargo, and approval check
 
 > **Note:** the hook guards `update` only. `payload.create({ data: { _status: 'published' } })` is not intercepted, so a create can publish without the pipeline. Save as a draft and publish in a second step if that matters to you.
 
+## Warnings
+
+A publish or unpublish writes the document first, then emits its Inngest event. The event is a consequence of the write, not a step in it — so if the emission fails, the action still reports success and carries a warning:
+
+```jsonc
+{ "published": true, "publishedAt": "…", "warnings": ["The content/page.published event could not be sent, …"] }
+```
+
+The admin shows these as a warning toast on an otherwise successful publish. Reporting failure for a write that landed would tell an editor their change isn't live when it is, and the obvious response to that is to publish again over live content.
+
+`rollback` and `schedule_publish` behave the same way.
+
 ## Custom accessibility checks
 
-The built-in checks (alt text, heading hierarchy, link labels) are exported from `@forumone/throughline-publishing/checks`. Add your own via `accessibilityChecks`:
+The built-in checks (`alt-text`, `heading-hierarchy`, `link-labels`) are exported from `@forumone/throughline-publishing/checks`. Add your own via `accessibilityChecks`:
 
 ```ts
 publishingPlugin({
@@ -129,3 +141,18 @@ publishingPlugin({
   ],
 })
 ```
+
+`accessibilityChecks` appends. To switch a built-in off — because it misfires on your content shape, or you want to replace it — name it in `disableAccessibilityChecks`:
+
+```ts
+publishingPlugin({
+  inngest,
+  collections: [{ slug: 'pages' }],
+  disableAccessibilityChecks: ['alt-text'],
+  accessibilityChecks: [myOwnAltTextCheck],
+})
+```
+
+### A note on uploads
+
+The `alt-text` check walks the document for image-shaped objects but does **not** descend into a populated upload's `sizes` map. Payload's generated derivatives carry `filename` and `mimeType` but never `alt` — that lives on the parent document — so treating them as images would report one false failure per configured `imageSize`. Alt text is checked once, on the parent.

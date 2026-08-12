@@ -1,6 +1,7 @@
 import type { Payload, TypedUser } from 'payload'
 import type { AuditActor, AuditWriter } from '@forumone/throughline-core'
-import type { AuthenticatedUser } from '@forumone/throughline-plugin-contract'
+import type { AuthenticatedUser, Logger } from '@forumone/throughline-plugin-contract'
+import { sendEventSafely } from './events.js'
 import { type PublishingPluginOptions, resolveCollection } from './options.js'
 import { runPreflightPipeline, runPublishPipeline } from './pipeline/index.js'
 import type { PipelineIssue, PipelineMeta } from './pipeline/types.js'
@@ -44,11 +45,17 @@ export interface PublishOutcome {
   code?: string
   issues?: PipelineIssue[]
   suggestion?: string
+  /**
+   * Non-fatal problems. The publish happened; something downstream of it
+   * did not. Present on a successful result.
+   */
+  warnings?: string[]
 }
 
 export interface UnpublishOutcome {
   unpublished: boolean
   reason?: string
+  warnings?: string[]
 }
 
 export interface PublishStatusOutcome {
@@ -76,6 +83,7 @@ export interface CreatePublishingServiceDeps {
   payload: Payload
   options: PublishingPluginOptions
   auditWriter: AuditWriter
+  logger?: Logger | undefined
 }
 
 /**
@@ -86,7 +94,7 @@ export interface CreatePublishingServiceDeps {
 export function createPublishingService(
   deps: CreatePublishingServiceDeps,
 ): PublishingService {
-  const { payload, options, auditWriter } = deps
+  const { payload, options, auditWriter, logger } = deps
 
   async function loadDocument(
     slug: string,
@@ -134,10 +142,21 @@ export function createPublishingService(
         errorMessage: result.success ? undefined : result.reason,
       })
 
+      if (result.warnings?.length) {
+        logger?.warn('Publish completed with warnings', {
+          collection: request.collection,
+          id: request.id,
+          warnings: result.warnings,
+        })
+      }
+
+      const warnings = result.warnings?.length ? { warnings: result.warnings } : {}
+
       if (result.success) {
         return {
           published: true,
           ...(result.publishedAt ? { publishedAt: result.publishedAt } : {}),
+          ...warnings,
         }
       }
 
@@ -148,6 +167,7 @@ export function createPublishingService(
         ...(result.code ? { code: result.code } : {}),
         ...(result.issues ? { issues: result.issues } : {}),
         ...(result.suggestion ? { suggestion: result.suggestion } : {}),
+        ...warnings,
       }
     },
 
@@ -169,8 +189,10 @@ export function createPublishingService(
         context: { bypassPublishingServer: true },
       })
 
+      // Same rule as publish: the write has landed, so a failed emission is
+      // a warning, not a failure.
       const slug = document[collection.slugField]
-      await options.inngest.send({
+      const warning = await sendEventSafely(options.inngest, {
         name: 'content/page.unpublished',
         data: {
           collection: collection.slug,
@@ -179,6 +201,14 @@ export function createPublishingService(
           unpublishedBy: request.actor.user?.id ?? 'system',
         },
       })
+
+      if (warning) {
+        logger?.warn('Unpublish completed with warnings', {
+          collection: request.collection,
+          id: request.id,
+          warnings: [warning],
+        })
+      }
 
       await auditWriter({
         actor: toAuditActor(request.actor),
@@ -194,7 +224,7 @@ export function createPublishingService(
         success: true,
       })
 
-      return { unpublished: true }
+      return { unpublished: true, ...(warning ? { warnings: [warning] } : {}) }
     },
 
     async getStatus(request) {

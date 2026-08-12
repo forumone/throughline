@@ -45,6 +45,11 @@ export interface PipelineStepResult {
   code?: string
   issues?: PipelineIssue[]
   suggestion?: string
+  /**
+   * Non-fatal problems. The step did what it was asked to; something
+   * adjacent to it did not. Warnings never fail a step.
+   */
+  warnings?: string[]
 }
 
 export type PipelineStep = (context: PipelineContext) => Promise<PipelineStepResult>
@@ -57,4 +62,6 @@ export interface PipelineResult {
   issues?: PipelineIssue[]
   suggestion?: string
   publishedAt?: string
+  /** Non-fatal problems collected across the steps that ran. */
+  warnings?: string[]
 }

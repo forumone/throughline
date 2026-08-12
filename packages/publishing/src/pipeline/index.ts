@@ -32,8 +32,12 @@ const ORDERED_STEPS: OrderedStep[] = [
  * timestamp the execute step set.
  */
 export async function runPublishPipeline(context: PipelineContext): Promise<PipelineResult> {
+  const warnings: string[] = []
+
   for (const { name, step } of ORDERED_STEPS) {
     const result = await step(context)
+    if (result.warnings) warnings.push(...result.warnings)
+
     if (!result.pass) {
       return {
         success: false,
@@ -42,10 +46,16 @@ export async function runPublishPipeline(context: PipelineContext): Promise<Pipe
         ...(result.code ? { code: result.code } : {}),
         ...(result.issues ? { issues: result.issues } : {}),
         ...(result.suggestion ? { suggestion: result.suggestion } : {}),
+        ...(warnings.length ? { warnings } : {}),
       }
     }
   }
-  return { success: true, publishedAt: new Date().toISOString() }
+
+  return {
+    success: true,
+    publishedAt: new Date().toISOString(),
+    ...(warnings.length ? { warnings } : {}),
+  }
 }
 
 /**

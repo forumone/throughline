@@ -83,7 +83,16 @@ export function UnpublishButton(
       setUnpublishedVersionCount(1)
       setMostRecentVersionIsAutosaved(false)
       setHasPublishedDoc(false)
-      toast.success(t('version:unpublishedSuccessfully'))
+
+      const warnings = result.body.warnings ?? []
+      if (warnings.length > 0) {
+        toast.warning(t('version:unpublishedSuccessfully'), {
+          description: warnings.join('\n'),
+          duration: 10_000,
+        })
+      } else {
+        toast.success(t('version:unpublishedSuccessfully'))
+      }
     } finally {
       setUnpublishing(false)
     }

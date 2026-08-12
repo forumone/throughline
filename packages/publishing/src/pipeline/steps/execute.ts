@@ -1,3 +1,4 @@
+import { sendEventSafely } from '../../events.js'
 import type { PipelineStep } from '../types.js'
 
 /**
@@ -13,6 +14,10 @@ import type { PipelineStep } from '../types.js'
  * `overrideAccess: false`, so Payload rejects an editor who lacks update
  * access on the collection. Bypassing the hook is not bypassing access
  * control.
+ *
+ * The event is emitted after the write and cannot fail the step: once
+ * `_status` is `published` the publish has happened, and reporting failure
+ * would send an editor back to re-publish live content.
  */
 export const executeStep: PipelineStep = async (ctx) => {
   const now = new Date().toISOString()
@@ -35,7 +40,9 @@ export const executeStep: PipelineStep = async (ctx) => {
     context: { bypassPublishingServer: true },
   })
 
-  await ctx.inngest.send({
+  // The write has landed. From here the publish has happened, so nothing
+  // below may turn it back into a failure.
+  const warning = await sendEventSafely(ctx.inngest, {
     name: 'content/page.published',
     data: {
       collection: ctx.collection.slug,
@@ -47,5 +54,5 @@ export const executeStep: PipelineStep = async (ctx) => {
     },
   })
 
-  return { pass: true }
+  return { pass: true, ...(warning ? { warnings: [warning] } : {}) }
 }
