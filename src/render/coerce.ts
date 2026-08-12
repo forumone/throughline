@@ -55,6 +55,25 @@ export interface CoerceContext {
  * assignable to `{ heading?: string }`. Every optional prop has to be absent
  * rather than explicitly undefined, and there are several hundred of them.
  */
+
+/**
+ * Whether a stored value amounts to nothing, all the way down.
+ *
+ * `mode` is skipped because `linkField` gives it a default: it says which kind
+ * of link this *would* be, and is present whether or not anybody chose
+ * anything. The same reasoning as the group validation in `generate/fields.ts`,
+ * and the two have to agree — one decides whether a group may be saved, the
+ * other whether it reaches a component.
+ */
+function isEmptyValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === '') return true
+  if (Array.isArray(value)) return value.every(isEmptyValue)
+  if (typeof value === 'object') {
+    return Object.entries(value).every(([key, held]) => key === 'mode' || isEmptyValue(held))
+  }
+  return false
+}
+
 function put(target: Record<string, unknown>, key: string, value: unknown): void {
   if (value === undefined || value === null) return
   target[key] = value
@@ -121,6 +140,18 @@ function coerceField(
     case 'group': {
       // A slot: no children in the contract, nothing stored, nothing to pass.
       if (!field.of) return undefined
+      /*
+      An untouched optional group must arrive as `undefined`, not as an object
+      of empty values.
+
+      Payload stores one either way — `ChallengeOverview.caseStudy` comes back
+      as `{ stat: {}, href: { mode: 'internal' } }` when nobody has filled it
+      in, because `linkField` defaults `mode`. Passed through, that is truthy,
+      and a component guarding with `{caseStudy && <RelatedCard ... />}` renders
+      a card with no title: an empty `<h3>` in the page, which is an axe
+      violation and a heading a screen reader announces as nothing.
+      */
+      if (isEmptyValue(value)) return undefined
       const nested = value as Record<string, unknown>
       const out: Record<string, unknown> = {}
       for (const child of field.of) {
