@@ -294,11 +294,32 @@ function relaxRequired(fields: Field[]): Field[] {
 function allOrNothing(children: ContentField[]) {
   const names = children.filter(child => child.required).map(child => child.name)
 
+  /*
+  Emptiness has to be recursive, which is not obvious until it bites.
+
+  A group holding a link sub-group is never literally empty: `linkField` gives
+  `mode` a default of `'internal'`, so an untouched `caseStudy` arrives as
+  `{ stat: {}, href: { mode: 'internal' } }`. Compared shallowly that is a
+  filled group, and the rule then demands the title of an author who has typed
+  nothing — this validation firing on exactly the case it exists to allow.
+
+  `mode` is skipped for that reason: it is a discriminator that says which
+  *kind* of link this would be if there were one, and it is present whether or
+  not anybody chose anything. It is never evidence that a group was filled in.
+  */
+  const isEmpty = (value: unknown): boolean => {
+    if (value === undefined || value === null || value === '') return true
+    if (Array.isArray(value)) return value.every(isEmpty)
+    if (typeof value === 'object') {
+      return Object.entries(value).every(([key, held]) => key === 'mode' || isEmpty(held))
+    }
+    return false
+  }
+
   return (value: unknown): true | string => {
     if (!value || typeof value !== 'object') return true
 
     const entries = Object.entries(value as Record<string, unknown>)
-    const isEmpty = (v: unknown) => v === undefined || v === null || v === ''
 
     if (entries.every(([, v]) => isEmpty(v))) return true
 
