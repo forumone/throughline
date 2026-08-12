@@ -221,11 +221,33 @@ export function toPayloadField(
       // another component, declared in `composition.allowedSlots`. It holds no
       // authored content, so there is nothing to put in the CMS.
       if (!field.of || field.of.length === 0) return null
+
+      const children = childFields(field.of, ctx, path)
+
+      /*
+      An optional group holds its children to a weaker promise than it looks.
+
+      `ProseSection.image` is `required: false` with `src` and `alt` both
+      required inside it — meaning "an image is optional, but a *half* image is
+      not". Generated literally, Payload validates those children whether or
+      not the group has anything in it, so every block carrying an optional
+      image became a block that could not be published without one. Six of the
+      eight blocks on the About page failed that way.
+
+      So inside an optional group the children are relaxed, and the promise the
+      contract actually made is enforced on the group instead: fill it or leave
+      it, but do not half-fill it.
+      */
+      if (field.required) {
+        return { name: field.name, type: 'group', ...admin, fields: children }
+      }
+
       return {
         name: field.name,
         type: 'group',
         ...admin,
-        fields: childFields(field.of, ctx, path),
+        validate: allOrNothing(field.of),
+        fields: relaxRequired(children),
       }
     }
 
@@ -243,6 +265,49 @@ export function toPayloadField(
         fields: childFields(field.of, ctx, path),
       }
     }
+  }
+}
+
+/**
+ * Strip `required` from a group's children, recursing into nested groups.
+ *
+ * Only ever applied inside an optional group — see the `group` case. An array
+ * keeps its `minRows`, because Payload does not enforce rows on an array whose
+ * parent group is empty.
+ */
+function relaxRequired(fields: Field[]): Field[] {
+  return fields.map(field => {
+    const next = 'required' in field && field.required ? { ...field, required: false } : field
+    return 'fields' in next && Array.isArray(next.fields) && next.type === 'group'
+      ? { ...next, fields: relaxRequired(next.fields) }
+      : next
+  })
+}
+
+/**
+ * "Fill it or leave it, but do not half-fill it."
+ *
+ * The validation an optional group needs and Payload has no field-level way to
+ * express: silent while the group is empty, and demanding of exactly the
+ * children the contract marked required once any of them is filled in.
+ */
+function allOrNothing(children: ContentField[]) {
+  const names = children.filter(child => child.required).map(child => child.name)
+
+  return (value: unknown): true | string => {
+    if (!value || typeof value !== 'object') return true
+
+    const entries = Object.entries(value as Record<string, unknown>)
+    const isEmpty = (v: unknown) => v === undefined || v === null || v === ''
+
+    if (entries.every(([, v]) => isEmpty(v))) return true
+
+    const missing = names.filter(name => isEmpty((value as Record<string, unknown>)[name]))
+    if (missing.length === 0) return true
+
+    return missing.length === 1
+      ? `${missing[0]} is needed once anything else here is filled in. Clear the rest to leave this out entirely.`
+      : `${missing.join(' and ')} are needed once anything else here is filled in. Clear the rest to leave this out entirely.`
   }
 }
 
