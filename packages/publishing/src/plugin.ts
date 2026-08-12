@@ -7,8 +7,14 @@ import {
   defaultLogger,
   getAuditWriter,
 } from '@forumone/throughline-core'
-import { type PublishingPluginOptions, validateOptions } from './options.js'
+import {
+  type PublishingPluginOptions,
+  resolveCollection,
+  validateOptions,
+} from './options.js'
 import { createBlockStatusWritesHook } from './hooks/block-status-writes.js'
+import { createAdminEndpoints } from './endpoints/admin.js'
+import { attachPublishingService, createPublishingService } from './service.js'
 import {
   createGetPublishStatusTool,
   createPublishTool,
@@ -20,6 +26,8 @@ import {
 const PLUGIN_ID = '@forumone/throughline-publishing'
 const PLUGIN_VERSION = '0.1.0'
 const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/publishing-mcp-handler')
+
+const CLIENT_ENTRY = '@forumone/throughline-publishing/client'
 
 type McpHandler = (request: Request) => Promise<Response>
 
@@ -33,12 +41,14 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
     const routePrefix = options.routePrefix ?? '/publishing'
     const logger = createNamedLogger('publishing', options.logger ?? defaultLogger)
     const publishableSlugs = new Set(options.collections.map((c) => c.slug))
+    const adminComponents = options.adminComponents !== false
 
-    // Inject the block-status-writes hook into every publishable collection.
     const modifiedCollections = (incomingConfig.collections ?? []).map((collection) => {
       if (!publishableSlugs.has(collection.slug)) return collection
+
       return {
         ...collection,
+        // The trust boundary: nothing may write `_status` outside the pipeline.
         hooks: {
           ...(collection.hooks ?? {}),
           beforeChange: [
@@ -46,6 +56,9 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
             createBlockStatusWritesHook(),
           ],
         },
+        ...(adminComponents
+          ? { admin: withAdminControls(collection, routePrefix, options) }
+          : {}),
       } satisfies CollectionConfig
     })
 
@@ -54,6 +67,7 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
       collections: modifiedCollections,
       endpoints: [
         ...(incomingConfig.endpoints ?? []),
+        ...createAdminEndpoints({ routePrefix, publishableSlugs }),
         {
           path: `${routePrefix}/mcp`,
           method: 'post',
@@ -81,11 +95,16 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
 
         const auditWriter = getAuditWriter(payload)
 
+        // One service instance behind every channel — MCP tools, the admin
+        // endpoints, and host code reaching in through `publishDocument`.
+        const service = createPublishingService({ payload, options, auditWriter })
+        attachPublishingService(payload, service)
+
         const tools = [
-          createPublishTool({ payload, options, auditWriter }),
-          createUnpublishTool({ payload, options, auditWriter }),
+          createPublishTool({ payload, options, auditWriter, service }),
+          createUnpublishTool({ payload, options, auditWriter, service }),
           createSchedulePublishTool({ payload, options, auditWriter }),
-          createGetPublishStatusTool({ payload, options }),
+          createGetPublishStatusTool({ payload, options, service }),
           createRollbackTool({ payload, options, auditWriter }),
         ]
 
@@ -111,7 +130,58 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
 
         logger.info('Publishing server ready', {
           collections: options.collections.map((c) => c.slug),
+          adminComponents,
         })
       },
     }
   }
+
+/**
+ * Points the collection's Publish / Unpublish slots at the plugin's own
+ * controls, so a stock admin can publish without any host-side code.
+ *
+ * A slot the host already set is left alone — an explicit override in the
+ * host config wins over the plugin's default.
+ *
+ * Hosts must run `payload generate:importmap` after adding the plugin (the
+ * dev server does it automatically) so Payload can resolve these paths.
+ */
+function withAdminControls(
+  collection: CollectionConfig,
+  routePrefix: string,
+  options: PublishingPluginOptions,
+): NonNullable<CollectionConfig['admin']> {
+  const resolved = resolveCollection(options, collection.slug)
+  const edit = collection.admin?.components?.edit ?? {}
+
+  return {
+    ...(collection.admin ?? {}),
+    components: {
+      ...(collection.admin?.components ?? {}),
+      edit: {
+        ...edit,
+        ...(edit.PublishButton === undefined
+          ? {
+              PublishButton: {
+                path: CLIENT_ENTRY,
+                exportName: 'PublishButton',
+                clientProps: {
+                  routePrefix,
+                  publishedAtField: resolved.publishedAtField,
+                },
+              },
+            }
+          : {}),
+        ...(edit.UnpublishButton === undefined
+          ? {
+              UnpublishButton: {
+                path: CLIENT_ENTRY,
+                exportName: 'UnpublishButton',
+                clientProps: { routePrefix },
+              },
+            }
+          : {}),
+      },
+    },
+  }
+}

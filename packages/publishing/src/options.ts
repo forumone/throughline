@@ -60,6 +60,16 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
   approvalResolver?: ApprovalResolver
   /** Required: Inngest client used to fire publishing events. */
   inngest: Inngest
+  /**
+   * Whether to install the plugin's Publish / Unpublish controls on each
+   * configured collection. Default: `true`.
+   *
+   * Payload's native buttons write `_status` directly, which the plugin's
+   * trust boundary rejects — so with this off, the admin has no working
+   * publish path until the host supplies its own control (see
+   * `publishDocument`).
+   */
+  adminComponents?: boolean
 }
 
 export type ResolvedCollection = Required<Omit<PublishableCollection, 'requiredFields'>> &

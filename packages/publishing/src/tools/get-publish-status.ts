@@ -2,12 +2,14 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import { withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { type PublishingPluginOptions, resolveCollection } from '../options.js'
-import { runPreflightPipeline } from '../pipeline/index.js'
+import type { PublishingPluginOptions } from '../options.js'
+import { createPublishingService, type PublishingService } from '../service.js'
 
 export interface GetPublishStatusToolDeps {
   payload: Payload
   options: PublishingPluginOptions
+  /** Injected by the plugin so every channel shares one service instance. */
+  service?: PublishingService
 }
 
 export function createGetPublishStatusTool(deps: GetPublishStatusToolDeps): McpToolDefinition {
@@ -16,50 +18,36 @@ export function createGetPublishStatusTool(deps: GetPublishStatusToolDeps): McpT
     id: z.string(),
   })
 
+  const service =
+    deps.service ??
+    createPublishingService({ ...deps, auditWriter: async () => {} })
+
   return {
     name: 'get_publish_status',
     description:
       "Returns the current publishability of a document without actually publishing. Reports current status, whether unpublished changes exist, the last publish timestamp, and a preflight result indicating whether `publish` would currently succeed. Read-only; no audit record is written.",
     inputSchema,
     handler: async (input, ctx) => {
-      const collection = resolveCollection(deps.options, input.collection)
-      const document = (await deps.payload.findByID({
-        collection: collection.slug,
+      const status = await service.getStatus({
+        collection: input.collection,
         id: input.id,
-        draft: true,
-      })) as Record<string, unknown>
-
-      const preflight = await runPreflightPipeline({
-        payload: deps.payload,
-        inngest: deps.options.inngest,
-        options: deps.options,
-        collection,
-        document,
-        documentId: input.id,
-        actor: { user: ctx.user, apiKeyName: ctx.apiKeyName },
+        actor: { user: ctx.user, apiKeyName: ctx.apiKeyName, channel: 'mcp' },
       })
 
-      const updatedAt = document['updatedAt']
-      const publishedAt = document[collection.publishedAtField]
-      const hasUnpublishedChanges =
-        typeof updatedAt === 'string' &&
-        typeof publishedAt === 'string' &&
-        Date.parse(updatedAt) > Date.parse(publishedAt)
-
       return {
-        currentStatus: document['_status'] ?? 'draft',
-        hasUnpublishedChanges,
-        lastPublished: typeof publishedAt === 'string' ? publishedAt : null,
+        currentStatus: status.status,
+        hasUnpublishedChanges: status.hasUnpublishedChanges,
+        lastPublished: status.publishedAt,
         wouldPublish: {
-          canPublish: preflight.success,
-          ...(preflight.success
+          canPublish: status.publishable,
+          ...(status.publishable
             ? {}
             : {
-                blockedAt: preflight.failedAt,
-                code: preflight.code,
-                reason: preflight.reason,
-                suggestion: preflight.suggestion,
-                issues: preflight.issues ?? [],
+                blockedAt: status.failedAt,
+                code: status.code,
+                reason: status.reason,
+                suggestion: status.suggestion,
+                issues: status.issues ?? [],
               }),
         },
       }

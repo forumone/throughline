@@ -13,6 +13,10 @@
     "./checks": {
       "types": "./dist/checks/index.d.ts",
       "default": "./dist/checks/index.js"
+    },
+    "./client": {
+      "types": "./dist/exports/client.d.ts",
+      "default": "./dist/exports/client.js"
     }
   },
   "files": [
@@ -48,8 +52,18 @@
     "access": "public"
   },
   "peerDependencies": {
+    "@payloadcms/ui": "^3.0.0",
+    "inngest": "^4.0.0",
     "payload": "^3.0.0",
-    "inngest": "^4.0.0"
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@payloadcms/ui": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@forumone/throughline-core": "workspace:*",
@@ -59,10 +73,13 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
+    "@payloadcms/ui": "^3.83.0",
     "@types/node": "^20.17.0",
+    "@types/react": "^19.2.0",
     "eslint": "^9.15.0",
     "inngest": "^4.2.0",
     "payload": "^3.83.0",
+    "react": "^19.2.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }
