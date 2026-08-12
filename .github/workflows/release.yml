@@ -30,9 +30,12 @@ jobs:
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
 
-      # npm trusted publishing requires npm >= 11.5.1; Node 20 ships with 10.x
+      # npm trusted publishing requires npm >= 11.5.1; Node 20 ships with 10.x.
+      # Pinned to the 11.x line rather than `latest`: npm 12 requires Node
+      # >= 22.22.2, so `latest` crossed a Node-major boundary and broke the
+      # release. Bump this range when the Node version above moves.
       - name: Upgrade npm
-        run: npm install -g npm@latest
+        run: npm install -g npm@^11.5.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
