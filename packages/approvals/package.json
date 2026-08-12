@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-approvals",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Conversational approval workflow server for Throughline. Provides the approval resolver the publishing server consumes plus MCP tools for requesting and responding to approvals.",
   "type": "module",
   "main": "./dist/index.js",
