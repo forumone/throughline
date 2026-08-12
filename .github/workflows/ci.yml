@@ -50,6 +50,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Check vendored design-system template is in sync with reference-ds
+        run: pnpm --filter @forumone/create-throughline sync-reference-ds --check
+
   storybook-validate:
     # Builds Storybook and validates the reference-ds manifest against the
     # generated story index so every contract's storyId resolves. Runs in

@@ -16,7 +16,8 @@ import { auditQueryPlugin } from '@forumone/throughline-audit'
 import { integrationsPlugin } from '@forumone/throughline-integrations'
 import { emailPlugin } from '@forumone/throughline-email'
 import { formsPlugin } from '@forumone/throughline-forms'
-{{#if useReferenceDs}}import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
+{{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-contract'
+import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
 {{/if}}
 
 const __filename = fileURLToPath(import.meta.url)
@@ -101,7 +102,7 @@ export default buildConfig({
     auditPlugin({ inngest }),
 
     componentsPlugin({
-      {{#if useReferenceDs}}manifest: { type: 'object', manifest: referenceManifest },
+      {{#if useReferenceDs}}manifest: { type: 'object', manifest: designSystemManifest as unknown as Manifest },
       {{else}}// TODO: point at your design system manifest
       manifest: { type: 'url', url: 'https://your-design-system.example.com/manifest.json' },
       {{/if}}matching: { strategy: 'tfidf' },
@@ -132,15 +133,16 @@ export default buildConfig({
       },
     }),
 
-    auditQueryPlugin(),
+    auditQueryPlugin({}),
 
     emailPlugin({
       inngest,
       // TODO: replace with your real user lookups
       resolveApprover: async (_userId) => null,
       resolveRequester: async (_userId) => null,
-      buildActionUrl: ({ token, action }) =>
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/approvals/decision?token=${token}&action=${action}`,
+      // TODO: sign these URLs (HMAC) so an approval decision can't be forged.
+      buildActionUrl: async ({ approvalId, action, approverId }) =>
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/approvals/decision?approval=${approvalId}&action=${action}&approver=${approverId}`,
       tokens: { brandName: '{{projectName}}' },
     }),
 
