@@ -64,9 +64,14 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
     setPublishing(true)
 
     try {
-      // Persist pending edits first. Draft writes never touch `_status`, so
-      // the trust boundary lets them through; the pipeline then evaluates
-      // what was actually saved rather than what is on screen.
+      // Persist pending edits first, as a draft. Payload writes those to the
+      // versions table and leaves the published document alone, so the trust
+      // boundary lets them through; the pipeline then evaluates what was
+      // actually saved rather than what is on screen.
+      //
+      // `?draft=true` is what makes this a draft write. The `_status`
+      // override only pins the intent when form state carries a `_status` of
+      // its own, and mirrors what Payload's native Save Draft sends.
       if (modified) {
         const saved = await submit({
           action: `${serverURL}${api}/${collectionSlug}/${id}?draft=true&depth=0`,

@@ -124,6 +124,37 @@ describe('publishingPlugin trust boundary', () => {
     expect(collection?.hooks?.beforeChange).toHaveLength(1)
   })
 
+  // The status-write hook cannot tell a draft save from an unpublish on its
+  // own; it depends on the beforeOperation hook having recorded the draft
+  // flag. Shipping one without the other blocks every edit to a published
+  // document, which is exactly what happened in 0.3.1.
+  it('installs the draft-write recorder alongside it', () => {
+    const collection = build().collections?.find((c) => c.slug === 'pages')
+    expect(collection?.hooks?.beforeOperation).toHaveLength(1)
+  })
+
+  it('keeps host hooks on both arrays', () => {
+    const config = build({}, [
+      {
+        ...Pages,
+        hooks: {
+          beforeOperation: [({ args }) => args],
+          beforeChange: [({ data }) => data],
+        },
+      },
+      Users,
+    ])
+    const collection = config.collections?.find((c) => c.slug === 'pages')
+    expect(collection?.hooks?.beforeOperation).toHaveLength(2)
+    expect(collection?.hooks?.beforeChange).toHaveLength(2)
+  })
+
+  it('leaves collections it does not govern without either hook', () => {
+    const collection = build().collections?.find((c) => c.slug === 'users')
+    expect(collection?.hooks?.beforeOperation).toBeUndefined()
+    expect(collection?.hooks?.beforeChange).toBeUndefined()
+  })
+
   it('returns the config untouched when disabled', () => {
     const incoming = { collections: [Pages] } as unknown as Config
     const config = publishingPlugin({

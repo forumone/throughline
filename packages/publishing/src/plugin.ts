@@ -13,6 +13,7 @@ import {
   validateOptions,
 } from './options.js'
 import { createBlockStatusWritesHook } from './hooks/block-status-writes.js'
+import { createRecordDraftWritesHook } from './hooks/draft-writes.js'
 import { createAdminEndpoints } from './endpoints/admin.js'
 import { attachPublishingService, createPublishingService } from './service.js'
 import {
@@ -48,9 +49,16 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
 
       return {
         ...collection,
-        // The trust boundary: nothing may write `_status` outside the pipeline.
+        // The trust boundary: nothing may change the live document's
+        // `_status` outside the pipeline. `beforeOperation` records whether
+        // the update is a draft write, which is the only place Payload
+        // exposes that; `beforeChange` enforces. They must ship together.
         hooks: {
           ...(collection.hooks ?? {}),
+          beforeOperation: [
+            ...(collection.hooks?.beforeOperation ?? []),
+            createRecordDraftWritesHook(),
+          ],
           beforeChange: [
             ...(collection.hooks?.beforeChange ?? []),
             createBlockStatusWritesHook(),
