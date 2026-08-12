@@ -97,7 +97,7 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
 
         // One service instance behind every channel — MCP tools, the admin
         // endpoints, and host code reaching in through `publishDocument`.
-        const service = createPublishingService({ payload, options, auditWriter })
+        const service = createPublishingService({ payload, options, auditWriter, logger })
         attachPublishingService(payload, service)
 
         const tools = [

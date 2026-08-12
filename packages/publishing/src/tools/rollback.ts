@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
 
 export interface RollbackToolDeps {
@@ -56,7 +57,9 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
         id: input.versionId,
       })
 
-      await deps.options.inngest.send({
+      // The version is already restored; a failed emission must not undo
+      // that or lose the audit record below.
+      const warning = await sendEventSafely(deps.options.inngest, {
         name: 'content/page.rolled_back',
         data: {
           collection: collection.slug,
@@ -88,6 +91,7 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
         restored: true,
         toVersionId: input.versionId,
         note: 'The restored content is a draft. Call `publish` to make it live.',
+        ...(warning ? { warnings: [warning] } : {}),
       }
     },
   }

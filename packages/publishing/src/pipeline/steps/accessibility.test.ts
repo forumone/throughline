@@ -47,6 +47,38 @@ describe('accessibilityStep', () => {
     expect(result.issues?.some((i) => i.rule === 'link-labels')).toBe(true)
   })
 
+  // `accessibilityChecks` only appends, so without an opt-out a built-in
+  // that misfires on a host's content shape blocks every publish until the
+  // plugin ships a fix.
+  it('skips a built-in named in disableAccessibilityChecks', async () => {
+    const result = await accessibilityStep(
+      makeContext({
+        options: {
+          collections: [{ slug: 'pages' }],
+          inngest: makeContext().inngest,
+          disableAccessibilityChecks: ['alt-text'],
+        },
+        document: { hero: { image: { filename: 'h.jpg' } } },
+      }),
+    )
+    expect(result.pass).toBe(true)
+  })
+
+  it('leaves the other built-ins running when one is disabled', async () => {
+    const result = await accessibilityStep(
+      makeContext({
+        options: {
+          collections: [{ slug: 'pages' }],
+          inngest: makeContext().inngest,
+          disableAccessibilityChecks: ['alt-text'],
+        },
+        document: { cta: { url: 'https://example.com', label: '' } },
+      }),
+    )
+    expect(result.pass).toBe(false)
+    expect(result.issues?.some((i) => i.rule === 'link-labels')).toBe(true)
+  })
+
   it('runs user-supplied checks alongside the built-ins', async () => {
     const ctx = makeContext({
       options: {

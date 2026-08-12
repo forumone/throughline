@@ -19,6 +19,8 @@ export interface PublishingResponse {
   code?: string
   issues?: PublishingIssue[]
   suggestion?: string
+  /** Non-fatal problems on an action that otherwise succeeded. */
+  warnings?: string[]
   error?: string
 }
 

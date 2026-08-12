@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
 import { runPreflightPipeline } from '../pipeline/index.js'
 
@@ -82,7 +83,9 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         context: { bypassPublishingServer: false },
       })
 
-      await deps.options.inngest.send({
+      // The schedule is already persisted; a failed emission must not undo
+      // that or lose the audit record below.
+      const warning = await sendEventSafely(deps.options.inngest, {
         name: 'content/page.scheduled',
         data: {
           collection: collection.slug,
@@ -105,7 +108,11 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         success: true,
       })
 
-      return { scheduled: true, scheduledFor: input.publishAt }
+      return {
+        scheduled: true,
+        scheduledFor: input.publishAt,
+        ...(warning ? { warnings: [warning] } : {}),
+      }
     },
   }
 }

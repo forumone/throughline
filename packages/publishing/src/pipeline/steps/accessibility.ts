@@ -6,10 +6,15 @@ import { BUILT_IN_ACCESSIBILITY_CHECKS } from '../../checks/index.js'
  * Errors block publish; warnings are surfaced on the result but don't fail
  * the step. (Warning-only behavior is currently unused by the built-in
  * checks but reserved for richer per-client checks.)
+ *
+ * Built-ins named in `disableAccessibilityChecks` are skipped, so a host
+ * whose content shape trips one can replace it rather than wait for a
+ * plugin release.
  */
 export const accessibilityStep: PipelineStep = async (ctx) => {
+  const disabled = new Set(ctx.options.disableAccessibilityChecks ?? [])
   const checks = [
-    ...BUILT_IN_ACCESSIBILITY_CHECKS,
+    ...BUILT_IN_ACCESSIBILITY_CHECKS.filter((check) => !disabled.has(check.name)),
     ...(ctx.options.accessibilityChecks ?? []),
   ]
 

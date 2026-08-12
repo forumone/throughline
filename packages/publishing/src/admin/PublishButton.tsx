@@ -113,7 +113,19 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
       setHasPublishedDoc(true)
       setUnpublishedVersionCount(0)
       setMostRecentVersionIsAutosaved(false)
-      toast.success(t('version:published'))
+
+      // The document is live either way. A warning means something
+      // downstream of the publish didn't happen, which is worth saying
+      // without implying the publish failed.
+      const warnings = result.body.warnings ?? []
+      if (warnings.length > 0) {
+        toast.warning(t('version:published'), {
+          description: warnings.join('\n'),
+          duration: 10_000,
+        })
+      } else {
+        toast.success(t('version:published'))
+      }
     } finally {
       setPublishing(false)
     }

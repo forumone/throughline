@@ -53,6 +53,41 @@ describe('executeStep', () => {
     expect(sendArgs.data.previousPublishedAt).toBeNull()
   })
 
+  // The write has already landed by the time the event is sent. Failing the
+  // step here told an editor the publish failed on a document that was live,
+  // and lost the audit record for it.
+  it('reports success with a warning when the event emission fails', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const send = vi.fn(async () => {
+      throw new Error('Inngest API Error: 401 Event key not found')
+    })
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    const result = await executeStep(ctx)
+
+    expect(result.pass).toBe(true)
+    expect(result.warnings).toHaveLength(1)
+    expect(result.warnings?.[0]).toContain('content/page.published')
+    // The document was still published.
+    expect(update).toHaveBeenCalledTimes(1)
+  })
+
+  it('carries no warnings when the event goes out', async () => {
+    const ctx = makeContext({
+      payload: { update: vi.fn(async () => ({ id: 'p1' })) } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    expect((await executeStep(ctx)).warnings).toBeUndefined()
+  })
+
   it('marks subsequent publishes as not-first', async () => {
     const update = vi.fn(async () => ({ id: 'p1' }))
     const send = vi.fn(async () => ({}))
