@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-publishing",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Policy-gated publishing server for Throughline. Wraps Payload's update operation with composition, accessibility, required-field, embargo, and approval gating.",
   "type": "module",
   "main": "./dist/index.js",
