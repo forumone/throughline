@@ -8,6 +8,11 @@ import type { PipelineStep } from '../types.js'
  * Sets `context.bypassPublishingServer = true` on the Payload update so the
  * status-write blocking hook recognizes this as a sanctioned write. Any
  * other path that tries to flip `_status` will be rejected by the hook.
+ *
+ * When `actor.enforceAccessAs` is set the write runs as that user with
+ * `overrideAccess: false`, so Payload rejects an editor who lacks update
+ * access on the collection. Bypassing the hook is not bypassing access
+ * control.
  */
 export const executeStep: PipelineStep = async (ctx) => {
   const now = new Date().toISOString()
@@ -24,6 +29,9 @@ export const executeStep: PipelineStep = async (ctx) => {
       _status: 'published',
       [ctx.collection.publishedAtField]: now,
     },
+    ...(ctx.actor.enforceAccessAs
+      ? { user: ctx.actor.enforceAccessAs, overrideAccess: false }
+      : {}),
     context: { bypassPublishingServer: true },
   })
 

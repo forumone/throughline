@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { APIError } from 'payload'
 import type { CollectionBeforeChangeHook } from 'payload'
 import { createBlockStatusWritesHook } from './block-status-writes.js'
 
@@ -50,6 +51,25 @@ describe('createBlockStatusWritesHook', () => {
         originalDoc: { _status: 'draft' },
       }),
     ).toThrow(/Direct writes to `_status` are not allowed/)
+  })
+
+  // A plain Error becomes a 500 and a generic "Something went wrong" toast.
+  // APIError carries the message and status to the admin, which is the whole
+  // difference between log-diving and reading the reason on screen.
+  it('throws APIError with status 400 so the message reaches the admin', () => {
+    let thrown: unknown
+    try {
+      callHook(hook, {
+        data: { _status: 'published' },
+        originalDoc: { _status: 'draft' },
+      })
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(APIError)
+    expect((thrown as APIError).status).toBe(400)
+    expect((thrown as APIError).message).toMatch(/Use the publishing server/)
   })
 
   it('passes through when bypass flag is set on hook context', () => {
