@@ -1,5 +1,27 @@
 # @forumone/throughline-publishing
 
+## 0.3.2
+
+### Patch Changes
+
+- 4eeb721: Fix published documents being uneditable: allow draft writes through the trust boundary.
+
+  Editing an already-published document failed with `Direct writes to _status are not allowed` — from both the plugin's own Publish button and Payload's native Save Draft, which discarded the editor's work. Only first publishes worked, because an unmodified document skips the draft save.
+
+  Payload sets `data._status = 'draft'` on every `draft: true` update _before_ `beforeChange` runs, whether or not the caller supplied it. By the time the hook saw the write, saving a draft of a published document was indistinguishable from unpublishing it: `data._status` was `'draft'` and `originalDoc._status` was `'published'` in both cases. A draft save writes a version and leaves the live document alone, so it should never have been blocked.
+
+  The plugin now installs a `beforeOperation` hook that records the operation's own `draft` argument, which `beforeChange` reads to tell the two apart. That argument is visible identically on the Local API, REST and GraphQL, unlike `req.query.draft`, which is only populated on the REST path.
+
+  A `draft: true` request that sets `_status: 'published'` is still blocked — Payload's own `isSavingDraft` excludes it, so it is a real publish and belongs in the pipeline. Genuine unpublishes and direct publishes are unchanged. Installing the status-write hook without the recorder fails closed.
+
+- 4eeb721: Fix two defects reported against 0.3.0.
+
+  **The `alt-text` check false-positived on Payload upload derivatives.** `walkForImages` descended into a populated upload's `sizes` map, and every generated size carries `filename` and `mimeType` but never `alt` — that lives on the parent document. Each configured `imageSize` therefore produced one false failure, and any page carrying a sized image could not be published. The walk now skips `sizes` on an object that is itself an image; alt text is checked once, on the parent. A parent with missing or empty alt still fails, at the parent's path, and a host with no `imageSizes` is unaffected.
+
+  **A failed Inngest emission failed a publish that had already succeeded.** The event is sent after the document is written, so a transport failure (an invalid `INNGEST_EVENT_KEY`, say) returned 500 for a document that was published — and lost the audit record for it. Publish, unpublish, rollback and `schedule_publish` now report success and carry the emission failure as a `warnings` array on the result. The admin renders it as a warning toast on an otherwise successful publish.
+
+  Also adds `disableAccessibilityChecks`, naming built-in checks to skip. `accessibilityChecks` only appends, so previously a built-in that misfired on a host's content shape blocked every publish until the plugin shipped a fix.
+
 ## 0.3.1
 
 ### Patch Changes
