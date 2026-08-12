@@ -39,7 +39,7 @@ describe('publishingPlugin admin controls', () => {
     expect(edit?.PublishButton).toEqual({
       path: '@forumone/throughline-publishing/client',
       exportName: 'PublishButton',
-      clientProps: { routePrefix: '/publishing', publishedAtField: 'publishedAt' },
+      clientProps: { routePrefix: '/publishing' },
     })
     expect(edit?.UnpublishButton).toEqual({
       path: '@forumone/throughline-publishing/client',
@@ -48,14 +48,14 @@ describe('publishingPlugin admin controls', () => {
     })
   })
 
-  it('passes the collection its configured publishedAt field and route prefix', () => {
-    const config = build({
-      routePrefix: '/content-ops',
-      collections: [{ slug: 'pages', publishedAtField: 'wentLiveAt' }],
-    })
+  it('passes the configured route prefix to both controls', () => {
+    const config = build({ routePrefix: '/content-ops' })
 
     expect(editComponents(config, 'pages')?.PublishButton).toMatchObject({
-      clientProps: { routePrefix: '/content-ops', publishedAtField: 'wentLiveAt' },
+      clientProps: { routePrefix: '/content-ops' },
+    })
+    expect(editComponents(config, 'pages')?.UnpublishButton).toMatchObject({
+      clientProps: { routePrefix: '/content-ops' },
     })
   })
 
