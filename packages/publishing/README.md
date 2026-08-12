@@ -96,6 +96,25 @@ if (!result.published) {
 
 All three run the same pipeline the admin and MCP paths use, so host code cannot drift from the plugin's policy. `getPublishStatus` runs every check except the write and mutates nothing.
 
+## What the trust boundary blocks
+
+The plugin installs two hooks on every configured collection, and they work as a pair:
+
+- `beforeOperation` records whether the update in flight is a draft write.
+- `beforeChange` rejects writes that change the **live** document's `_status`.
+
+| Write | Result |
+|---|---|
+| `draft: true` on a draft or published document | **allowed** — writes a version, live status unchanged |
+| `draft: false`, `_status: 'published'` | **blocked** — publish through the pipeline |
+| `draft: false`, `_status: 'draft'` on a published document | **blocked** — unpublish through the pipeline |
+| `draft: true` with `_status: 'published'` | **blocked** — Payload treats this as a publish, not a draft save |
+| Any write carrying `bypassPublishingServer` | **allowed** |
+
+Draft saves have to be allowed explicitly because Payload sets `data._status = 'draft'` on every `draft: true` update before `beforeChange` runs, whether or not the caller supplied it — so at that point a draft save of a published document and an unpublish look identical. The `draft` flag is read from the operation's own arguments in `beforeOperation`, which sees it the same way on the Local API, REST and GraphQL. (`req.query.draft` is only populated on the REST path, so keying on the request would cover the admin and silently miss scripts.)
+
+If you install `createBlockStatusWritesHook` yourself without the recorder, it fails closed: every status change is blocked.
+
 ## Bypassing the pipeline
 
 `bypassPublishingServer: true` in the Payload request context is the only way to write `_status` without the pipeline. It is intended for seed scripts and migrations:
