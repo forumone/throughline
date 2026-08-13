@@ -17,6 +17,23 @@ export interface MediaLike {
   url?: string | null
   alt?: string | null
   filename?: string | null
+  /**
+   * The stored file's own width. The host uses it to keep a `srcSet` from
+   * offering candidates larger than the original, which no optimizer can
+   * produce and which would therefore all be the same bytes.
+   */
+  width?: number | null
+  /**
+   * Candidate widths for the same image, as a `srcset` value. Optional: a host
+   * with no image pipeline resolves a `url` and nothing else, and every
+   * component treats `srcSet` as absent rather than empty.
+   */
+  srcSet?: string | null
+  /**
+   * How wide the image is drawn, as a `sizes` value. Ignored without a
+   * `srcSet`, which is the only thing it selects from.
+   */
+  sizes?: string | null
 }
 
 export interface LinkValue {
@@ -79,6 +96,63 @@ function put(target: Record<string, unknown>, key: string, value: unknown): void
   target[key] = value
 }
 
+/**
+ * The props that carry an image's candidate widths, beside the one that carries
+ * its URL.
+ *
+ * The design system names them by suffixing the image's own prop — `image` has
+ * `imageSrcSet` and `imageSizes`, `poster` has `posterSrcSet` and
+ * `posterSizes` — except where the image prop is already called `src`, inside
+ * an `ImageRef` group or array row, where the siblings are the bare `srcSet`
+ * and `sizes` of the HTML attributes.
+ *
+ * They are not fields in any contract, and must not become ones: a `srcset` is
+ * not content an author writes, it is what an optimizer computed. So the CMS
+ * offers `src` and `alt`, `resolveMedia` returns the rest, and this is the one
+ * place that knows where they go.
+ */
+function responsiveProps(imageProp: string): { srcSet: string; sizes: string } {
+  return imageProp === 'src'
+    ? { srcSet: 'srcSet', sizes: 'sizes' }
+    : { srcSet: `${imageProp}SrcSet`, sizes: `${imageProp}Sizes` }
+}
+
+/**
+ * Writes one field into `target` under the prop name — or names — it maps to.
+ *
+ * Every field but an image is one key. An image is up to three, which is why
+ * this exists rather than the three call sites each putting a single returned
+ * value.
+ */
+function putField(
+  target: Record<string, unknown>,
+  component: string,
+  field: ContentField,
+  value: unknown,
+  ctx: CoerceContext,
+  path: string,
+): void {
+  const override = fieldOverride(ctx.overrides, component, path)
+  if (override?.omit) return
+
+  // The one name mismatch in the system — ArticleBody's `body` is the
+  // component's `children` — declared in the overrides so the generator and
+  // this agree by construction rather than by memory.
+  const name = override?.propName ?? field.name
+
+  if (field.type === 'image' && override?.as !== 'icon' && value !== undefined && value !== null) {
+    const media = ctx.resolveMedia(value, { component, path })
+    if (!media?.url) return
+    const responsive = responsiveProps(name)
+    put(target, name, media.url)
+    put(target, responsive.srcSet, media.srcSet)
+    put(target, responsive.sizes, media.sizes)
+    return
+  }
+
+  put(target, name, coerceField(component, field, value, ctx, path))
+}
+
 /** One component's block data, as props. */
 export function coerceBlock(
   component: string,
@@ -89,14 +163,7 @@ export function coerceBlock(
   const props: Record<string, unknown> = {}
 
   for (const field of fields) {
-    const override = fieldOverride(ctx.overrides, component, field.name)
-    if (override?.omit) continue
-
-    const value = coerceField(component, field, data[field.name], ctx, field.name)
-    // The one name mismatch in the system — ArticleBody's `body` is the
-    // component's `children` — declared in the overrides so the generator and
-    // this agree by construction rather than by memory.
-    put(props, override?.propName ?? field.name, value)
+    putField(props, component, field, data[field.name], ctx, field.name)
   }
 
   return props
@@ -129,6 +196,15 @@ function coerceField(
     case 'richtext':
       return ctx.renderRichText(value)
 
+    /*
+    The URL alone, with no responsive siblings — because there is nowhere to put
+    them. This branch is only reached through the scalar-array path below, where
+    a row *is* its single value and has no object to hold a `srcSet` beside it.
+    Every image field in the design system today arrives through `putField`
+    instead; no contract has a single-image-child array. If one ever does, its
+    images will be right-sized but not responsive, and the fix is a row object
+    rather than a scalar.
+    */
     case 'image': {
       const media = ctx.resolveMedia(value, { component, path })
       return media?.url ?? undefined
@@ -155,11 +231,7 @@ function coerceField(
       const nested = value as Record<string, unknown>
       const out: Record<string, unknown> = {}
       for (const child of field.of) {
-        put(
-          out,
-          fieldOverride(ctx.overrides, component, `${path}.${child.name}`)?.propName ?? child.name,
-          coerceField(component, child, nested[child.name], ctx, `${path}.${child.name}`),
-        )
+        putField(out, component, child, nested[child.name], ctx, `${path}.${child.name}`)
       }
       return Object.keys(out).length > 0 ? out : undefined
     }
@@ -203,12 +275,7 @@ function coerceField(
         const source = row as Record<string, unknown>
         const out: Record<string, unknown> = {}
         for (const child of field.of ?? []) {
-          put(
-            out,
-            fieldOverride(ctx.overrides, component, `${path}.${child.name}`)?.propName ??
-              child.name,
-            coerceField(component, child, source[child.name], ctx, `${path}.${child.name}`),
-          )
+          putField(out, component, child, source[child.name], ctx, `${path}.${child.name}`)
         }
         // `id` is Payload's row key. The component has no such prop, and React
         // would pass it straight through to the DOM.
