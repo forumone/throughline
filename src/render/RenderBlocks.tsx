@@ -22,6 +22,21 @@ export interface RenderBlocksProps {
    * nothing — a page with one unrenderable block should still serve.
    */
   onUnknownBlock?: (blockType: string) => ReactNode
+  /**
+   * Extra props merged into a block's, keyed by `blockType`.
+   *
+   * For the things a route supplies and an editor cannot author. The filter row
+   * in the Insights hero is the case this exists for: a row of links built from
+   * the taxonomy and the current URL, handed to `ImageHero` as `children`.
+   * Nobody types it into a block, and `coerceBlock` only ever produces props the
+   * contract declares — so without a way in, route-driven content has no way to
+   * reach a component that a block renders.
+   *
+   * Applies to **every** block of that type on the page. Pages carrying two of
+   * one component and wanting them to differ want their own routes, not a
+   * cleverer key here.
+   */
+  slots?: Readonly<Record<string, Record<string, unknown>>>
 }
 
 /**
@@ -37,6 +52,7 @@ export function RenderBlocks({
   fields,
   context,
   onUnknownBlock,
+  slots,
 }: RenderBlocksProps): JSX.Element | null {
   if (!blocks || blocks.length === 0) return null
 
@@ -52,7 +68,12 @@ export function RenderBlocks({
           )
         }
 
-        const props = coerceBlock(block.blockType, contractFields, block, context)
+        /* Slot props last: the route knows things the stored block does not,
+           and a block cannot author its way into overriding them. */
+        const props = {
+          ...coerceBlock(block.blockType, contractFields, block, context),
+          ...slots?.[block.blockType],
+        }
         return <Component key={block.id ?? index} {...props} />
       })}
     </>
