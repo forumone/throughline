@@ -42,9 +42,9 @@ export interface RenderBlocksProps {
 /**
  * Renders a stored `layout` as design-system components.
  *
- * A server component. The 16 components that call hooks carry their own
+ * A server component. The components that call hooks carry their own
  * `'use client'`, so the boundary is drawn per component by the design system
- * rather than here — which is what keeps the other 41 out of the client bundle.
+ * rather than here — which is what keeps the rest out of the client bundle.
  */
 export function RenderBlocks({
   blocks,
