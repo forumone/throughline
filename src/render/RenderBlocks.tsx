@@ -32,11 +32,31 @@ export interface RenderBlocksProps {
    * contract declares — so without a way in, route-driven content has no way to
    * reach a component that a block renders.
    *
-   * Applies to **every** block of that type on the page. Pages carrying two of
-   * one component and wanting them to differ want their own routes, not a
-   * cleverer key here.
+   * Applies to **every** block of that type on the page, which is right for
+   * what it is for: route-level knowledge is the same for every block on the
+   * route. When two blocks of one type need to differ from each other, the
+   * difference is a property of the *block*, not of the route — use
+   * `resolveProps`.
    */
   slots?: Readonly<Record<string, Record<string, unknown>>>
+  /**
+   * Extra props derived from the stored block itself.
+   *
+   * The other axis from `slots`. That one answers "what does this route know
+   * that no block does"; this one answers "what does this block hold that the
+   * contract does not declare". `coerceBlock` only ever produces props the
+   * contract declares, so a value spliced into a stored block by a hydration
+   * pass — a form definition fetched for the form this block points at — has no
+   * other way through.
+   *
+   * Two forms on one campaign page is the case that needs it, and it is the
+   * ordinary case rather than the edge one: a signup band and a download form,
+   * each pointing at a different form. Keyed by type, they would be handed the
+   * same one.
+   *
+   * Applied before `slots`, so a route still outranks a block.
+   */
+  resolveProps?: (block: StoredBlock) => Record<string, unknown> | undefined
 }
 
 /**
@@ -53,6 +73,7 @@ export function RenderBlocks({
   context,
   onUnknownBlock,
   slots,
+  resolveProps,
 }: RenderBlocksProps): JSX.Element | null {
   if (!blocks || blocks.length === 0) return null
 
@@ -69,9 +90,11 @@ export function RenderBlocks({
         }
 
         /* Slot props last: the route knows things the stored block does not,
-           and a block cannot author its way into overriding them. */
+           and neither a block nor its own resolver can author its way into
+           overriding them. */
         const props = {
           ...coerceBlock(block.blockType, contractFields, block, context),
+          ...resolveProps?.(block),
           ...slots?.[block.blockType],
         }
         return <Component key={block.id ?? index} {...props} />
