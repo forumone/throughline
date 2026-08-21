@@ -306,9 +306,22 @@ function allOrNothing(children: ContentField[]) {
   `mode` is skipped for that reason: it is a discriminator that says which
   *kind* of link this would be if there were one, and it is present whether or
   not anybody chose anything. It is never evidence that a group was filled in.
+
+  **An unticked checkbox is the same thing, and is why `false` counts as
+  empty.** `boolean` fields are generated with `defaultValue: false`, so a group
+  holding one is never literally empty either — and `false` is indistinguishable
+  from "nobody touched this", because Payload stores the default and an
+  author's deliberate untick identically. Treating it as filled makes the rule
+  demand the group's required children of somebody who has typed nothing, which
+  is the same defect this comment already describes, arriving by a second route.
+
+  It did arrive: `ManagedForm.consent` holds a `required` boolean beside a
+  required `text`, and adding the block failed to save with "Consent is
+  invalid" before an editor could touch it.
   */
   const isEmpty = (value: unknown): boolean => {
     if (value === undefined || value === null || value === '') return true
+    if (value === false) return true
     if (Array.isArray(value)) return value.every(isEmpty)
     if (typeof value === 'object') {
       return Object.entries(value).every(([key, held]) => key === 'mode' || isEmpty(held))
