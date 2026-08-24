@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CONTRACT_VERSION, ComponentContractSchema } from './schema.js'
+import { CONTRACT_VERSION, ComponentContractSchema, groupOf } from './schema.js'
 import { makeHeroContract } from './_fixtures.js'
 
 describe('CONTRACT_VERSION', () => {
@@ -26,6 +26,28 @@ describe('ComponentContractSchema', () => {
     const input = { ...makeHeroContract(), category: 'banner' as never }
     const result = ComponentContractSchema.safeParse(input)
     expect(result.success).toBe(false)
+  })
+
+  it('accepts a contract with no group', () => {
+    const result = ComponentContractSchema.safeParse(makeHeroContract())
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.group).toBeUndefined()
+    }
+  })
+
+  it('accepts a known group', () => {
+    const result = ComponentContractSchema.safeParse(makeHeroContract({ group: 'proof' }))
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects an unknown group', () => {
+    const input = { ...makeHeroContract(), group: 'section' as never }
+    const result = ComponentContractSchema.safeParse(input)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.join('.') === 'group')).toBe(true)
+    }
   })
 
   it('requires at least one example', () => {
@@ -95,5 +117,19 @@ describe('ComponentContractSchema', () => {
     })
     const result = ComponentContractSchema.safeParse(contract)
     expect(result.success).toBe(true)
+  })
+})
+
+describe('groupOf', () => {
+  it('returns the group when one is set', () => {
+    expect(groupOf({ category: 'section', group: 'narrative' })).toBe('narrative')
+  })
+
+  it('falls back to the category when no group is set', () => {
+    expect(groupOf({ category: 'section' })).toBe('section')
+  })
+
+  it('falls back when the group is explicitly undefined', () => {
+    expect(groupOf({ category: 'hero', group: undefined })).toBe('hero')
   })
 })

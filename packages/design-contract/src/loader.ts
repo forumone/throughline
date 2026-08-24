@@ -1,5 +1,6 @@
 import { type Manifest, ManifestSchema } from './manifest.js'
-import type { ComponentContract, ComponentCategory } from './schema.js'
+import { groupOf } from './schema.js'
+import type { ComponentContract, ComponentCategory, ComponentGroup } from './schema.js'
 
 /**
  * A validated, queryable manifest. Returned by {@link loadManifest} and
@@ -50,6 +51,23 @@ export class LoadedManifest {
       categories.add(component.category)
     }
     return Array.from(categories).sort()
+  }
+
+  /**
+   * Every component filed under a shelf. Matches on the resolved group, so a
+   * component with no `group` is found by its category.
+   */
+  listByGroup(group: ComponentGroup | string): ComponentContract[] {
+    return Object.values(this.raw.components).filter((c) => groupOf(c) === group)
+  }
+
+  /** Every distinct resolved group present, sorted alphabetically. */
+  listGroups(): string[] {
+    const groups = new Set<string>()
+    for (const component of Object.values(this.raw.components)) {
+      groups.add(groupOf(component))
+    }
+    return Array.from(groups).sort()
   }
 
   /** Token definition by name, or `undefined` if absent. */

@@ -34,6 +34,48 @@ const CategorySchema = z.enum([
   'utility',
 ])
 
+/**
+ * Where an editor looks for a component, as distinct from what the component
+ * *is*.
+ *
+ * `category` answers the second question and several consumers reason about it
+ * as a kind. It is a poor answer to the first: a real design system files
+ * roughly half its library under `section`, so a picker grouped on `category`
+ * hands back the flat list the grouping was meant to avoid, while `card` and
+ * `navigation` hold one entry each. Redistributing within `category` to even
+ * the shelves out would file components under the wrong kind for every other
+ * consumer.
+ *
+ * So this is a second, optional field. The values are shelf labels, chosen to
+ * split the sections a `category` cannot:
+ *
+ * - `hero`       — page openers
+ * - `narrative`  — sections that explain, walk through, or tell
+ * - `proof`      — sections that evidence a claim: testimony, clients, results
+ * - `listing`    — collections of records, usually repeating
+ * - `media`      — image, video, audio, and their captions
+ * - `form`       — anything an editor thinks of as a form
+ * - `cta`        — asks
+ * - `navigation` — wayfinding within or across pages
+ * - `utility`    — structural or incidental
+ *
+ * There is deliberately no `section`: a shelf that holds half the library is
+ * the problem this field exists to solve. There is no `card` or `data` either
+ * — both name a kind rather than a place to look, and their contents belong on
+ * `listing` and `proof` respectively.
+ */
+const GroupSchema = z.enum([
+  'hero',
+  'narrative',
+  'proof',
+  'listing',
+  'media',
+  'form',
+  'cta',
+  'navigation',
+  'utility',
+])
+
 export type ContentField = {
   name: string
   type: z.infer<typeof FieldTypeSchema>
@@ -70,6 +112,12 @@ export const ComponentContractSchema = z.object({
   // Identity
   name: z.string().min(1).regex(/^[A-Z][A-Za-z0-9]+$/, 'Component names must be PascalCase'),
   category: CategorySchema,
+  /**
+   * The shelf an authoring UI files this component under. Optional: when it is
+   * absent, {@link groupOf} falls back to {@link category}, so a design system
+   * that sets none groups exactly as it did before this field existed.
+   */
+  group: GroupSchema.optional(),
   description: z.string().min(20).max(280),
   intent: z.string().min(20).max(500),
 
@@ -152,5 +200,20 @@ export const ComponentContractSchema = z.object({
 
 export type ComponentContract = z.infer<typeof ComponentContractSchema>
 export type ComponentCategory = z.infer<typeof CategorySchema>
+export type ComponentGroup = z.infer<typeof GroupSchema>
+
+/**
+ * The shelf a component is filed under: its `group` when set, otherwise its
+ * `category`.
+ *
+ * Anything that groups components should call this rather than reading either
+ * field directly, so a design system part-way through adopting `group` groups
+ * consistently instead of half one way and half the other. It takes a
+ * structural type so it also accepts the looser component shapes consumers
+ * carry around, not only a fully parsed {@link ComponentContract}.
+ */
+export function groupOf(component: { category: string; group?: string | undefined }): string {
+  return component.group ?? component.category
+}
 export type ComponentPlacement = z.infer<typeof PlacementSchema>
 export type ContentFieldType = z.infer<typeof FieldTypeSchema>

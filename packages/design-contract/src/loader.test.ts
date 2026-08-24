@@ -70,6 +70,48 @@ describe('LoadedManifest', () => {
     expect(loaded.listCategories()).toEqual(['card', 'hero'])
   })
 
+  it('listByGroup finds a component by its explicit group', () => {
+    const grouped = loadManifest(
+      makeManifest({
+        components: {
+          Hero: makeHeroContract(),
+          Testimonials: makeHeroContract({
+            name: 'Testimonials',
+            category: 'section',
+            group: 'proof',
+          }),
+        },
+      }),
+    )
+    const proof = grouped.listByGroup('proof')
+    expect(proof).toHaveLength(1)
+    expect(proof[0]?.name).toBe('Testimonials')
+  })
+
+  it('listByGroup finds an ungrouped component by its category', () => {
+    const heroes = loaded.listByGroup('hero')
+    expect(heroes).toHaveLength(1)
+    expect(heroes[0]?.name).toBe('Hero')
+  })
+
+  it('listGroups resolves group before category', () => {
+    const grouped = loadManifest(
+      makeManifest({
+        components: {
+          Hero: makeHeroContract(),
+          Testimonials: makeHeroContract({
+            name: 'Testimonials',
+            category: 'section',
+            group: 'proof',
+          }),
+          Steps: makeHeroContract({ name: 'Steps', category: 'section', group: 'narrative' }),
+        },
+      }),
+    )
+    expect(grouped.listGroups()).toEqual(['hero', 'narrative', 'proof'])
+    expect(grouped.listCategories()).toEqual(['hero', 'section'])
+  })
+
   it('getToken returns a token by name', () => {
     expect(loaded.getToken('space.lg')?.value).toBe('2rem')
   })
