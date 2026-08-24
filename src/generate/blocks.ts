@@ -1,3 +1,4 @@
+import { groupOf } from '@forumone/throughline-design-contract'
 import type { Block } from 'payload'
 import type { Overrides } from '../overrides'
 import { toPayloadField, type ContentField, type FieldContext } from './fields'
@@ -6,6 +7,7 @@ import { toPayloadField, type ContentField, type FieldContext } from './fields'
 export interface ManifestComponent {
   name: string
   category: string
+  group?: string
   description: string
   intent: string
   composition: {
@@ -95,11 +97,19 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
       plural: humanize(component.name),
     },
     admin: {
-      // The contract's `intent` is the sentence that says when to choose this
-      // component over its neighbours. It is the single most useful thing an
-      // author can read at the moment they are picking a block, and it already
-      // exists — there is no reason to write a worse one here.
-      group: humanize(component.category),
+      // Which shelf of the picker this block sits on.
+      //
+      // `groupOf` is the contract's resolver: a component's `group` when it
+      // sets one, its `category` when it does not. Both fields are read through
+      // it rather than either directly, so a component that has not been given
+      // a group still lands somewhere sensible instead of on a nameless shelf.
+      //
+      // The two are different questions. `category` is what the component *is*,
+      // and other consumers read it that way — the components MCP server
+      // filters on it. `group` is where an author looks for it. Grouping on
+      // `category` alone put over half the picker under "Section", which is the
+      // flat list the grouping exists to avoid.
+      group: humanize(groupOf(component)),
     },
     // A block with no authorable fields is still legitimate: some components
     // are entirely presentational. Payload needs a field array, not a non-empty
