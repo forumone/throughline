@@ -1,5 +1,12 @@
 # @forumone/throughline-reference-ds
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [24bd325]
+  - @forumone/throughline-design-contract@0.3.0
+
 ## 0.3.0
 
 ### Minor Changes
