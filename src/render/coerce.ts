@@ -34,6 +34,13 @@ export interface MediaLike {
    * `srcSet`, which is the only thing it selects from.
    */
   sizes?: string | null
+  /**
+   * The stored file's own mime type. The media collection accepts video as
+   * well as images, and the two cannot be treated alike: a host that resizes
+   * images through an optimizer has to leave an `video/mp4` URL alone, because
+   * an image optimizer handed a video returns nothing it can play.
+   */
+  mimeType?: string | null
 }
 
 export interface LinkValue {
@@ -147,6 +154,24 @@ function putField(
     put(target, name, media.url)
     put(target, responsive.srcSet, media.srcSet)
     put(target, responsive.sizes, media.sizes)
+    return
+  }
+
+  /*
+  An uploaded video is one key, never three. A `srcset` picks between candidate
+  widths of the same picture, and there are no candidate widths of a video file
+  — the browser cannot re-encode one, and offering `videoSrcSet` would put a
+  prop on the component that no component takes.
+  */
+  if (
+    field.type === 'video' &&
+    override?.as === 'videoUpload' &&
+    value !== undefined &&
+    value !== null
+  ) {
+    const media = ctx.resolveMedia(value, { component, path })
+    if (!media?.url) return
+    put(target, name, media.url)
     return
   }
 

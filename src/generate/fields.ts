@@ -190,8 +190,25 @@ export function toPayloadField(
       }
 
     case 'video':
-      // An embed URL, not an upload. VideoEmbed takes a provider URL and has a
-      // separate `poster` field that *is* an image.
+      /*
+      Two kinds of video wear the same contract type, and the override is what
+      tells them apart.
+
+      `videoUpload` is a file the site serves itself — `VideoHero`'s background
+      clip — so it is an upload against the same media collection an image
+      uses, which already accepts `video/mp4`. Everything else is a provider
+      embed URL: `VideoEmbed` takes a YouTube/Vimeo/Wistia src and has a
+      separate `poster` field that *is* an image.
+      */
+      if (override?.as === 'videoUpload') {
+        return {
+          name: field.name,
+          type: 'upload',
+          relationTo: ctx.mediaCollection as CollectionSlug,
+          ...required,
+          ...admin,
+        }
+      }
       return {
         name: field.name,
         type: 'text',

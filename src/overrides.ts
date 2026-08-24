@@ -27,8 +27,19 @@ export interface FieldOverride {
    * and the component takes it as `children`.
    */
   propName?: string
-  /** Force a treatment the contract's `type` cannot express. */
-  as?: 'icon' | 'url'
+  /**
+   * Force a treatment the contract's `type` cannot express.
+   *
+   * `videoUpload` is for a video the site hosts itself rather than embeds. The
+   * contract's `video` type means a provider URL — it is `VideoEmbed`'s
+   * YouTube/Vimeo/Wistia iframe src — and the field type enum in
+   * `@forumone/throughline-design-contract` has no eleventh value for "a file
+   * in the media library". So the contract says `video`, and this says which
+   * of the two kinds of video it meant: an upload field, resolved to the
+   * stored file's URL with no `srcSet` beside it, because a video has no
+   * candidate widths to choose between.
+   */
+  as?: 'icon' | 'url' | 'videoUpload'
   /**
    * Explicit `select` options. The manifest carries none — allowed values live
    * in prose `constraints` — so they come from the component's own literal
