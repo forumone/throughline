@@ -41,7 +41,8 @@ export type { McpHandlerOptions, McpMeta } from './mcp/index.js'
 
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
-export { shallowDiff, generateId } from './utils/index.js'
+export { shallowDiff, generateId, documentContentHash } from './utils/index.js'
+export type { DocumentContentHashOptions } from './utils/index.js'
 
 // Re-export plugin contract types so consumers do not have to import the
 // contract package separately for the common ones.

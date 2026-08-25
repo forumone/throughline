@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import { type AuditWriter, documentContentHash, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
@@ -62,7 +62,16 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
         }
       }
 
-      const targetVersion = String(document['updatedAt'] ?? document['id'] ?? input.id)
+      /*
+      What the approval is bound to. A hash of the document's content, not of
+      its `updatedAt` — so a save that changed nothing leaves a granted
+      approval standing, and one that changed something invalidates it.
+
+      Publishing's approval step hashes the same document the same way, with
+      the same function, from a `findByID` with the same arguments. That is
+      the only reason the two agree; see `documentContentHash`.
+      */
+      const targetVersion = await documentContentHash(document)
       const targetTitle =
         typeof document['title'] === 'string' ? document['title'] : input.id
       const slug =

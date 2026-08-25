@@ -12,7 +12,7 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 | MCP | `./mcp` | `createMcpHandler`, `McpMetaSchema`, `withMeta` |
 | Env | `./env` | `ENV_VARS`, `validateBaseEnv`, `requireEnv`, `optionalEnv` |
 | Logger | (main) | `defaultLogger`, `createNamedLogger` |
-| Utils | (main) | `shallowDiff`, `generateId` |
+| Utils | (main) | `shallowDiff`, `generateId`, `documentContentHash` |
 
 The main entry re-exports everything; the subpath exports keep bundles smaller for consumers who only need one slice.
 
@@ -115,6 +115,21 @@ validateBaseEnv() // throws on missing PAYLOAD_SECRET / DATABASE_URI / NEXT_PUBL
 
 const apiKey = requireEnv(ENV_VARS.PUBLISHING_SERVER_API_KEY)
 ```
+
+## Document content hashing
+
+`documentContentHash(document)` reduces a Payload document to a hash of the part an editor authored, ignoring the metadata that moves without the content moving — `id`, `createdAt`, `updatedAt`, `_status`, `__v`, `_id`, `globalType`, stripped at every level of the document. Object key order does not affect the result, because blocks come back out of JSONB in no promised order; array order does, because that is the order of the blocks on the page.
+
+```ts
+import { documentContentHash } from '@forumone/throughline-core'
+
+const version = await documentContentHash(page)
+const withExtras = await documentContentHash(page, { exclude: ['syncedAt'] })
+```
+
+It exists so that approvals can bind to *what an approver read* rather than to when it was last saved. Approvals writes it as `targetVersion`; publishing recomputes it at publish time. Two consequences worth stating: a save that changed nothing keeps a granted approval, and an edit that is reverted brings one back.
+
+**Two callers only agree if they hash a document loaded the same way.** Both of the above use `payload.findByID({ collection, id, draft: true })` at the config's default depth. A populated relationship and a bare relationship id are different values, and normalising cannot turn one into the other — so a third caller fetching at a different depth would produce a hash that matches nothing.
 
 ## Why all of this lives in one package
 
