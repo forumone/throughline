@@ -1,5 +1,12 @@
 # @forumone/throughline-components
 
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies [d20f909]
+  - @forumone/throughline-core@0.3.0
+
 ## 0.2.5
 
 ### Patch Changes

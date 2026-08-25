@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-integrations",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Plugin architecture for connecting Throughline-powered Payload sites to external systems. Ships the Integration contract, registry, collection, MCP tools, and a generic outbound-webhook integration as the first concrete example.",
   "type": "module",
   "main": "./dist/index.js",
