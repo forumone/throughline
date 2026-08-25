@@ -46,5 +46,14 @@ was granted against is not recoverable from a timestamp. Grant a moment for
 in-flight requests to clear before upgrading, or expect approvers to be asked once
 more.
 
-Minor rather than patch on all three: `documentContentHash` is new public API, and
-the stored meaning of `targetVersion` changes.
+Also exports `isDraftWrite` from `@forumone/throughline-publishing`. It is the
+predicate the plugin's own trust boundary uses to tell a "Save draft" apart from
+an unpublish, and it is unavailable to host code that needs the same answer: an
+`afterChange` hook cannot work it out, because Payload sets `data._status =
+'draft'` on any `draft: true` update before the hooks run and `previousDoc` is the
+latest _version_ rather than the live document. With autosave on, a host hook that
+drops a cache or sends a notification fires every few seconds of typing unless it
+asks this first.
+
+Minor rather than patch on all three: `documentContentHash` and `isDraftWrite` are
+new public API, and the stored meaning of `targetVersion` changes.
