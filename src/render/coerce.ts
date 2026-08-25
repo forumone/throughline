@@ -274,12 +274,14 @@ function coerceField(
       `[{ tag: 'AI' }]`, which type-checks nowhere and renders as
       `[object Object]`.
 
-      Every one of the 24 single-child arrays in the design system is a scalar
-      array — `KeyPoints.points`, `TagList.tags`, `AudioPlayer.speeds` (numbers,
-      hence coercing the value rather than stringifying it), `TextHero.logos`.
-      Checked against each component's own prop type, not inferred from the
-      shape. If a genuine one-field *object* row ever appears, this is where it
-      breaks, and the fix is a marker in the contract rather than a guess here.
+      Every single-child array in the design system is a scalar array —
+      `KeyPoints.points`, `TagList.tags`, `AudioPlayer.speeds` (numbers, hence
+      coercing the value rather than stringifying it), `Card.tags`. Checked
+      against each component's own prop type, not inferred from the shape. A
+      count used to be written here and had drifted by two by the time anyone
+      re-ran it, so it is gone: the invariant is what holds, not the total. If
+      a genuine one-field *object* row ever appears, this is where it breaks,
+      and the fix is a marker in the contract rather than a guess here.
       */
       const [only] = field.of
       if (field.of.length === 1 && only && !only.of) {
