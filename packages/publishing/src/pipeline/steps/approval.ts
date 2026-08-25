@@ -1,3 +1,4 @@
+import { documentContentHash } from '@forumone/throughline-core'
 import type { ApprovalResolver } from '../../options.js'
 import type { PipelineStep } from '../types.js'
 
@@ -39,7 +40,18 @@ export const approvalStep: PipelineStep = async (ctx) => {
     }
   }
 
-  const versionId = String(ctx.document['updatedAt'] ?? ctx.documentId)
+  /*
+  The approval binds to the document's content, not to its `updatedAt`. The
+  approvals plugin's `request_approval` computes this same hash, with this
+  same function, over a document loaded by the same `findByID` call — so an
+  approval granted on what an approver read still resolves after a save that
+  changed nothing, and does not resolve after one that changed something.
+
+  Binding to `updatedAt` made that a property of a timestamp rather than a
+  rule: any save at all invalidated a pending approval, which is also why
+  autosave and approvals could not both be on. See #341.
+  */
+  const versionId = await documentContentHash(ctx.document)
   const approval = await resolver.getActiveApproval(
     ctx.collection.slug,
     ctx.documentId,
