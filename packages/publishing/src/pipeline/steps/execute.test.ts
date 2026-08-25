@@ -30,6 +30,49 @@ describe('executeStep', () => {
     expect(updateArgs.context.bypassPublishingServer).toBe(true)
   })
 
+  /*
+  The field means "when this went live". A listing sorts on it and a template
+  prints it, so re-publishing an edit must not move it — and it did, on every
+  publish, sending an edited article to the top of its index under today's
+  date. The guard was already computed here for the event payload; it was
+  simply not applied to the write.
+  */
+  it('leaves publishedAt alone when the document already has one', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const send = vi.fn(async () => ({}))
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send } as unknown as Inngest,
+      document: { slug: 'my-page', publishedAt: '2026-03-25T09:00:00.000Z' },
+      documentId: 'p1',
+    })
+
+    await executeStep(ctx)
+
+    const data = (update.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data
+    expect(data['_status']).toBe('published')
+    // Absent, not merely unchanged: writing the same value back would still be
+    // this step deciding the date.
+    expect('publishedAt' in data).toBe(false)
+  })
+
+  it('reports the date it did not overwrite, so a subscriber can still see it', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const send = vi.fn(async () => ({}))
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send } as unknown as Inngest,
+      document: { slug: 'my-page', publishedAt: '2026-03-25T09:00:00.000Z' },
+      documentId: 'p1',
+    })
+
+    await executeStep(ctx)
+
+    const sent = (send.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data
+    expect(sent.isFirstPublish).toBe(false)
+    expect(sent.previousPublishedAt).toBe('2026-03-25T09:00:00.000Z')
+  })
+
   it('fires content/page.published with first-publish flag and slug', async () => {
     const update = vi.fn(async () => ({ id: 'p1' }))
     const send = vi.fn(async () => ({}))

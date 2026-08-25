@@ -2,9 +2,23 @@ import { sendEventSafely } from '../../events.js'
 import type { PipelineStep } from '../types.js'
 
 /**
- * Performs the actual publish: writes `_status: 'published'` and updates
- * the publishedAt field, then fires `content/page.published` with metadata
- * subscribers can react to (revalidation, integrations, etc.).
+ * Performs the actual publish: writes `_status: 'published'`, stamps the
+ * publishedAt field on a first publish, then fires `content/page.published`
+ * with metadata subscribers can react to (revalidation, integrations, etc.).
+ *
+ * `publishedAt` is set only when the document does not already have one. It
+ * means "when this went live", which is what a listing sorts on and what a
+ * template prints on the page — so re-publishing an edit must not move it. It
+ * did: every publish overwrote the field with the current time, which sent an
+ * edited article to the top of its index and printed today's date on a piece
+ * written months ago. An editor who typed the original date into the sidebar
+ * watched it be replaced by the act of publishing.
+ *
+ * The guard is `wasFirstPublish`, which this step already computed for the
+ * event payload and did not apply to the write.
+ *
+ * A document that should genuinely be re-dated is re-dated by editing the
+ * field, which now survives.
  *
  * Sets `context.bypassPublishingServer = true` on the Payload update so the
  * status-write blocking hook recognizes this as a sanctioned write. Any
@@ -32,7 +46,7 @@ export const executeStep: PipelineStep = async (ctx) => {
     id: ctx.documentId,
     data: {
       _status: 'published',
-      [ctx.collection.publishedAtField]: now,
+      ...(wasFirstPublish ? { [ctx.collection.publishedAtField]: now } : {}),
     },
     ...(ctx.actor.enforceAccessAs
       ? { user: ctx.actor.enforceAccessAs, overrideAccess: false }
