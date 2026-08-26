@@ -52,7 +52,8 @@ What you get:
 - **No API key in the editorial publish path.** The endpoint authenticates off the Payload session cookie.
 - **The person is the actor.** The audit event records the logged-in editor, with `mcpTool` set to `admin:publish` so admin publishes are distinguishable from MCP ones.
 - **Access control still applies.** The write runs with `overrideAccess: false` as that user. Bypassing the status hook is not bypassing permissions.
-- **Real feedback.** A blocked publish renders the failing step, its issues, and its suggestion — not a generic error.
+- **Real feedback, on the field that caused it.** A blocked publish renders the failing step, its issues, and its suggestion — and every issue naming a field is marked on that field, with an error count on the collapsed block row containing it. An issue with no field (an embargo, a missing approval) stays in the toast, which is where the full list still appears.
+- **One notice per action.** The interim draft save the button performs does not announce itself; publishing says "published" once.
 
 The Publish button is hidden on the create view: the pipeline's first step is `exist`, so there is nothing to evaluate until the draft is saved. Use Payload's Save Draft button, then publish from the edit view.
 
@@ -73,6 +74,8 @@ With `adminComponents: false` the admin has **no** working publish path until yo
 | `POST /api/publishing/mcp` | Bearer API key | JSON-RPC |
 
 A publish blocked by the pipeline returns **200** with `{ published: false, failedAt, reason, code, issues, suggestion }`. The pipeline ran correctly and the answer was no; that is not a transport error. Non-2xx is reserved for auth (401/403), bad input (400), and genuine failures (500).
+
+A field the collection itself refuses is one of those blocks — `failedAt: 'execute'`, `code: 'field-validation-failed'`, with Payload's own field paths as `issues`. The publishing write is the first step that enforces `required`, because a draft write deliberately does not, so an empty required field inside a block is caught there and nowhere earlier.
 
 ## Publishing from host code
 

@@ -10,7 +10,7 @@ import {
   useFormModified,
   useTranslation,
 } from '@payloadcms/ui'
-import { callPublishingEndpoint, describeBlock } from './publishing-client.js'
+import { callPublishingEndpoint, describeBlock, fieldErrorsFromBlock } from './publishing-client.js'
 
 export interface ThroughlinePublishButtonProps {
   /** Route prefix the plugin is mounted under. Injected via `clientProps`. */
@@ -48,7 +48,7 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
   } = useDocumentInfo()
 
   const { config } = useConfig()
-  const { submit } = useForm()
+  const { dispatchFields, getFields, setIsValid, setSubmitted, submit } = useForm()
   const modified = useFormModified()
   const { t } = useTranslation()
   const [publishing, setPublishing] = useState(false)
@@ -75,6 +75,12 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
           method: 'PATCH',
           overrides: { _status: 'draft' },
           skipValidation: true,
+          // No toast for this write. It is a step inside publishing, not
+          // something the editor asked for, and its success toast used to
+          // land on top of the publish one — two overlapping notices for one
+          // action, the first of which announced the lesser outcome.
+          // Payload's own Save Draft button is untouched and still toasts.
+          disableSuccessStatus: true,
         })
         // `submit` returns void and toasts its own error on most failures,
         // but falls through with a non-ok response when the body carries no
@@ -97,7 +103,31 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
       }
 
       if (!result.body.published) {
-        const { title, description } = describeBlock(result.body)
+        /*
+        The pipeline's issues already name their fields; until now they only
+        reached a toast, which left the editor reading `layout.7.image` and
+        counting blocks. Dispatched into form state they render where the
+        problem is — on the field, and as an error count on the collapsed
+        block row containing it.
+
+        `setSubmitted` is what makes them visible: a field shows its error
+        only once the form has been submitted, and a publish with no pending
+        edits never submits the form at all. `setIsValid(false)` mirrors what
+        Payload does with the field errors from an ordinary save.
+
+        The toast still lists everything, because an issue with no field — an
+        embargo, a missing approval — has nowhere else to go.
+        */
+        const fieldErrors = fieldErrorsFromBlock(result.body, Object.keys(getFields()))
+        if (fieldErrors.length > 0) {
+          dispatchFields({ type: 'ADD_SERVER_ERRORS', errors: fieldErrors })
+          setIsValid(false)
+          setSubmitted(true)
+        }
+
+        const { title, description } = describeBlock(result.body, {
+          markedFields: fieldErrors.length,
+        })
         toast.error(title, {
           ...(description ? { description } : {}),
           duration: 10_000,
@@ -135,13 +165,17 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
   }, [
     api,
     collectionSlug,
+    dispatchFields,
+    getFields,
     id,
     modified,
     publishing,
     routePrefix,
     serverURL,
     setHasPublishedDoc,
+    setIsValid,
     setMostRecentVersionIsAutosaved,
+    setSubmitted,
     setUnpublishedVersionCount,
     submit,
     t,
