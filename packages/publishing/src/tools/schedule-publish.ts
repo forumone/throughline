@@ -24,6 +24,7 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
 
   return {
     name: 'schedule_publish',
+    requiredScope: 'publishing.execute',
     description:
       "Schedules a future publish. Validates the document would currently pass the preflight pipeline (composition, accessibility, required fields, embargo, approval), then stores `scheduledPublishAt` on the document. The framework's workflow runner picks up the schedule and executes the full publish pipeline at that time.",
     inputSchema,

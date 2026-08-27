@@ -11,6 +11,14 @@ export interface McpToolDefinition<Input extends z.ZodType = z.ZodType, Output =
   description: string
   /** Zod schema for the input; used for validation and for generating the MCP tool schema. */
   inputSchema: Input
+  /**
+   * The API-key scope a caller must hold, e.g. `'publishing.execute'`.
+   *
+   * Declared on the consequential tools — the ones that write, publish or
+   * decide. A tool with no `requiredScope` is callable by any authenticated
+   * key, which is the right default for a read.
+   */
+  requiredScope?: string
   /** Handler invoked with validated input plus per-request context. */
   handler: (input: z.infer<Input>, context: McpToolContext) => Promise<Output>
 }

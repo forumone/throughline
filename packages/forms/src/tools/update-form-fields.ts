@@ -26,6 +26,7 @@ export function createUpdateFormFieldsTool(
 ): McpToolDefinition<typeof inputSchema> {
   return {
     name: 'update_form_fields',
+    requiredScope: 'forms.manage',
     description:
       'Replaces the fields on an existing form. Re-runs the same accessibility / submitter-confirmation checks `create_form` runs against the form\'s current submitterConfirmation config so existing email-field references stay valid.',
     inputSchema,

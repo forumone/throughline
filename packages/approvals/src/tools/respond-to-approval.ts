@@ -36,6 +36,7 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
 
   return {
     name: 'respond_to_approval',
+    requiredScope: 'approvals.decide',
     description:
       "Records an approver's decision on a pending approval. Valid decisions: approve, decline, request_changes. Approvers can also act through the inline action links in their notification emails; this tool is for when they respond conversationally through Claude.",
     inputSchema,

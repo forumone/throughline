@@ -38,6 +38,7 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
 
   return {
     name: 'request_approval',
+    requiredScope: 'approvals.request',
     description:
       "Kicks off the approval workflow for a document that requires approval before publishing. Provide a clear changesSummary explaining what changed and why; approvers see this in their notifications. Returns the approval ID, expiration time, and the list of approvers who were notified.",
     inputSchema,

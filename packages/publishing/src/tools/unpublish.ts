@@ -23,6 +23,7 @@ export function createUnpublishTool(deps: UnpublishToolDeps): McpToolDefinition 
 
   return {
     name: 'unpublish',
+    requiredScope: 'publishing.execute',
     description:
       'Unpublishes a published document by reverting it to draft. Use when content needs to be removed from the public site without deleting it. Fires content/page.unpublished so revalidation and integrations can react.',
     inputSchema,

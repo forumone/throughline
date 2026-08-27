@@ -20,6 +20,7 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
 
   return {
     name: 'rollback',
+    requiredScope: 'publishing.execute',
     description:
       "Rolls a document back to a prior version from Payload's version history. The restored content lands as a fresh draft; call `publish` afterwards if you want it live again. Audits the rollback under publishing.rollback.",
     inputSchema,

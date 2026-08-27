@@ -52,8 +52,17 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
 
     try {
       if (rpc.method === 'tools/list') {
+        /*
+        Only what this key may actually call.
+
+        An agent shown a tool it will be refused for will try it, be refused,
+        and try something else — and the transcript reads like the tool is
+        broken rather than like the key is narrow. Hiding it is the difference
+        between "you cannot publish" and "publishing is unavailable", and only
+        one of those is true.
+        */
         return jsonRpcResult(id, {
-          tools: options.tools.map((tool) => ({
+          tools: options.tools.filter(permits(auth.scopes)).map((tool) => ({
             name: tool.name,
             description: tool.description,
             inputSchema: zodToJsonSchema(tool.inputSchema, { target: 'jsonSchema7' }),
@@ -70,6 +79,19 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
         const tool = toolsByName.get(params.data.name)
         if (!tool) {
           return jsonRpcError(id, JSON_RPC_METHOD_NOT_FOUND, `Unknown tool: ${params.data.name}`)
+        }
+
+        // Named rather than merely refused: a caller that cannot see why it was
+        // turned away has no way to ask for the right key.
+        if (!permits(auth.scopes)(tool)) {
+          logger.warn(
+            `${tag} refused ${tool.name}: key "${auth.apiKeyName}" lacks scope ${String(tool.requiredScope)}`,
+          )
+          return jsonRpcError(
+            id,
+            JSON_RPC_INVALID_REQUEST,
+            `This API key does not carry the "${String(tool.requiredScope)}" scope, which ${tool.name} requires.`,
+          )
         }
 
         const inputResult = tool.inputSchema.safeParse(params.data.arguments ?? {})
@@ -143,4 +165,16 @@ function jsonRpcResult(id: string | number | null, result: unknown): Response {
 
 function jsonRpcError(id: string | number | null, code: number, message: string): Response {
   return jsonResponse({ jsonrpc: '2.0', id, error: { code, message } })
+}
+
+/**
+ * Whether a key holding `scopes` may call a given tool.
+ *
+ * A tool declaring no `requiredScope` is callable by any authenticated key —
+ * the right default for a read. A tool that declares one needs it named on the
+ * key, and a key carrying no scopes at all passes nothing.
+ */
+function permits(scopes: string[] | undefined): (tool: McpToolDefinition) => boolean {
+  const held = new Set(scopes ?? [])
+  return (tool) => tool.requiredScope === undefined || held.has(tool.requiredScope)
 }
