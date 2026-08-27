@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { withMeta, getAuditWriter } from '@forumone/throughline-core'
+import { auditContext, withMeta, getAuditWriter } from '@forumone/throughline-core'
 import type { ResolvedFormsConfig } from '../options.js'
 import {
   FieldSchema,
@@ -61,20 +61,13 @@ export function createUpdateFormFieldsTool(
 
       const auditWriter = getAuditWriter(deps.payload)
       await auditWriter({
-        actor: {
-          type: 'user',
-          ...(ctx.user?.id ? { userId: ctx.user.id } : {}),
-          ...(ctx.user?.name ? { userName: ctx.user.name } : {}),
-          ...(ctx.apiKeyName ? { apiKeyName: ctx.apiKeyName } : {}),
-        },
+        ...auditContext(ctx, input._meta),
         action: 'form.updated',
         mcpServer: 'forms',
         mcpTool: 'update_form_fields',
         targetCollection: deps.resolved.formsCollectionSlug,
         targetId: input.formId,
         targetTitle: typeof existing['title'] === 'string' ? (existing['title'] as string) : undefined,
-        ...(input._meta?.userPrompt ? { prompt: input._meta.userPrompt } : {}),
-        ...(input._meta?.reasoning ? { reasoning: input._meta.reasoning } : {}),
         changesSummary: `Replaced form fields (${input.fields.length} fields).`,
       })
 

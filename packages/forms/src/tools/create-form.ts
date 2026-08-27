@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { withMeta, getAuditWriter } from '@forumone/throughline-core'
+import { auditContext, withMeta, getAuditWriter } from '@forumone/throughline-core'
 import type { ResolvedFormsConfig } from '../options.js'
 import { validateDestinationLabel } from '../destinations.js'
 import {
@@ -88,20 +88,13 @@ export function createCreateFormTool(
 
       const auditWriter = getAuditWriter(deps.payload)
       await auditWriter({
-        actor: {
-          type: 'user',
-          ...(ctx.user?.id ? { userId: ctx.user.id } : {}),
-          ...(ctx.user?.name ? { userName: ctx.user.name } : {}),
-          ...(ctx.apiKeyName ? { apiKeyName: ctx.apiKeyName } : {}),
-        },
+        ...auditContext(ctx, input._meta),
         action: 'form.created',
         mcpServer: 'forms',
         mcpTool: 'create_form',
         targetCollection: deps.resolved.formsCollectionSlug,
         targetId: String(created['id']),
         targetTitle: input.title,
-        ...(input._meta?.userPrompt ? { prompt: input._meta.userPrompt } : {}),
-        ...(input._meta?.reasoning ? { reasoning: input._meta.reasoning } : {}),
         changesSummary: `Created form "${input.title}" with ${input.fields.length} fields, destinations: ${input.destinationLabels.join(', ')}.`,
       })
 

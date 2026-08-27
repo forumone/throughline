@@ -39,11 +39,23 @@ export const fakeContext: McpToolContext = {
   logger: noopLogger,
 }
 
-/** Helper that runs a tool's handler with the fake context. */
+/**
+ * A caller authenticated by an API key with no linked user — an agent, in other
+ * words, which is the ordinary case for these tools and the one the audit actor
+ * used to get wrong.
+ */
+export const apiKeyOnlyContext: McpToolContext = {
+  user: null,
+  apiKeyName: 'agent-key',
+  logger: noopLogger,
+}
+
+/** Helper that runs a tool's handler, with the fake user context by default. */
 export async function callTool<I extends Record<string, unknown>>(
   tool: McpToolDefinition,
   args: I,
+  context: McpToolContext = fakeContext,
 ): Promise<unknown> {
   const parsed = tool.inputSchema.parse(args)
-  return tool.handler(parsed, fakeContext)
+  return tool.handler(parsed, context)
 }
