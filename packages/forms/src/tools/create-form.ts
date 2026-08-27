@@ -46,6 +46,7 @@ export function createCreateFormTool(
 ): McpToolDefinition<typeof inputSchema> {
   return {
     name: 'create_form',
+    requiredScope: 'forms.manage',
     description:
       "Creates a form with privacy notice, consent checkbox, and honeypot enabled by default. Destinations must be selected from the allowlist (call list_allowed_destinations first). Field names must be snake_case; every field needs a label (accessibility); submitterConfirmation, if enabled, must point to an existing email-typed field on the form.",
     inputSchema,

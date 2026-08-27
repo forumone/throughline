@@ -19,6 +19,7 @@ export function createTestIntegrationTool(
 ): McpToolDefinition<typeof inputSchema> {
   return {
     name: 'test_integration',
+    requiredScope: 'integrations.trigger',
     description:
       "Calls the integration's healthcheck. Use to answer 'is the integration reachable / configured correctly?'. Doesn't fire any system events; the test is local to the integration's healthcheck.",
     inputSchema,

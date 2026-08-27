@@ -21,6 +21,7 @@ export function createUpdateFormDestinationsTool(
 ): McpToolDefinition<typeof inputSchema> {
   return {
     name: 'update_form_destinations',
+    requiredScope: 'forms.manage',
     description:
       "Replaces a form's destinations with the given labels. Every label must be on the allowlist (use list_allowed_destinations to discover). The replace-all semantics are deliberate — incremental destination edits are too easy to misuse via prompt injection.",
     inputSchema,

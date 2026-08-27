@@ -23,6 +23,7 @@ export function createPublishTool(deps: PublishToolDeps): McpToolDefinition {
 
   return {
     name: 'publish',
+    requiredScope: 'publishing.execute',
     description:
       "Publishes a draft document. Runs the full publish pipeline: composition, accessibility, required-field, embargo, and approval checks. Returns success with the publish timestamp, or a specific failedAt step with reason / suggestion when something blocks the publish.",
     inputSchema,

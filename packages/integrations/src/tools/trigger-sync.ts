@@ -25,6 +25,7 @@ export function createTriggerSyncTool(
 ): McpToolDefinition<typeof inputSchema> {
   return {
     name: 'trigger_sync',
+    requiredScope: 'integrations.trigger',
     description:
       'Manually triggers an integration to send a test payload. Useful for verifying connectivity after a config change or after the integration has been failing. Admin-only because triggering an external POST is a write-side action.',
     inputSchema,

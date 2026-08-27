@@ -17,6 +17,10 @@ export interface BearerTokenAuthenticatorOptions {
  * against the API-keys collection. Returns the linked user plus key metadata
  * on success, `null` on any failure (no token, unknown token, disabled key,
  * key without linked user, expired key).
+ *
+ * The key's `scopes` come back with it. They are what the handler holds a
+ * scoped tool against; until they did, the field was a label on a key that
+ * could do everything its linked user could.
  */
 export function createBearerTokenAuthenticator(
   options: BearerTokenAuthenticatorOptions,
@@ -57,6 +61,7 @@ export function createBearerTokenAuthenticator(
         user,
         apiKeyName: String(apiKey['name'] ?? ''),
         apiKeyId: String(apiKey['id']),
+        scopes: toScopes(apiKey['scopes']),
       }
     },
   }
@@ -78,4 +83,11 @@ function toAuthenticatedUser(raw: Record<string, unknown>): AuthenticatedUser | 
     roles: (raw['roles'] as string[] | undefined) ?? [],
     groups: (raw['groups'] as string[] | undefined) ?? [],
   }
+}
+
+
+/** The stored `scopes` as a string list, whatever shape the row came back in. */
+function toScopes(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter((scope): scope is string => typeof scope === 'string')
 }

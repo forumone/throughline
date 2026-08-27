@@ -88,6 +88,34 @@ const handleMcp = createMcpHandler({
 export const POST = (req: Request) => handleMcp(req)
 ```
 
+### Scopes
+
+A key carries `scopes`, and a tool may declare the one it needs:
+
+```ts
+const publishTool: McpToolDefinition = {
+  name: 'publish',
+  requiredScope: 'publishing.execute',
+  // …
+}
+```
+
+A tool that declares no `requiredScope` is callable by any authenticated key, which is the right default for a read. A tool that declares one is **hidden from `tools/list`** and refused on a direct call unless the key names that scope — hidden as well as refused, because an agent shown a tool it will be turned away from will try it, fail, and report the tool as broken when what is narrow is the key.
+
+A key carrying no scopes at all passes nothing scoped. Absent is read as none, not as everything.
+
+The consequential tools in this suite and the scopes they require:
+
+| Scope | Tools |
+|---|---|
+| `publishing.execute` | `publish`, `unpublish`, `schedule_publish`, `rollback` |
+| `approvals.request` | `request_approval` |
+| `approvals.decide` | `respond_to_approval` |
+| `forms.manage` | `create_form`, `update_form_fields`, `update_form_destinations` |
+| `integrations.trigger` | `trigger_sync`, `test_integration` |
+
+Everything else — the component tools, the audit queries, the read side of publishing and approvals — needs only a valid key.
+
 ## Events
 
 `CoreEvents` enumerates the events the framework fires today. Server packages add their own via TypeScript module augmentation:
