@@ -112,6 +112,16 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
           createRollbackTool({ payload, options, auditWriter }),
         ]
 
+        /*
+        Payload's own MCP plugin, if the host is using it.
+
+        `onInit` is the first moment these tools can exist — they close over the
+        service, the audit writer and `payload` — and it runs before any request,
+        which is when `mcpPlugin` reads the array. That ordering is the whole
+        reason a config-time option can be filled at init.
+        */
+        options.mcpTools?.add(tools, { serverName: 'publishing', logger })
+
         const handler = createMcpHandler({
           payload,
           serverName: 'publishing',

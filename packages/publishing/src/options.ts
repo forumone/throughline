@@ -1,3 +1,4 @@
+import type { McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
 import { z } from 'zod'
 import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
@@ -79,6 +80,22 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
    * `publishDocument`).
    */
   adminComponents?: boolean
+
+  /**
+   * Where to put this server's MCP tools so Payload's own MCP plugin can serve
+   * them.
+   *
+   * Payload ships `@payloadcms/plugin-mcp`, which takes its tools as a config
+   * option — and every tool here is built at `onInit`, because every one closes
+   * over `payload`. `createMcpToolCollector()` from `@forumone/throughline-core`
+   * bridges that: the host hands the collector's array to `mcpPlugin` at config
+   * time and this plugin fills it at init, which is before any request and
+   * therefore before the plugin reads it.
+   *
+   * Omit it and nothing changes — this server keeps its own `/mcp` endpoint,
+   * which is what lets a host move one server at a time.
+   */
+  mcpTools?: McpToolCollector
 }
 
 export type ResolvedCollection = Required<Omit<PublishableCollection, 'requiredFields'>> &
