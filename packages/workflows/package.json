@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-workflows",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Composable Inngest function factories for the Throughline framework — revalidation, scheduled publishing, approval expiration, audit fan-out, healthcheck.",
   "type": "module",
   "main": "./dist/index.js",

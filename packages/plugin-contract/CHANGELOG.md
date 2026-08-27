@@ -1,5 +1,30 @@
 # @forumone/throughline-plugin-contract
 
+## 0.3.0
+
+### Minor Changes
+
+- 40839b5: Stop publishing code nothing imports
+
+  `@forumone/throughline-core` loses three things no package in the suite, and no consumer, has ever called:
+  - **`./env`** — `ENV_VARS`, `validateBaseEnv`, `requireEnv`, `optionalEnv`, and the subpath export that served them. The idea was that plugins would read `process.env` through shared constants instead of hard-coded strings; every plugin hard-codes the string, including the ones in this repo. A convention with no adherents is not a convention.
+  - **`shallowDiff`** — written for the audit writer's `diff` field, never wired to it. The writer still takes a caller-supplied diff, and Payload's own version diffing is the better answer if one is ever wanted.
+  - **`generateId`** — an id generator in a framework where Payload assigns the ids.
+
+  `@forumone/throughline-plugin-contract` stops shipping `examplePlugin`. It is documentation of a shape, and it now lives in the playground, which is where a shape gets demonstrated — the published package was carrying 74 lines of example for every consumer that installs it.
+
+  Removing exports from a published package, hence minor rather than patch. Nothing in this repository, and nothing in the suite's only consumer, imports any of it.
+
+- 9f39ace: Enforce API-key scopes, which until now were only a label
+
+  The API-keys collection has always had a required `scopes` field, the README has always told you to mint keys with `--scopes publishing.execute`, and the scheduled-publish factory documents that its key "must carry `publishing.execute` scope". Nothing read the field. Every key could do whatever its linked user could, whatever it said on the label.
+
+  A tool may now declare `requiredScope`, and the handler holds callers to it: the tool is hidden from `tools/list` and refused on a direct call unless the key names that scope. Hidden as well as refused, because an agent shown a tool it will be turned away from will try it, fail, and report the tool as broken when what is narrow is the key.
+
+  The consequential tools are annotated — `publish`, `unpublish`, `schedule_publish`, `rollback` (`publishing.execute`); `request_approval` (`approvals.request`); `respond_to_approval` (`approvals.decide`); the three form writers (`forms.manage`); `trigger_sync` and `test_integration` (`integrations.trigger`). Reads are left unscoped, which is the right default for a read.
+
+  **This narrows existing keys.** A key minted with one scope could previously call every tool on every server and now cannot. That is the point, but it will change what an existing MCP client can do — check the scopes on your keys before upgrading. A key carrying no scopes at all passes nothing scoped: absent is read as none, not as everything.
+
 ## 0.2.1
 
 ### Patch Changes

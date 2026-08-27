@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-plugin-contract",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Shared plugin and MCP contract types and the cross-plugin registry for @forumone/throughline core packages.",
   "license": "MIT",
   "repository": {

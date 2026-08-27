@@ -1,5 +1,36 @@
 # @forumone/throughline-publishing
 
+## 0.6.0
+
+### Minor Changes
+
+- 9f39ace: Enforce API-key scopes, which until now were only a label
+
+  The API-keys collection has always had a required `scopes` field, the README has always told you to mint keys with `--scopes publishing.execute`, and the scheduled-publish factory documents that its key "must carry `publishing.execute` scope". Nothing read the field. Every key could do whatever its linked user could, whatever it said on the label.
+
+  A tool may now declare `requiredScope`, and the handler holds callers to it: the tool is hidden from `tools/list` and refused on a direct call unless the key names that scope. Hidden as well as refused, because an agent shown a tool it will be turned away from will try it, fail, and report the tool as broken when what is narrow is the key.
+
+  The consequential tools are annotated — `publish`, `unpublish`, `schedule_publish`, `rollback` (`publishing.execute`); `request_approval` (`approvals.request`); `respond_to_approval` (`approvals.decide`); the three form writers (`forms.manage`); `trigger_sync` and `test_integration` (`integrations.trigger`). Reads are left unscoped, which is the right default for a read.
+
+  **This narrows existing keys.** A key minted with one scope could previously call every tool on every server and now cannot. That is the point, but it will change what an existing MCP client can do — check the scopes on your keys before upgrading. A key carrying no scopes at all passes nothing scoped: absent is read as none, not as everything.
+
+### Patch Changes
+
+- 75179c9: Respect document locks on publish, unpublish and schedule
+
+  Payload locks a document while somebody has it open in the admin, and the Local API overrides that lock by default. Every write in this package took the default — so an agent publishing over MCP pushed a document live while an editor was part-way through revising it, and nothing anywhere said so. `schedule_publish` did the same, more quietly.
+
+  All three now pass `overrideLock: false`. A lock blocks only when it is held by somebody else and has been touched within its duration (five minutes by default), so an editor publishing their own open document still passes, and an abandoned tab stops blocking on its own within a few minutes.
+
+  A locked document comes back as a pipeline block — `code: 'document-locked'` — rather than a thrown error, so the admin and the MCP client both get an answer that says what to do about it: wait, or ask the person to finish.
+
+- Updated dependencies [40839b5]
+- Updated dependencies [9f39ace]
+- Updated dependencies [f138b3d]
+- Updated dependencies [6fac789]
+  - @forumone/throughline-core@0.4.0
+  - @forumone/throughline-plugin-contract@0.3.0
+
 ## 0.5.0
 
 ### Minor Changes
