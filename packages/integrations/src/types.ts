@@ -1,5 +1,5 @@
 import type { Field } from 'payload'
-import type { Inngest, InngestFunction } from 'inngest'
+import type { Inngest } from 'inngest'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 
 export type IntegrationCategory =
@@ -35,7 +35,7 @@ export interface IntegrationHealth {
  * {@link Integration.createFunctions} and emit their own results events as
  * needed. They never call other integrations directly.
  */
-export interface Integration<Config = Record<string, unknown>> {
+export interface Integration<Config = Record<string, unknown>, Fn = unknown> {
   /** Unique slug. Used as the `integrationType` value in the collection. */
   id: string
   /** Display name shown in the admin and `list_integration_types`. */
@@ -64,8 +64,24 @@ export interface Integration<Config = Record<string, unknown>> {
    * during plugin init; the returned functions are exposed via the registry
    * so the client app's Inngest endpoint can serve them. See
    * `docs/integrations-wiring.md`.
+   *
+   * **Generic in the function type, and `unknown` by default, on purpose.**
+   * This plugin never inspects or invokes what comes back — the one use
+   * anywhere is `.length`, for a log line saying how many an integration
+   * contributed. The host serves them.
+   *
+   * Naming `InngestFunction.Any` here instead cost a consumer two casts. A host
+   * whose dependency graph resolves a different `inngest` instance — pnpm keys
+   * one by its peer set, and `inngest` has optional peers on `express`, `hono`
+   * and `next`, so installing anything that pulls one in is enough — got a type
+   * that is structurally identical and nominally different. Generic, the host's
+   * own `InngestFunction.Any` flows through and the question never arises:
+   *
+   * ```ts
+   * export const myIntegration: Integration<MyConfig, InngestFunction.Any> = { … }
+   * ```
    */
-  createFunctions: (ctx: IntegrationContext) => InngestFunction.Any[]
+  createFunctions: (ctx: IntegrationContext) => Fn[]
   /**
    * Optional MCP tools the integration adds to the integrations server. Most
    * integrations need only the five built-in tools; this is for cases where
