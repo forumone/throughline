@@ -179,6 +179,9 @@ export function createPublishingService(
         return { unpublished: false, reason: 'Document is not currently published' }
       }
 
+      // `overrideLock: false` for the same reason as the publish write: taking a
+      // live page down while somebody has it open in the admin should be a
+      // refusal, not a surprise. A lock held by the caller themselves passes.
       await payload.update({
         collection: collection.slug,
         id: request.id,
@@ -186,6 +189,7 @@ export function createPublishingService(
         ...(request.actor.enforceAccessAs
           ? { user: request.actor.enforceAccessAs, overrideAccess: false }
           : {}),
+        overrideLock: false,
         context: { bypassPublishingServer: true },
       })
 

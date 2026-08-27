@@ -257,6 +257,26 @@ describe('createPublishingService', () => {
     )
   })
 
+  /*
+  Taking a live page down while somebody has it open in the admin should be a
+  refusal, not a surprise. The Local API overrides locks by default, so this has
+  to be asked for.
+  */
+  it('asks Payload to respect a lock when unpublishing', async () => {
+    const deps = makeDeps({ document: { ...publishableDoc, _status: 'published' } })
+    const service = createPublishingService(deps)
+
+    await service.unpublish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+
+    expect(deps.spies.payloadUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ overrideLock: false }),
+    )
+  })
+
   it('refuses to unpublish a document that is not published', async () => {
     const deps = makeDeps({ document: publishableDoc })
     const service = createPublishingService(deps)
