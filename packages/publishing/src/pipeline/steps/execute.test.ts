@@ -131,6 +131,100 @@ describe('executeStep', () => {
     expect((await executeStep(ctx)).warnings).toBeUndefined()
   })
 
+  /*
+  The write is the first thing in the pipeline that enforces `required` — a
+  draft write does not — so an empty required field inside a block reaches
+  here and nowhere earlier. Thrown, it left the transport to explain itself:
+  the admin got a bare message and the MCP tool got an exception, when Payload
+  had already named the paths.
+  */
+  it('returns a failed step with the fields Payload named', async () => {
+    const error = Object.assign(new Error('The following fields are invalid: layout.3.heading'), {
+      name: 'ValidationError',
+      data: {
+        collection: 'pages',
+        errors: [
+          { path: 'layout.3.heading', message: 'This field is required.' },
+          { path: 'title', message: 'This field is required.' },
+        ],
+      },
+    })
+    const send = vi.fn(async () => ({}))
+    const ctx = makeContext({
+      payload: {
+        update: vi.fn(async () => {
+          throw error
+        }),
+      } as unknown as Payload,
+      inngest: { send } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    const result = await executeStep(ctx)
+
+    expect(result.pass).toBe(false)
+    expect(result.code).toBe('field-validation-failed')
+    expect(result.issues).toEqual([
+      { field: 'layout.3.heading', message: 'This field is required.', severity: 'error' },
+      { field: 'title', message: 'This field is required.', severity: 'error' },
+    ])
+    // Nothing was published, so nothing may claim it was.
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('counts the fields it is reporting', async () => {
+    const ctx = makeContext({
+      payload: {
+        update: vi.fn(async () => {
+          throw Object.assign(new Error('nope'), {
+            data: { errors: [{ path: 'title', message: 'This field is required.' }] },
+          })
+        }),
+      } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    expect((await executeStep(ctx)).reason).toBe('1 field the collection will not accept')
+  })
+
+  /*
+  A database or access failure is not an answer an editor can act on, and
+  dressing it up as "fix these fields" would send them looking for a field
+  that is fine. It has to keep throwing.
+  */
+  it('rethrows anything that is not a field rejection', async () => {
+    const ctx = makeContext({
+      payload: {
+        update: vi.fn(async () => {
+          throw new Error('connection terminated unexpectedly')
+        }),
+      } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    await expect(executeStep(ctx)).rejects.toThrow('connection terminated unexpectedly')
+  })
+
+  it('rethrows an error whose data carries something other than field errors', async () => {
+    const ctx = makeContext({
+      payload: {
+        update: vi.fn(async () => {
+          throw Object.assign(new Error('Forbidden'), { data: { errors: ['not an object'] } })
+        }),
+      } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    await expect(executeStep(ctx)).rejects.toThrow('Forbidden')
+  })
+
   it('marks subsequent publishes as not-first', async () => {
     const update = vi.fn(async () => ({ id: 'p1' }))
     const send = vi.fn(async () => ({}))
