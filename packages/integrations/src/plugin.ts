@@ -194,8 +194,28 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
     }
   }
 
-export function getIntegrationRegistry(payload: unknown): IntegrationRegistry | undefined {
-  return (payload as Record<symbol, unknown>)[REGISTRY_SYMBOL] as IntegrationRegistry | undefined
+/**
+ * The registry this plugin attached at init, if it did.
+ *
+ * `Fn` is the host's own Inngest function type. Naming it is what lets the host
+ * serve `createFunctions()` results without asserting them back — the registry
+ * stores integrations at `unknown` otherwise, and an `unknown[]` cannot be
+ * handed to `serve()`:
+ *
+ * ```ts
+ * const registry = getIntegrationRegistry<InngestFunction.Any>(payload)
+ * ```
+ *
+ * There is no checking behind it either way — the value comes off a symbol on
+ * the Payload instance. What the parameter buys is that the assertion happens
+ * once, here, in terms of the host's own types, rather than at every read.
+ */
+export function getIntegrationRegistry<Fn = unknown>(
+  payload: unknown,
+): IntegrationRegistry<Fn> | undefined {
+  return (payload as Record<symbol, unknown>)[REGISTRY_SYMBOL] as
+    | IntegrationRegistry<Fn>
+    | undefined
 }
 
 export function getIntegrationContext(payload: unknown): IntegrationContext | undefined {
