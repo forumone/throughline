@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { type AuditWriter, documentContentHash, withMeta } from '@forumone/throughline-core'
+import {
+  type AuditWriter,
+  auditContext,
+  documentContentHash,
+  withMeta,
+} from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
@@ -118,20 +123,13 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
       })
 
       await deps.auditWriter({
-        actor: {
-          type: 'user',
-          userId: ctx.user.id,
-          userName: ctx.user.name,
-          apiKeyName: ctx.apiKeyName,
-        },
+        ...auditContext(ctx, input._meta),
         action: 'approval.requested',
         mcpServer: 'approvals',
         mcpTool: 'request_approval',
         targetCollection: input.collection,
         targetId: input.id,
         targetTitle,
-        prompt: input._meta?.userPrompt,
-        reasoning: input._meta?.reasoning,
         changesSummary: input.changesSummary,
         approvalRequestId: approvalId,
         success: true,

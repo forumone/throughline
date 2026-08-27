@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import { type AuditWriter, auditContext, withMeta } from '@forumone/throughline-core'
 import type { AuditAction } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
@@ -96,12 +96,7 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
       })
 
       await deps.auditWriter({
-        actor: {
-          type: 'user',
-          userId: ctx.user.id,
-          userName: ctx.user.name,
-          apiKeyName: ctx.apiKeyName,
-        },
+        ...auditContext(ctx, input._meta),
         action: decisionToAuditAction[decision],
         mcpServer: 'approvals',
         mcpTool: 'respond_to_approval',
@@ -111,7 +106,8 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
           typeof approval['targetTitle'] === 'string'
             ? approval['targetTitle']
             : String(approval['targetId']),
-        prompt: input._meta?.userPrompt,
+        // The decision notes are the reasoning when there are any: they are
+        // what the approver actually wrote.
         reasoning: input.notes ?? input._meta?.reasoning,
         approvalRequestId: input.approvalId,
         success: true,

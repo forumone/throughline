@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import { type AuditWriter, auditContext, withMeta } from '@forumone/throughline-core'
 import type { ManifestLoader } from '../manifest-source.js'
 import { validateComposition } from '../validation/composition.js'
 
@@ -31,17 +31,10 @@ export function createValidateCompositionTool(deps: ValidateCompositionDeps): Mc
       const result = validateComposition({ blocks: input.blocks }, manifest)
 
       await deps.auditWriter({
-        actor: {
-          type: 'user',
-          userId: ctx.user?.id,
-          userName: ctx.user?.name,
-          apiKeyName: ctx.apiKeyName,
-        },
+        ...auditContext(ctx, input._meta),
         action: 'design.validate',
         mcpServer: 'component',
         mcpTool: 'validate_composition',
-        prompt: input._meta?.userPrompt,
-        reasoning: input._meta?.reasoning,
       })
 
       return result
