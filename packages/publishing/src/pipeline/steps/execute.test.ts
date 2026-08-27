@@ -132,6 +132,54 @@ describe('executeStep', () => {
   })
 
   /*
+  Locks.
+
+  Without `overrideLock: false` the Local API's default applies, which is to
+  override — so an agent publishing over MCP pushed a document live while an
+  editor had it open and was part-way through revising it, and nothing anywhere
+  said so.
+  */
+  it('asks Payload to respect a document lock', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    await executeStep(ctx)
+
+    expect((update.mock.calls[0]?.[0] as { overrideLock?: boolean }).overrideLock).toBe(false)
+  })
+
+  it('reports a locked document as a block somebody can act on', async () => {
+    const send = vi.fn(async () => ({}))
+    const ctx = makeContext({
+      payload: {
+        update: vi.fn(async () => {
+          throw Object.assign(new Error('This document is currently locked'), {
+            name: 'Locked',
+            status: 423,
+          })
+        }),
+      } as unknown as Payload,
+      inngest: { send } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    const result = await executeStep(ctx)
+
+    expect(result.pass).toBe(false)
+    expect(result.code).toBe('document-locked')
+    // It resolves itself, and the suggestion has to say so — otherwise this
+    // reads as a failure to investigate.
+    expect(result.suggestion).toMatch(/expires/)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  /*
   The write is the first thing in the pipeline that enforces `required` — a
   draft write does not — so an empty required field inside a block reaches
   here and nowhere earlier. Thrown, it left the transport to explain itself:

@@ -33,6 +33,14 @@ import type { PipelineIssue, PipelineStep } from '../types.js'
  * `_status` is `published` the publish has happened, and reporting failure
  * would send an editor back to re-publish live content.
  *
+ * The write respects Payload's document locks. Without `overrideLock: false` the
+ * Local API's default applies, which is to override — so an agent publishing
+ * over MCP would push a document live while an editor had it open in the admin
+ * and was part-way through revising it, silently. A lock only blocks when it is
+ * held by *somebody else* and has been touched within its duration (five minutes
+ * by default), so an editor publishing their own open document still passes, and
+ * an abandoned tab stops blocking on its own.
+ *
  * A field Payload refuses is a failed *step*, not a thrown error. The write is
  * the first thing in the whole pipeline that enforces `required` — a draft
  * write does not, which is the point of drafts — so an empty required field
@@ -61,9 +69,22 @@ export const executeStep: PipelineStep = async (ctx) => {
       ...(ctx.actor.enforceAccessAs
         ? { user: ctx.actor.enforceAccessAs, overrideAccess: false }
         : {}),
+      overrideLock: false,
       context: { bypassPublishingServer: true },
     })
   } catch (error) {
+    // Somebody is in the document. Not a failure to investigate — a state that
+    // resolves itself, and one the caller can act on: wait, or ask them.
+    if (isLocked(error)) {
+      return {
+        pass: false,
+        code: 'document-locked',
+        reason: 'Somebody is editing this document right now',
+        suggestion:
+          'A lock is released when the editor closes the document, and expires on its own a few minutes after they stop. Try again, or ask them to finish.',
+      }
+    }
+
     const issues = fieldIssues(error)
     // Only a field rejection is an answer. A database or access failure is
     // not, and rethrowing keeps it out of the diagnostics an editor reads as
@@ -121,4 +142,16 @@ function fieldIssues(error: unknown): PipelineIssue[] | undefined {
     issues.push({ field: path, message, severity: 'error' })
   }
   return issues
+}
+
+/**
+ * Payload's `Locked`, read structurally for the same reason as `fieldIssues`
+ * below it: two copies of `payload` under one tree make `instanceof` false for
+ * an error that is one in every other respect. 423 is the status the class
+ * carries, and the name is the belt to its braces.
+ */
+function isLocked(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const { status, name } = error as { status?: unknown; name?: unknown }
+  return status === 423 || name === 'Locked'
 }

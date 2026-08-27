@@ -76,10 +76,13 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         }
       }
 
+      // Writing a date onto a document somebody is editing is the same
+      // collision as publishing it — quieter, and harder to notice afterwards.
       await deps.payload.update({
         collection: collection.slug,
         id: input.id,
         data: { [collection.scheduledPublishField]: input.publishAt },
+        overrideLock: false,
         context: { bypassPublishingServer: false },
       })
 
