@@ -1,3 +1,5 @@
+export { unwrapRelationshipId } from '@forumone/throughline-core'
+
 import type { ApprovalTargetKind } from '../templates/index.js'
 
 const COLLECTION_TO_KIND: Record<string, ApprovalTargetKind> = {
@@ -13,14 +15,6 @@ const COLLECTION_TO_KIND: Record<string, ApprovalTargetKind> = {
  */
 export function targetKindFromCollection(slug: string): ApprovalTargetKind {
   return COLLECTION_TO_KIND[slug] ?? 'item'
-}
-
-export function unwrapRelationshipId(value: unknown): string | null {
-  if (typeof value === 'string') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    return String((value as { id: unknown }).id)
-  }
-  return null
 }
 
 /**

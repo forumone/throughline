@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { type AuditWriter, auditContext, withMeta } from '@forumone/throughline-core'
+import { auditContext, type AuditWriter, unwrapRelationshipId, withMeta } from '@forumone/throughline-core'
 import type { AuditAction } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
@@ -117,12 +117,4 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
       return { success: true, status: newStatus, decidedAt }
     },
   }
-}
-
-function unwrapRelationshipId(value: unknown): string | null {
-  if (typeof value === 'string') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    return String((value as { id: unknown }).id)
-  }
-  return null
 }

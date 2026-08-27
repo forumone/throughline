@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { withMeta } from '@forumone/throughline-core'
+import { unwrapRelationshipId, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
@@ -61,13 +61,4 @@ export function createListPendingApprovalsTool(
       }
     },
   }
-}
-
-function unwrapRelationshipId(value: unknown): string | null {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'string') return value
-  if (typeof value === 'object' && 'id' in value) {
-    return String((value as { id: unknown }).id)
-  }
-  return null
 }

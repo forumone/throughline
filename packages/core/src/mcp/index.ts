@@ -20,3 +20,5 @@ export type {
   CreateMcpToolCollectorOptions,
   McpToolCollector,
 } from './collector.js'
+
+export { deniedEnvelope } from './envelope.js'
