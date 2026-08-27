@@ -7,7 +7,7 @@ import type {
   McpToolDefinition,
 } from '@forumone/throughline-plugin-contract'
 import { createBearerTokenAuthenticator } from '../auth/index.js'
-import { defaultLogger } from '../logger/index.js'
+import { createNamedLogger, defaultLogger } from '../logger/index.js'
 
 export interface McpHandlerOptions {
   payload: Payload
@@ -32,6 +32,9 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
   const toolsByName = new Map(options.tools.map((t) => [t.name, t]))
   const logger = options.logger ?? defaultLogger
   const tag = `[${options.serverName}]`
+  // `createNamedLogger` is forty lines away in this same package and does
+  // exactly this. The handler used to rebuild it inline.
+  const toolLogger = createNamedLogger(options.serverName, logger)
 
   return async function handleMcp(request: Request): Promise<Response> {
     const auth = await authenticator.authenticate(request)
@@ -101,13 +104,6 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
             JSON_RPC_INVALID_PARAMS,
             `Invalid arguments: ${inputResult.error.message}`,
           )
-        }
-
-        const toolLogger: Logger = {
-          debug: (m, c) => logger.debug(`${tag} ${m}`, c),
-          info: (m, c) => logger.info(`${tag} ${m}`, c),
-          warn: (m, c) => logger.warn(`${tag} ${m}`, c),
-          error: (m, c) => logger.error(`${tag} ${m}`, c),
         }
 
         const result = await tool.handler(inputResult.data, {

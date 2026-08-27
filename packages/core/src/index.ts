@@ -36,6 +36,7 @@ export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events
 export {
   McpMetaSchema,
   auditContext,
+  deniedEnvelope,
   createMcpHandler,
   createMcpToolCollector,
   toPayloadMcpTool,
@@ -56,7 +57,7 @@ export type {
 
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
-export { documentContentHash } from './utils/index.js'
+export { documentContentHash, unwrapRelationshipId } from './utils/index.js'
 export type { DocumentContentHashOptions } from './utils/index.js'
 
 // Re-export plugin contract types so consumers do not have to import the

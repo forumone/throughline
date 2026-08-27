@@ -11,6 +11,5 @@ export function isIntegrationsAdmin(ctx: McpToolContext): boolean {
   return ctx.user.roles.includes('admin')
 }
 
-export function deniedEnvelope(reason: string): { error: string } {
-  return { error: reason }
-}
+// `deniedEnvelope` lives in core: three servers had identical copies.
+export { deniedEnvelope } from '@forumone/throughline-core'
