@@ -67,7 +67,7 @@ describe('Integration.createFunctions', () => {
   signature would break.
   */
   it('registers an integration that named its function type', () => {
-    const registry = new IntegrationRegistry()
+    const registry = new IntegrationRegistry<InngestFunction.Any>()
     const integration: Integration<Record<string, unknown>, InngestFunction.Any> = {
       ...base('registered'),
       createFunctions: () => [],
@@ -77,5 +77,23 @@ describe('Integration.createFunctions', () => {
 
     expect(registry.get('registered')?.id).toBe('registered')
     expect(registry.list()).toHaveLength(1)
+  })
+
+  /*
+  And the type survives the round trip through the registry, which is the part a
+  host depends on. Erased, `list()` gives back `unknown[]` and the host cannot
+  hand it to `serve()` without asserting — which is the assertion this whole
+  change exists to delete.
+  */
+  it('gives the function type back from list(), not unknown', () => {
+    const registry = new IntegrationRegistry<InngestFunction.Any>()
+    const hostFunctions = [{ id: () => 'sync' }] as unknown as InngestFunction.Any[]
+    registry.register({ ...base('round-trip'), createFunctions: () => hostFunctions })
+
+    const served: InngestFunction.Any[] = registry
+      .list()
+      .flatMap(integration => integration.createFunctions(context))
+
+    expect(served).toEqual(hostFunctions)
   })
 })
