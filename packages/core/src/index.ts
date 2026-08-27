@@ -33,8 +33,22 @@ export type { ApiKeysCollectionOptions, BearerTokenAuthenticatorOptions } from '
 export { createInngestClient } from './events/index.js'
 export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events/index.js'
 
-export { McpMetaSchema, auditContext, createMcpHandler, withMeta } from './mcp/index.js'
-export type { AuditContextFields, McpHandlerOptions, McpMeta } from './mcp/index.js'
+export {
+  McpMetaSchema,
+  auditContext,
+  createMcpHandler,
+  toPayloadMcpTool,
+  toPayloadMcpTools,
+  withMeta,
+} from './mcp/index.js'
+export type {
+  AuditContextFields,
+  McpHandlerOptions,
+  McpMeta,
+  PayloadMcpRequest,
+  PayloadMcpTool,
+  ToPayloadMcpToolOptions,
+} from './mcp/index.js'
 
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 

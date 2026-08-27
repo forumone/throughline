@@ -6,3 +6,10 @@ export type { McpMeta } from './meta.js'
 
 export { auditContext } from './audit-context.js'
 export type { AuditContextFields } from './audit-context.js'
+
+export { toPayloadMcpTool, toPayloadMcpTools } from './payload-mcp.js'
+export type {
+  PayloadMcpRequest,
+  PayloadMcpTool,
+  ToPayloadMcpToolOptions,
+} from './payload-mcp.js'
