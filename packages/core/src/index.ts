@@ -30,9 +30,6 @@ export {
 } from './auth/index.js'
 export type { ApiKeysCollectionOptions, BearerTokenAuthenticatorOptions } from './auth/index.js'
 
-export { ENV_VARS, validateBaseEnv, requireEnv, optionalEnv } from './env/index.js'
-export type { EnvVarName, BaseEnv } from './env/index.js'
-
 export { createInngestClient } from './events/index.js'
 export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events/index.js'
 
@@ -41,7 +38,7 @@ export type { AuditContextFields, McpHandlerOptions, McpMeta } from './mcp/index
 
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
-export { shallowDiff, generateId, documentContentHash } from './utils/index.js'
+export { documentContentHash } from './utils/index.js'
 export type { DocumentContentHashOptions } from './utils/index.js'
 
 // Re-export plugin contract types so consumers do not have to import the

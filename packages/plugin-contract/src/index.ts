@@ -35,4 +35,3 @@ export type CorePlugin<Options extends BaseCorePluginOptions = BaseCorePluginOpt
 export * from './mcp.js'
 export * from './auth.js'
 export * from './registry.js'
-export * from './example-plugin-pattern.js'
