@@ -10,9 +10,8 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 | Auth | `./auth` | `createApiKeysCollection`, `createBearerTokenAuthenticator`, `generateApiKey`, `sha256Hex` |
 | Events | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam) |
 | MCP | `./mcp` | `createMcpHandler`, `McpMetaSchema`, `withMeta` |
-| Env | `./env` | `ENV_VARS`, `validateBaseEnv`, `requireEnv`, `optionalEnv` |
 | Logger | (main) | `defaultLogger`, `createNamedLogger` |
-| Utils | (main) | `shallowDiff`, `generateId`, `documentContentHash` |
+| Utils | (main) | `documentContentHash` |
 
 The main entry re-exports everything; the subpath exports keep bundles smaller for consumers who only need one slice.
 
@@ -132,17 +131,6 @@ declare module '@forumone/throughline-core/events' {
 
 After augmentation, `inngest.send({ name: 'approval/decided', data: { ... } })` is type-checked everywhere.
 
-## Env vars
-
-`ENV_VARS` is the canonical list of names the framework reads. Plugins reach into `process.env` through these constants rather than hard-coded strings:
-
-```ts
-import { ENV_VARS, requireEnv, validateBaseEnv } from '@forumone/throughline-core'
-
-validateBaseEnv() // throws on missing PAYLOAD_SECRET / DATABASE_URI / NEXT_PUBLIC_SERVER_URL
-
-const apiKey = requireEnv(ENV_VARS.PUBLISHING_SERVER_API_KEY)
-```
 
 ## Document content hashing
 

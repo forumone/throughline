@@ -1,6 +1,13 @@
 import type { Config } from 'payload'
-import type { BaseCorePluginOptions, CorePlugin } from './index.js'
-import { getPluginRegistry } from './registry.js'
+import type { BaseCorePluginOptions, CorePlugin } from '@forumone/throughline-plugin-contract'
+import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
+
+/*
+Moved here from `@forumone/throughline-plugin-contract`, which published it to
+every consumer. It is documentation of a shape, and the playground is where a
+shape gets demonstrated — a published package carrying an example nobody imports
+is 74 lines of weight on everyone who installs it.
+*/
 
 /**
  * EXAMPLE ONLY — not a real plugin. Reference implementation showing the
