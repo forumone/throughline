@@ -37,14 +37,18 @@ export {
   McpMetaSchema,
   auditContext,
   createMcpHandler,
+  createMcpToolCollector,
   toPayloadMcpTool,
   toPayloadMcpTools,
   withMeta,
 } from './mcp/index.js'
 export type {
+  AddToolsOptions,
   AuditContextFields,
+  CreateMcpToolCollectorOptions,
   McpHandlerOptions,
   McpMeta,
+  McpToolCollector,
   PayloadMcpRequest,
   PayloadMcpTool,
   ToPayloadMcpToolOptions,

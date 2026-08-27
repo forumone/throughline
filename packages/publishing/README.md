@@ -73,6 +73,29 @@ With `adminComponents: false` the admin has **no** working publish path until yo
 | `POST /api/publishing/unpublish` | Payload session | `{ collection, id }` |
 | `POST /api/publishing/mcp` | Bearer API key | JSON-RPC |
 
+### Serving these tools through Payload's MCP plugin instead
+
+Payload ships `@payloadcms/plugin-mcp` — the official MCP SDK, streamable HTTP, sessions, and per-key per-tool capability checkboxes an admin can see and change. This plugin's tools can be served through it rather than through the endpoint above:
+
+```ts
+import { createMcpToolCollector } from '@forumone/throughline-core'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
+
+const mcpTools = createMcpToolCollector()
+
+plugins: [
+  auditPlugin({ inngest }),
+  publishingPlugin({ inngest, collections: [{ slug: 'pages' }], mcpTools }),
+  mcpPlugin({ mcp: { tools: mcpTools.tools } }),
+]
+```
+
+Every tool here is built at `onInit`, because every one closes over `payload`; `mcpPlugin` takes its tools as a config option. The collector bridges that, and it works because the plugin reads `mcp.tools` inside the handler it builds *per request* — so an array handed over at config time is read populated. Hand over `mcpTools.tools` itself rather than a copy.
+
+Omit `mcpTools` and nothing changes, which is what lets a host move one server at a time. The endpoint above stays either way until the host stops using it.
+
+One thing does not survive the move: `plugin-mcp` resolves a key to its linked user and does not carry the key document forward, so the calling key's *name* is not recoverable. Audit rows record the strategy instead, or a name the host passes as `apiKeyName`.
+
 A publish blocked by the pipeline returns **200** with `{ published: false, failedAt, reason, code, issues, suggestion }`. The pipeline ran correctly and the answer was no; that is not a transport error. Non-2xx is reserved for auth (401/403), bad input (400), and genuine failures (500).
 
 A field the collection itself refuses is one of those blocks — `failedAt: 'execute'`, `code: 'field-validation-failed'`, with Payload's own field paths as `issues`. The publishing write is the first step that enforces `required`, because a draft write deliberately does not, so an empty required field inside a block is caught there and nowhere earlier.

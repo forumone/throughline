@@ -277,6 +277,26 @@ describe('createPublishingService', () => {
     )
   })
 
+  /*
+  A document that is not there and one that is there and already a draft are
+  different answers. Both used to be neither: `findByID` threw `NotFound` before
+  the service could say anything, so the caller got an exception where the whole
+  design is to return a diagnostic.
+  */
+  it('reports a missing document rather than throwing', async () => {
+    const deps = makeDeps({ document: {} })
+    const service = createPublishingService(deps)
+
+    const result = await service.unpublish({
+      collection: 'pages',
+      id: 'nope',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+
+    expect(result).toEqual({ unpublished: false, reason: 'Document not found' })
+    expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
+  })
+
   it('refuses to unpublish a document that is not published', async () => {
     const deps = makeDeps({ document: publishableDoc })
     const service = createPublishingService(deps)

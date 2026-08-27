@@ -13,3 +13,10 @@ export type {
   PayloadMcpTool,
   ToPayloadMcpToolOptions,
 } from './payload-mcp.js'
+
+export { createMcpToolCollector } from './collector.js'
+export type {
+  AddToolsOptions,
+  CreateMcpToolCollectorOptions,
+  McpToolCollector,
+} from './collector.js'

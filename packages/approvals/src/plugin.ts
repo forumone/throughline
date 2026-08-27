@@ -106,6 +106,11 @@ export const approvalsPlugin: CorePlugin<ApprovalsPluginOptions> =
           createListMyRequestsTool({ payload, options }),
         ]
 
+        // Payload's own MCP plugin, when the host is using it. See the option's
+        // note — `onInit` is both the earliest these tools can exist and still
+        // early enough that the array is read populated.
+        options.mcpTools?.add(tools, { serverName: 'approvals', logger })
+
         const handler = createMcpHandler({
           payload,
           serverName: 'approvals',

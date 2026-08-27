@@ -96,19 +96,35 @@ export function createPublishingService(
 ): PublishingService {
   const { payload, options, auditWriter, logger } = deps
 
+  /*
+  `disableErrors`, and an empty object for a document that is not there.
+
+  Without it `findByID` throws `NotFound`, which happens before the pipeline
+  runs — so the `exist` step's `not-found` branch was unreachable from every
+  caller, and publishing a document that does not exist came back as a thrown
+  error rather than as the structured block the pipeline exists to return. The
+  step's own tests passed it an empty document and so never noticed; a real
+  Payload found it in one call.
+
+  An empty object rather than `null` because that is what `existStep` already
+  checks for: `Object.keys(ctx.document).length === 0`. The branch was written
+  for this and only ever needed a caller that could reach it.
+  */
   async function loadDocument(
     slug: string,
     id: string,
     actor: PublishingActor,
   ): Promise<Record<string, unknown>> {
-    return (await payload.findByID({
+    const document = await payload.findByID({
       collection: slug,
       id,
       draft: true,
+      disableErrors: true,
       ...(actor.enforceAccessAs
         ? { user: actor.enforceAccessAs, overrideAccess: false }
         : {}),
-    })) as Record<string, unknown>
+    })
+    return (document ?? {}) as Record<string, unknown>
   }
 
   return {
@@ -174,6 +190,12 @@ export function createPublishingService(
     async unpublish(request) {
       const collection = resolveCollection(options, request.collection)
       const document = await loadDocument(collection.slug, request.id, request.actor)
+
+      // A document that is not there and one that is there and already a draft
+      // are different answers, and only one of them means "nothing to do".
+      if (Object.keys(document).length === 0) {
+        return { unpublished: false, reason: 'Document not found' }
+      }
 
       if (document['_status'] !== 'published') {
         return { unpublished: false, reason: 'Document is not currently published' }
