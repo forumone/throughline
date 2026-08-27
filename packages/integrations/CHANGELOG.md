@@ -1,5 +1,43 @@
 # @forumone/throughline-integrations
 
+## 0.5.0
+
+### Minor Changes
+
+- 0d7501d: `Integration.createFunctions` is generic in its return type
+
+  It named `InngestFunction.Any`, and nothing in this package inspects or invokes what comes back — the one use anywhere is `.length`, for a log line saying how many functions an integration contributed. The host serves them.
+
+  Naming the type cost a consumer two casts. pnpm keys an `inngest` instance by its resolved peer set, and `inngest` declares optional peers on `express`, `hono` and `next` — so a host that installs anything pulling one of those in (in this case `@payloadcms/plugin-mcp`, via `mcp-handler`) ends up with a structurally identical, nominally different `InngestFunction.Any`, and the assignment stops compiling.
+
+  Generic, the host's own type flows through:
+
+  ```ts
+  export const myIntegration: Integration<MyConfig, InngestFunction.Any> = { … }
+  ```
+
+  `unknown` by default, so nothing existing has to change — `webhookIntegration` in this package is untouched.
+
+- 88d7e4f: `IntegrationRegistry` and `getIntegrationRegistry` are generic in the function type too
+
+  Making `Integration.createFunctions` generic was half the fix: the registry still stored integrations at the default `unknown`, so `list()` handed back `unknown[]` and a host had to assert its way back to its own Inngest type before calling `serve()` — the assertion the generic existed to delete.
+
+  `getIntegrationRegistry<InngestFunction.Any>(payload)` now names it once, where the host reads the registry, and the type survives the round trip.
+
+  `unknown` by default, so nothing existing changes.
+
+### Patch Changes
+
+- 9131065: Three helpers that existed once per package now exist once
+  - **`unwrapRelationshipId`** had four definitions — three private to `approvals`, one exported from `email` — differing only in a null guard that `typeof value === 'string'` already covers. One deliberate change comes with the move: none of the four handled a _numeric_ id, so on Postgres at `depth: 0` they returned `null` for a relationship that was populated fine. No caller reads at depth 0 today, so this fixes nothing and stops a shared helper being wrong for the first caller that does.
+  - **`deniedEnvelope`** had three identical definitions, one per server with an access predicate. The role predicates stay where they are: what counts as an audit reader is not what counts as a forms author, and collapsing those would put one package's policy in another's file.
+  - **The MCP handler rebuilt `createNamedLogger` inline**, forty lines from the real one in the same package.
+
+  Nothing else in the duplication audit survived checking. `createFakePayload` has six definitions and three distinct implementations — a query engine, a two-line map read, and a stateful form store — which share a name and nothing else; merging them means building a fake that does all three jobs. `createFakeInngest` has one definition and three importers. The six MCP endpoint stanzas are real duplication that should be deleted rather than merged, once hosts move to `@payloadcms/plugin-mcp`.
+
+- Updated dependencies [9131065]
+  - @forumone/throughline-core@0.6.0
+
 ## 0.4.0
 
 ### Minor Changes

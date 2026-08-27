@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-email",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Transactional email system for the Throughline framework. Resend wrapper, themeable React Email templates, and Inngest functions that subscribe to the approval-workflow notification events.",
   "type": "module",
   "main": "./dist/index.js",
