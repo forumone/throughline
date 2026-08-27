@@ -18,7 +18,7 @@
     "react": "^19.0.0"
   },
   "dependencies": {
-    "@forumone/throughline-design-contract": "^0.3.0"
+    "@forumone/throughline-design-contract": "workspace:*"
   },
   "devDependencies": {
     "@forumone/eslint-config-es5": "^4.0.0",
