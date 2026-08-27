@@ -1,5 +1,52 @@
 # @forumone/throughline-core
 
+## 0.4.0
+
+### Minor Changes
+
+- 40839b5: Stop publishing code nothing imports
+
+  `@forumone/throughline-core` loses three things no package in the suite, and no consumer, has ever called:
+  - **`./env`** — `ENV_VARS`, `validateBaseEnv`, `requireEnv`, `optionalEnv`, and the subpath export that served them. The idea was that plugins would read `process.env` through shared constants instead of hard-coded strings; every plugin hard-codes the string, including the ones in this repo. A convention with no adherents is not a convention.
+  - **`shallowDiff`** — written for the audit writer's `diff` field, never wired to it. The writer still takes a caller-supplied diff, and Payload's own version diffing is the better answer if one is ever wanted.
+  - **`generateId`** — an id generator in a framework where Payload assigns the ids.
+
+  `@forumone/throughline-plugin-contract` stops shipping `examplePlugin`. It is documentation of a shape, and it now lives in the playground, which is where a shape gets demonstrated — the published package was carrying 74 lines of example for every consumer that installs it.
+
+  Removing exports from a published package, hence minor rather than patch. Nothing in this repository, and nothing in the suite's only consumer, imports any of it.
+
+- 9f39ace: Enforce API-key scopes, which until now were only a label
+
+  The API-keys collection has always had a required `scopes` field, the README has always told you to mint keys with `--scopes publishing.execute`, and the scheduled-publish factory documents that its key "must carry `publishing.execute` scope". Nothing read the field. Every key could do whatever its linked user could, whatever it said on the label.
+
+  A tool may now declare `requiredScope`, and the handler holds callers to it: the tool is hidden from `tools/list` and refused on a direct call unless the key names that scope. Hidden as well as refused, because an agent shown a tool it will be turned away from will try it, fail, and report the tool as broken when what is narrow is the key.
+
+  The consequential tools are annotated — `publish`, `unpublish`, `schedule_publish`, `rollback` (`publishing.execute`); `request_approval` (`approvals.request`); `respond_to_approval` (`approvals.decide`); the three form writers (`forms.manage`); `trigger_sync` and `test_integration` (`integrations.trigger`). Reads are left unscoped, which is the right default for a read.
+
+  **This narrows existing keys.** A key minted with one scope could previously call every tool on every server and now cannot. That is the point, but it will change what an existing MCP client can do — check the scopes on your keys before upgrading. A key carrying no scopes at all passes nothing scoped: absent is read as none, not as everything.
+
+- f138b3d: One audit actor shape for every tool, and stop recording agents as people
+
+  Ten tools built the audit actor by hand and four of them disagreed. Three were only untidy — a dropped `userName`, conditional spreads, an assumption that `ctx.user` is non-null. The fourth was wrong: the component tools wrote `type: 'user'` unconditionally, so a call made with an API key and no linked user was recorded as a person. An audit log that cannot tell an agent from an editor is not an audit log.
+
+  `auditContext(ctx, meta)` is now exported from core and used at all eight tool call sites. `type` follows the rule the publishing service already used — a call carrying a user is that user's, one without is the system's — and `apiKeyName` rides along either way, because a key acting for a linked user is still worth naming.
+
+  It also passes `sessionId` through for the first time. The column has been on the audit collection since it was written and nothing ever filled it; it is what lets somebody reading the log group one conversation's writes instead of reading them one at a time.
+
+- 6fac789: Add `toPayloadMcpTool`, so Throughline's tools can be served by Payload's own MCP plugin
+
+  Payload ships `@payloadcms/plugin-mcp`, exact-pinned to the Payload version, built on the official MCP SDK: streamable HTTP, sessions, per-key per-tool capability checkboxes, and generic CRUD tools derived from the field configs. Against that, `createMcpHandler` here is a 146-line JSON-RPC subset speaking `tools/list` and `tools/call`, mounted six times over.
+
+  The transport was never the product. The tools are. This adapter is what makes moving between the two a configuration change rather than a rewrite of every tool: it translates the input schema (`withMeta`'s `z.object` to the raw shape the plugin registers), the context (a `PayloadRequest` to an `McpToolContext`), and the result (a tool's own object to MCP content blocks).
+
+  Nothing is wired to it. It is the outcome of a spike, and the servers move over one at a time.
+
+### Patch Changes
+
+- Updated dependencies [40839b5]
+- Updated dependencies [9f39ace]
+  - @forumone/throughline-plugin-contract@0.3.0
+
 ## 0.3.0
 
 ### Minor Changes
