@@ -30,7 +30,7 @@ export const examplePlugin: CorePlugin<ExamplePluginOptions> = (options) => {
 
     // Step 2 — apply defaults. Note: route prefixes here MUST NOT include
     // `/api` — Payload mounts top-level endpoints under its API base
-    // (default `/api`), so the user-facing URL becomes `/api/example/mcp`.
+    // (default `/api`), so the user-facing URL becomes `/api/example/greeting`.
     const greeting = options.greeting ?? 'Hello'
     const routePrefix = options.routePrefix ?? '/example'
 
@@ -44,11 +44,20 @@ export const examplePlugin: CorePlugin<ExamplePluginOptions> = (options) => {
       ],
       endpoints: [
         ...(incomingConfig.endpoints ?? []),
+        /*
+        An ordinary HTTP endpoint, and deliberately not an MCP one.
+
+        A plugin does not serve MCP itself any more. It builds its tools at
+        `onInit` — the first moment they can close over `payload` — and hands
+        them to the collector the host passed in, which the host has already
+        given to `@payloadcms/plugin-mcp`. One `/api/mcp` for every server.
+        Endpoints like this are for the things MCP is not: admin controls,
+        webhooks, public form posts.
+        */
         {
-          path: `${routePrefix}/mcp`,
-          method: 'post',
+          path: `${routePrefix}/greeting`,
+          method: 'get',
           handler: async () => {
-            // Real plugins delegate this to an MCP server implementation.
             return new Response(JSON.stringify({ greeting }), {
               headers: { 'content-type': 'application/json' },
             })

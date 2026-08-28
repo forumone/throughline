@@ -1,11 +1,6 @@
 import type { CorePlugin } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import {
-  createMcpHandler,
-  createNamedLogger,
-  defaultLogger,
-  getAuditWriter,
-} from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import { type ComponentsPluginOptions, validateOptions } from './options.js'
 import { createManifestLoader, type ManifestLoader } from './manifest-source.js'
 import { createTfidfMatcher } from './matching/index.js'
@@ -26,7 +21,6 @@ import {
 
 const PLUGIN_ID = '@forumone/throughline-components'
 const PLUGIN_VERSION = '0.1.0'
-const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/components-mcp-handler')
 /**
  * Internal IPC point: peer plugins (publishing, etc.) read this symbol from
  * the Payload instance to call composition validation directly without
@@ -35,42 +29,16 @@ const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/components-mcp-hand
  */
 const VALIDATOR_SYMBOL = Symbol.for('@forumone/throughline/components-validator')
 
-type McpHandler = (request: Request) => Promise<Response>
-
 export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
   (rawOptions) => (incomingConfig) => {
     if (rawOptions.enabled === false) return incomingConfig
 
     const options = validateOptions(rawOptions)
-    // Payload mounts top-level endpoints under its API base (default /api),
-    // so the path passed here MUST NOT include /api itself or it ends up
-    // doubled (e.g. /api/api/components/mcp). The user-facing URL is still
-    // /api/components/mcp.
-    const routePrefix = options.routePrefix ?? '/components'
     const logger = createNamedLogger('components', options.logger ?? defaultLogger)
     const maxRecommendations = options.matching?.maxRecommendations ?? 5
 
     return {
       ...incomingConfig,
-      endpoints: [
-        ...(incomingConfig.endpoints ?? []),
-        {
-          path: `${routePrefix}/mcp`,
-          method: 'post',
-          handler: async (req) => {
-            const handler = (req.payload as unknown as Record<symbol, unknown>)[
-              MCP_HANDLER_SYMBOL
-            ] as McpHandler | undefined
-            if (!handler) {
-              return new Response(
-                JSON.stringify({ error: 'Components MCP not initialized' }),
-                { status: 503, headers: { 'content-type': 'application/json' } },
-              )
-            }
-            return handler(req as unknown as Request)
-          },
-        },
-      ],
       onInit: async (payload) => {
         if (incomingConfig.onInit) {
           await incomingConfig.onInit(payload)
@@ -104,19 +72,11 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
           createFindAntiPatternTool({ loader, auditWriter }),
         ]
 
-        // Payload's own MCP plugin, when the host is using it. See the option's
-        // note — `onInit` is both the earliest these tools can exist and still
-        // early enough that the array is read populated.
+        // Payload's own MCP plugin, and the only transport these tools have.
+        // `onInit` is both the earliest they can exist and still early enough
+        // that `mcpPlugin` reads the array populated.
         options.mcpTools?.add(tools, { serverName: 'components', logger })
 
-        const handler = createMcpHandler({
-          payload,
-          serverName: 'components',
-          tools,
-          logger,
-        })
-
-        attachMcpHandler(payload, handler)
         attachValidator(payload, loader)
 
         registry.register({
@@ -132,15 +92,6 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
       },
     }
   }
-
-function attachMcpHandler(payload: object, handler: McpHandler): void {
-  Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
-    value: handler,
-    enumerable: false,
-    writable: false,
-    configurable: false,
-  })
-}
 
 /**
  * Attaches a composition-validation function to the Payload instance under

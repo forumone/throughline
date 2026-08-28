@@ -21,15 +21,6 @@ export type {
   AuditWriterOptions,
 } from './audit/index.js'
 
-export {
-  DEFAULT_API_KEYS_SLUG,
-  createApiKeysCollection,
-  createBearerTokenAuthenticator,
-  generateApiKey,
-  sha256Hex,
-} from './auth/index.js'
-export type { ApiKeysCollectionOptions, BearerTokenAuthenticatorOptions } from './auth/index.js'
-
 export { createInngestClient } from './events/index.js'
 export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events/index.js'
 
@@ -37,7 +28,6 @@ export {
   McpMetaSchema,
   auditContext,
   deniedEnvelope,
-  createMcpHandler,
   createMcpToolCollector,
   toPayloadMcpTool,
   toPayloadMcpTools,
@@ -47,7 +37,6 @@ export type {
   AddToolsOptions,
   AuditContextFields,
   CreateMcpToolCollectorOptions,
-  McpHandlerOptions,
   McpMeta,
   McpToolCollector,
   PayloadMcpRequest,
@@ -57,7 +46,12 @@ export type {
 
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
-export { documentContentHash, formatZodIssues, unwrapRelationshipId } from './utils/index.js'
+export {
+  documentContentHash,
+  formatZodIssues,
+  sha256Hex,
+  unwrapRelationshipId,
+} from './utils/index.js'
 export type { DocumentContentHashOptions } from './utils/index.js'
 
 // Re-export plugin contract types so consumers do not have to import the
@@ -67,8 +61,6 @@ export type {
   BaseCorePluginOptions,
   CorePlugin,
   Logger,
-  McpAuthResult,
-  McpAuthenticator,
   McpToolContext,
   McpToolDefinition,
   PluginRegistry,

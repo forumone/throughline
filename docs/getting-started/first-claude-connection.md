@@ -6,20 +6,35 @@ Prerequisite: you've completed [Scaffolding a project](scaffolding-a-project.md)
 
 ## What's at stake
 
-Throughline exposes six MCP servers, each with its own URL and its own API key:
+One endpoint, one key, every tool: `POST /api/mcp`, served by
+`@payloadcms/plugin-mcp`.
 
-| Server | Endpoint | Capability |
-| --- | --- | --- |
-| Components | `/api/components/mcp` | propose components, validate compositions |
-| Publishing | `/api/publishing/mcp` | publish, schedule, rollback |
-| Approvals | `/api/approvals/mcp` | request, list, decide on approvals |
-| Audit | `/api/audit/mcp` | read-only queries over the audit log |
-| Forms | `/api/forms/mcp` | manage form definitions and submissions |
-| Integrations | `/api/integrations/mcp` | trigger and inspect third-party integrations |
+| Tools | Capability |
+| --- | --- |
+| Components | propose components, validate compositions |
+| Publishing | publish, schedule, rollback |
+| Approvals | request, list, decide on approvals |
+| Audit | read-only queries over the audit log |
+| Forms | manage form definitions and submissions |
+| Integrations | trigger and inspect third-party integrations |
 
-Plus the Payload Plugin MCP (`@payloadcms/plugin-mcp`) at `/api/payload/mcp`, which exposes generic CRUD over collections you opt in.
+Each plugin builds its tools at `onInit` and hands them to a collector; the host
+passes that collector's array to `mcpPlugin`. There is nothing per-server to
+configure in your client. Payload's own generic CRUD tools are available too, but
+only over collections the host opts in by naming them in `mcpPlugin`.
 
-You don't have to wire all of them at once. Start with Components + Publishing — those are the core authoring loop.
+This used to be six endpoints with six keys, on a JSON-RPC subset of the protocol
+written here. If you have a client configured that way, replace all six entries
+with the one below.
+
+## Make a key
+
+Payload admin → **MCP** → **Payload MCP API Keys** → new document.
+
+- **User** — required. The key inherits this user's access control, and every tool
+  logs it as the actor. A key saved with no user is a 500 on first use, not a 401.
+- **Label** — anything; it is how you will recognise the key later.
+- Tick **Enable API Key**, save, and copy the key. It is shown once.
 
 ## Claude Desktop
 
@@ -28,47 +43,57 @@ Edit your Claude Desktop config (`~/Library/Application Support/Claude/claude_de
 ```json
 {
   "mcpServers": {
-    "throughline-components": {
+    "throughline": {
       "command": "npx",
       "args": [
         "mcp-remote",
-        "http://localhost:3000/api/components/mcp",
+        "http://localhost:3000/api/mcp",
         "--header",
-        "Authorization: Bearer ${COMPONENT_SERVER_API_KEY}"
+        "Authorization: Bearer ${THROUGHLINE_API_KEY}"
       ],
       "env": {
-        "COMPONENT_SERVER_API_KEY": "<paste your key>"
-      }
-    },
-    "throughline-publishing": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "http://localhost:3000/api/publishing/mcp",
-        "--header",
-        "Authorization: Bearer ${PUBLISHING_SERVER_API_KEY}"
-      ],
-      "env": {
-        "PUBLISHING_SERVER_API_KEY": "<paste your key>"
+        "THROUGHLINE_API_KEY": "<paste your key>"
       }
     }
   }
 }
 ```
 
-Restart Claude Desktop. The hammer icon next to the chat input should show "throughline-components" and "throughline-publishing" with green status dots.
+Restart Claude Desktop. The hammer icon next to the chat input should show
+"throughline" with a green status dot.
 
 ## Claude Code
 
 `claude mcp add` writes the same shape into Claude Code's config:
 
 ```bash
-claude mcp add throughline-components http://localhost:3000/api/components/mcp \
-  --header "Authorization: Bearer $COMPONENT_SERVER_API_KEY"
-
-claude mcp add throughline-publishing http://localhost:3000/api/publishing/mcp \
-  --header "Authorization: Bearer $PUBLISHING_SERVER_API_KEY"
+claude mcp add throughline http://localhost:3000/api/mcp \
+  --header "Authorization: Bearer $THROUGHLINE_API_KEY"
 ```
+
+## Or check it with curl first
+
+Worth doing before involving a client, because it separates "the server is wrong"
+from "my client config is wrong":
+
+```bash
+curl -sS -X POST http://localhost:3000/api/mcp \
+  -H "Authorization: Bearer $THROUGHLINE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+  | sed -n 's/^data: //p' | jq '.result.tools | length'
+```
+
+Two things about that command. The transport is stateless, so a bare `tools/list`
+works with no `initialize` handshake. And the response is SSE-framed — `event:` and
+`data:` lines — so `jq` on the raw body fails with `Invalid numeric literal`; the
+`sed` is what unwraps it. `Accept` must offer `text/event-stream` or the server
+answers 406.
+
+A count of `0` with a `200` is the failure worth knowing about: it means the key
+authenticated but every tool was gated off. See the note on `overrideAuth` in
+[the core reference](../reference/core.md#mcp-handing-tools-to-payloads-server).
 
 ## Test the connection
 
@@ -86,15 +111,17 @@ Draft a homepage for a climate nonprofit. Use the Hero, Stats, and CTASection co
 
 Claude should call `propose_components` to vet the choices and return a JSON layout that satisfies the design system's rules (correct slot fills, valid prop combinations, no anti-pattern violations).
 
-## Add the rest
+## The rest
 
-When you're ready, add the remaining four servers (Approvals, Audit, Forms, Integrations) the same way. Each has its own API key and endpoint.
-
-For server-by-server tool reference, see the [reference section](../reference/).
+There is no "rest" to add — the one entry carries every server's tools. For the
+tool-by-tool reference, see the [reference section](../reference/).
 
 ## Troubleshooting
 
-- **`401 Unauthorized`** — wrong API key, or the key in `.env.local` doesn't match the one in the Payload admin's API Keys collection. Restart `pnpm dev` after changing `.env.local`.
+- **`401 Unauthorized`** — the key is wrong, disabled, or was never enabled. Check **Enable API Key** on the key document in the Payload admin. Nothing here reads a key from `.env.local`.
+- **`200` with an empty tool list** — authentication worked and gating denied everything. The host needs `overrideAuth`; see [the core reference](../reference/core.md#mcp-handing-tools-to-payloads-server).
+- **`406 Not Acceptable`** — your `Accept` header doesn't offer `text/event-stream`.
+- **A tool you expected is missing** — the plugin that owns it wasn't given the `mcpTools` collector. Nothing errors in that case; its tools are simply absent.
 - **`fetch failed`** — your local server isn't running or is on a different port. Confirm `pnpm dev` is up at `http://localhost:3000`.
 - **Tools don't appear in Claude** — restart your MCP client after editing config. Many clients only read the config file at startup.
 - **Claude calls a tool but it returns "denied"** — your user doesn't have the required role. Tools that mutate content require `admin` or `editor`; approval-related tools require `approver`; form-admin tools require `form-admin`. Edit your user in the Payload admin and re-fetch the user list in Claude.

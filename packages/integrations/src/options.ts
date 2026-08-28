@@ -5,7 +5,12 @@ import type { Integration } from './types.js'
 
 export const DEFAULT_INTEGRATIONS_SLUG = 'integrations'
 
-export interface IntegrationsPluginOptions extends BaseCorePluginOptions {
+/*
+`routePrefix` is omitted rather than ignored — see the note in the audit
+plugin's options. This server's only endpoint was `/<prefix>/mcp`, and its
+tools now reach a client through the host's `mcpPlugin`.
+*/
+export interface IntegrationsPluginOptions extends Omit<BaseCorePluginOptions, 'routePrefix'> {
   /**
    * Inngest client used to register integration functions and to fire
    * manual-sync trigger events. Required: integrations are an

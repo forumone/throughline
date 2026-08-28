@@ -88,15 +88,23 @@ describe('publishingPlugin admin controls', () => {
 })
 
 describe('publishingPlugin endpoints', () => {
-  it('mounts the admin publish routes alongside the MCP route', () => {
+  it('mounts the admin publish routes', () => {
     const paths = build().endpoints?.map((e) => e.path)
     expect(paths).toEqual(
-      expect.arrayContaining([
-        '/publishing/publish',
-        '/publishing/unpublish',
-        '/publishing/mcp',
-      ]),
+      expect.arrayContaining(['/publishing/publish', '/publishing/unpublish']),
     )
+  })
+
+  /*
+  The admin controls are all this plugin serves. Its tools reach a client
+  through the host's `mcpPlugin` on one `/api/mcp`, so an endpoint here ending
+  in `/mcp` would be a second transport nobody points at — which is what was
+  just deleted. Asserted as an absence because a re-added one would otherwise
+  pass every other test in this file.
+  */
+  it('serves no MCP endpoint of its own', () => {
+    const paths = build().endpoints?.map((e) => e.path) ?? []
+    expect(paths.filter((path) => path.endsWith('/mcp'))).toEqual([])
   })
 
   it('honours a custom route prefix', () => {

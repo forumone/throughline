@@ -1,6 +1,6 @@
 import type { CorePlugin, McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import { createMcpHandler, createNamedLogger, defaultLogger } from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger } from '@forumone/throughline-core'
 import { getEmailClient as readEmailClient } from '@forumone/throughline-email'
 import type { InngestFunction } from 'inngest'
 import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
@@ -26,10 +26,7 @@ import {
 const PLUGIN_ID = '@forumone/throughline-forms'
 const PLUGIN_VERSION = '0.1.0'
 
-const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/forms-mcp-handler')
 const FUNCTIONS_SYMBOL = Symbol.for('@forumone/throughline/forms-functions')
-
-type McpHandler = (request: Request) => Promise<Response>
 
 interface PolicyDestinationRow {
   label?: string
@@ -128,29 +125,12 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
 
     const withFormBuilder = formBuilderConfig(incomingConfig)
     const submitEndpoint = createSubmitEndpoint(resolved)
-    const mcpEndpoint = {
-      path: `${resolved.routePrefix}/mcp`,
-      method: 'post' as const,
-      handler: async (req: { payload: object }) => {
-        const handler = (req.payload as Record<symbol, unknown>)[MCP_HANDLER_SYMBOL] as
-          | McpHandler
-          | undefined
-        if (!handler) {
-          return new Response(JSON.stringify({ error: 'Forms MCP not initialized' }), {
-            status: 503,
-            headers: { 'content-type': 'application/json' },
-          })
-        }
-        return handler(req as unknown as Request)
-      },
-    }
 
     return {
       ...withFormBuilder,
       endpoints: [
         ...(withFormBuilder.endpoints ?? []),
         submitEndpoint,
-        mcpEndpoint,
       ] as NonNullable<typeof withFormBuilder.endpoints>,
       onInit: async (payload) => {
         if (withFormBuilder.onInit) await withFormBuilder.onInit(payload)
@@ -168,24 +148,10 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
           createGetFormSubmissionsTool({ payload, resolved }),
         ] as unknown as McpToolDefinition[]
 
-        // Payload's own MCP plugin, when the host is using it. See the option's
-        // note — `onInit` is both the earliest these tools can exist and still
-        // early enough that the array is read populated.
+        // Payload's own MCP plugin, and the only transport these tools have.
+        // `onInit` is both the earliest they can exist and still early enough
+        // that `mcpPlugin` reads the array populated.
         resolved.options.mcpTools?.add(tools, { serverName: 'forms', logger })
-
-        const handler = createMcpHandler({
-          payload,
-          serverName: 'forms',
-          tools,
-          logger,
-        })
-
-        Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
-          value: handler,
-          enumerable: false,
-          writable: false,
-          configurable: false,
-        })
 
         const fanOutDeps = { inngest: resolved.options.inngest, payload, resolved }
         const getEmailClient = () => readEmailClient(payload)

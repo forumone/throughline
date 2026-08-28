@@ -1,12 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import type { CorePlugin } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import {
-  createMcpHandler,
-  createNamedLogger,
-  defaultLogger,
-  getAuditWriter,
-} from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import { type PublishingPluginOptions, validateOptions } from './options.js'
 import { createBlockStatusWritesHook } from './hooks/block-status-writes.js'
 import { createRecordDraftWritesHook } from './hooks/draft-writes.js'
@@ -22,11 +17,7 @@ import {
 
 const PLUGIN_ID = '@forumone/throughline-publishing'
 const PLUGIN_VERSION = '0.1.0'
-const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/publishing-mcp-handler')
-
 const CLIENT_ENTRY = '@forumone/throughline-publishing/client'
-
-type McpHandler = (request: Request) => Promise<Response>
 
 export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
   (rawOptions) => (incomingConfig) => {
@@ -72,22 +63,6 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
       endpoints: [
         ...(incomingConfig.endpoints ?? []),
         ...createAdminEndpoints({ routePrefix, publishableSlugs }),
-        {
-          path: `${routePrefix}/mcp`,
-          method: 'post',
-          handler: async (req) => {
-            const handler = (req.payload as unknown as Record<symbol, unknown>)[
-              MCP_HANDLER_SYMBOL
-            ] as McpHandler | undefined
-            if (!handler) {
-              return new Response(
-                JSON.stringify({ error: 'Publishing MCP not initialized' }),
-                { status: 503, headers: { 'content-type': 'application/json' } },
-              )
-            }
-            return handler(req as unknown as Request)
-          },
-        },
       ],
       onInit: async (payload) => {
         if (incomingConfig.onInit) {
@@ -113,28 +88,19 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
         ]
 
         /*
-        Payload's own MCP plugin, if the host is using it.
+        Payload's own MCP plugin, and the only transport these tools have.
 
-        `onInit` is the first moment these tools can exist — they close over the
+        `onInit` is the first moment they can exist — they close over the
         service, the audit writer and `payload` — and it runs before any request,
         which is when `mcpPlugin` reads the array. That ordering is the whole
         reason a config-time option can be filled at init.
+
+        A host that registers this plugin without `mcpTools` gets the publish
+        pipeline, the admin controls and `publishDocument`, and no MCP surface
+        at all. This plugin used to serve its own `/mcp` endpoint as a fallback;
+        it no longer does.
         */
         options.mcpTools?.add(tools, { serverName: 'publishing', logger })
-
-        const handler = createMcpHandler({
-          payload,
-          serverName: 'publishing',
-          tools,
-          logger,
-        })
-
-        Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
-          value: handler,
-          enumerable: false,
-          writable: false,
-          configurable: false,
-        })
 
         registry.register({
           id: PLUGIN_ID,

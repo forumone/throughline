@@ -1,4 +1,4 @@
-import { sha256Hex } from '../auth/api-keys.js'
+import { sha256Hex } from './sha256.js'
 
 /**
  * Fields that move without the content moving. Stripped at every level of

@@ -31,7 +31,8 @@ componentsPlugin({
     tokens?: Record<string, string>      // override CSS-variable values
     additions?: ComponentContract[]      // append client-specific components
   },
-  routePrefix?: string,                   // default '/components'
+  mcpTools?: McpToolCollector,            // hand it the host's collector, or its
+                                          // seven tools reach nobody
 })
 ```
 
@@ -50,7 +51,17 @@ componentsPlugin({
 
 ## MCP tools
 
-The plugin registers an MCP server at `/api/components/mcp`. Tools:
+The plugin adds these to the collector, for the host's `/api/mcp`. It serves no HTTP
+endpoint of its own, which is why it takes no `routePrefix`.
+
+**The "required role" column has never been enforced.** No `requiredRoles` field
+exists on `McpToolDefinition` and no code has ever read one — the column records an
+intent, not a check. What did get enforced was `requiredScope`, per key, and that
+stopped when the per-server handler was deleted: `@payloadcms/plugin-mcp` gates on
+per-key checkboxes this suite cannot fill at config time, so any key that
+authenticates reaches every tool. #78 tracks getting gating back. Access control on
+the *documents* a tool touches is unaffected — that is Payload's, through the key's
+linked user.
 
 | Tool | Required role | Purpose |
 | --- | --- | --- |

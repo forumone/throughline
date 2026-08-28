@@ -13,13 +13,12 @@ Peer dependency: `payload@^3.0.0`.
 ## Subpath exports
 
 ```typescript
-import { auditPlugin, createApiKeysCollection } from '@forumone/throughline-core'
+import { auditPlugin, createMcpToolCollector } from '@forumone/throughline-core'
 
 // or
 import { auditPlugin } from '@forumone/throughline-core/audit'
-import { createApiKeysCollection } from '@forumone/throughline-core/auth'
 import { createInngestClient } from '@forumone/throughline-core/events'
-import { createMcpHandler } from '@forumone/throughline-core/mcp'
+import { createMcpToolCollector } from '@forumone/throughline-core/mcp'
 import { validateBaseEnv } from '@forumone/throughline-core/env'
 ```
 
@@ -55,40 +54,59 @@ interface AuditPluginOptions {
 }
 ```
 
-## Auth subsystem
+## Auth
+
+There is no auth subsystem here any more. This package used to mint and store MCP
+keys — a `mcp-api-keys` collection, a bearer-token authenticator, `generateApiKey` —
+and serve them to a JSON-RPC handler of its own. `@payloadcms/plugin-mcp` owns keys
+and authentication now, on its own `payload-mcp-api-keys` collection, and the host
+registers it.
+
+`sha256Hex(input)` survived the deletion and is exported from
+`@forumone/throughline-core/utils`. `documentContentHash` is its caller.
+
+## MCP: handing tools to Payload's server
 
 ```typescript
-import {
-  createApiKeysCollection,
-  createBearerTokenAuthenticator,
-  generateApiKey,
-} from '@forumone/throughline-core'
+import { createMcpToolCollector } from '@forumone/throughline-core'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
+
+const mcpTools = createMcpToolCollector()
+
+plugins: [
+  publishingPlugin({ /* … */ mcpTools }),
+  approvalsPlugin({ /* … */ mcpTools }),
+  mcpPlugin({ mcp: { tools: mcpTools.tools } }),
+]
 ```
+
+One endpoint — `POST /api/mcp` — for every plugin's tools.
+
+Every Throughline tool is built at `onInit`, because each closes over `payload`, the
+publishing service or the audit writer. At the moment the host writes its config
+there is nothing to hand over. What makes this work rather than a rewrite:
+`mcpPlugin` reads `mcp.tools` inside the handler it builds *per request*, so an
+array handed over at config time and filled at `onInit` is read populated.
+
+**Hand over the array itself.** A spread or a `.slice()` at config time hands over
+an empty array that stays empty.
 
 | Symbol | Purpose |
 | --- | --- |
-| `createApiKeysCollection(options)` | Returns the `CollectionConfig` for `api-keys` (Bearer tokens used by MCP endpoints) |
-| `createBearerTokenAuthenticator(options)` | Returns a function that validates a Bearer token against the collection |
-| `generateApiKey(length?)` | Generates a high-entropy random key (default 48 bytes, base64) |
-| `sha256Hex(input)` | SHA-256 hex digest helper |
+| `createMcpToolCollector(options)` | The array to give `mcpPlugin`, plus `add()` for plugins to fill at `onInit`. Refuses two tools with one name |
+| `toPayloadMcpTool` / `toPayloadMcpTools` | The adapter from an `McpToolDefinition` to the shape `mcpPlugin` takes. `add()` applies it for you |
+| `McpMetaSchema` / `withMeta` | The `_meta` envelope tools use to carry a session id and actor |
 
-The Bearer authenticator is what each MCP plugin's request handler delegates to. You shouldn't usually call it directly; the framework wires it.
+**A plugin given no collector serves no tools at all.** Each used to mount its own
+`/<prefix>/mcp` as a fallback; those are deleted, so an unwired plugin's tools are
+unreachable — with no error, because nothing is misconfigured from Payload's side.
 
-## MCP handler
-
-```typescript
-import { createMcpHandler, McpMetaSchema } from '@forumone/throughline-core'
-```
-
-`createMcpHandler({ tools, authenticator, logger })` returns a Next.js / Payload-compatible request handler that:
-
-- Verifies the Bearer token
-- Parses the JSON-RPC envelope
-- Dispatches to a tool by name
-- Validates input against the tool's Zod schema
-- Returns a structured response (or a typed error)
-
-You only call this if you're writing a new MCP server. Each Throughline plugin (`components`, `publishing`, etc.) calls it internally with its own tool list.
+**`requiredScope` is currently unenforced.** `mcpPlugin` gates each custom tool on a
+per-key checkbox it generates from `mcp.tools` while the config is being built —
+when the collector is still empty — so no checkbox exists and its `?? false` denies
+everything. A host works around this with `overrideAuth`, which authenticates
+normally and then answers the tool question from the collector. The cost is that any
+key which authenticates reaches every collected tool. See #78.
 
 ## Inngest client
 
@@ -161,20 +179,25 @@ These also live in `@forumone/throughline-plugin-contract` (see [its reference](
 ```typescript
 import {
   auditPlugin,
-  createApiKeysCollection,
   createInngestClient,
+  createMcpToolCollector,
 } from '@forumone/throughline-core'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
 
 const inngest = createInngestClient({ id: 'my-site' })
+const mcpTools = createMcpToolCollector()
 
 export default buildConfig({
   collections: [
-    /* your collections */,
-    createApiKeysCollection(),
+    /* your collections */
   ],
   plugins: [
+    // auditPlugin first: every other Throughline plugin requires the
+    // `audit-log` capability at init and refuses to load without it.
     auditPlugin({ inngest }),
-    /* other Throughline plugins */
+    /* other Throughline plugins, each given `mcpTools` */
+    // After them, so every plugin has contributed by the time it is read.
+    mcpPlugin({ mcp: { tools: mcpTools.tools } }),
   ],
   /* ... */
 })

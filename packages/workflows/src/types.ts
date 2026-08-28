@@ -62,24 +62,58 @@ export interface ScheduledCollectionConfig {
   scheduledField?: string
 }
 
+/** One document the cron found due, handed to `publish`. */
+export interface ScheduledPublishRequest {
+  collection: string
+  id: string
+  /** Recorded on the audit event, so a scheduled publish is distinguishable. */
+  reasoning: string
+}
+
+/**
+ * What `publish` reports back. `published: false` is a policy refusal — a
+ * composition error, a missing approval — and is expected traffic, not a fault.
+ */
+export interface ScheduledPublishResult {
+  published: boolean
+  reason?: string | undefined
+}
+
 export interface ExecuteScheduledPublishesOptions extends BaseWorkflowOptions {
   /** Collections that participate in scheduled publishing. */
   collections: ScheduledCollectionConfig[]
   /** Cron schedule. Default: `*\/5 * * * *` (every 5 minutes). */
   schedule?: string
   /**
-   * Base URL of the deployment's publishing server. Scheduled publishes
-   * call through the publishing MCP so the full pipeline runs (composition
-   * checks, accessibility, approval gating). Direct Payload writes would
-   * skip those checks.
+   * How to publish one document. **Wire this to the publishing service**, not to
+   * `payload.update` — the service is the seven-stage pipeline, and a direct
+   * write skips composition, accessibility and approval gating:
+   *
+   * ```ts
+   * import { getPublishingService } from '@forumone/throughline-publishing'
+   *
+   * publish: async ({ collection, id, reasoning }) => {
+   *   const outcome = await getPublishingService(payload).publish({
+   *     collection,
+   *     id,
+   *     actor: { apiKeyName: 'scheduled-publish', channel: 'mcp' },
+   *     meta: { reasoning },
+   *   })
+   *   return { published: outcome.published, reason: outcome.reason }
+   * }
+   * ```
+   *
+   * Injected rather than built in because this package is a leaf — it depends on
+   * `core` alone, and reaching the publishing service means depending on the
+   * publishing package or duplicating its symbol string.
+   *
+   * It used to be a `fetch` to `POST /api/publishing/mcp` with a bearer key, and
+   * that endpoint no longer exists. The self-call was also the wrong shape: it
+   * cost a function invocation per document, needed a key and a base URL to be
+   * right, and returned 401 rather than publishing anything if the deployment
+   * URL sat behind access protection.
    */
-  publishingServerUrl: string
-  /**
-   * API-key value for `Authorization: Bearer <key>` against the publishing
-   * MCP. Falls back to `process.env.PUBLISHING_SYSTEM_API_KEY` when omitted.
-   * Required at construction time — the factory throws if neither is set.
-   */
-  publishingApiKey?: string
+  publish: (request: ScheduledPublishRequest) => Promise<ScheduledPublishResult>
   /** Override the function id. Default: `execute-scheduled-publishes`. */
   id?: string
 }

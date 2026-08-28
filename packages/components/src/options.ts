@@ -20,7 +20,12 @@ export interface MatchingConfig {
   maxRecommendations?: number
 }
 
-export interface ComponentsPluginOptions extends BaseCorePluginOptions {
+/*
+`routePrefix` is omitted rather than ignored — see the note in the audit
+plugin's options. This server's only endpoint was `/<prefix>/mcp`, and its
+tools now reach a client through the host's `mcpPlugin`.
+*/
+export interface ComponentsPluginOptions extends Omit<BaseCorePluginOptions, 'routePrefix'> {
   /** Required: where the design system manifest comes from. */
   manifest: ManifestSource
   /** Optional: how the plugin matches intents to components. Defaults to TF-IDF. */
@@ -57,7 +62,6 @@ const ManifestSourceSchema = z.discriminatedUnion('type', [
 
 export const ComponentsPluginOptionsSchema = z.object({
   enabled: z.boolean().optional(),
-  routePrefix: z.string().optional(),
   manifest: ManifestSourceSchema,
   matching: z
     .object({

@@ -85,21 +85,25 @@ npx inngest-cli@latest dev
 
 This serves a local Inngest dashboard at http://localhost:8288 and discovers your app's functions at `http://localhost:3000/api/inngest`. Workflow events fire here during development; in production you'll connect to the hosted Inngest service.
 
-## 7. Generate MCP API keys
+## 7. Generate an MCP API key
 
-The MCP servers authenticate via Bearer tokens stored in Payload's `api-keys` collection.
+`@payloadcms/plugin-mcp` owns keys, on its own `payload-mcp-api-keys` collection.
+One key reaches every tool.
 
-1. In the Payload admin, open the **API Keys** collection
-2. Create one entry per server: `component-server`, `publishing-server`, `approvals-server`, `audit-server`, `forms-server`, `integrations-server`
-3. Each entry's `keyValue` field becomes the Bearer token for that server's MCP endpoint
-4. Paste each key into `.env.local` (`COMPONENT_SERVER_API_KEY`, `PUBLISHING_SERVER_API_KEY`, etc.) and restart `pnpm dev`
+1. In the Payload admin, open **MCP** → **Payload MCP API Keys**
+2. Create one document. Pick a **User** — required; the key inherits that user's
+   access control and every tool logs it as the actor
+3. Tick **Enable API Key** and save. The key is displayed once — copy it now
+4. Nothing goes in `.env.local`. The key lives in your MCP client's config
 
-Also create one `system` key for the scheduled-publishing workflow and paste it as `PUBLISHING_SYSTEM_API_KEY`.
+Also create one `system` key for the scheduled-publishing workflow and paste it as
+`PUBLISHING_SYSTEM_API_KEY` — that one *is* an env var, because Inngest calls the
+publish pipeline rather than going through MCP.
 
 ## 8. What you have now
 
 - A Payload admin at `/admin`
-- Six MCP endpoints running at `/api/<server>/mcp`, each Bearer-authenticated
+- One MCP endpoint at `/api/mcp`, Bearer-authenticated, carrying every plugin's tools
 - An Inngest endpoint at `/api/inngest` running revalidate, scheduled-publish, expire-approval, audit-echo, healthcheck, email, forms, and integration workers
 - An example `Pages` collection with the standard `policy` group attached
 - A `users` collection with a role/group taxonomy your approvers plugin can resolve against

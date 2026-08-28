@@ -39,7 +39,8 @@ export const myPlugin: CorePlugin<MyPluginOptions> = (options) => (incomingConfi
   const validated = validateOptions(options) // throws on invalid input
   // Note: routePrefix MUST NOT include `/api`. Payload mounts top-level
   // endpoints under its API base (default `/api`), so the user-facing URL
-  // becomes `/api/my-plugin/mcp`.
+  // becomes `/api/my-plugin/webhook`. Omit the option entirely if your plugin
+  // serves no HTTP endpoints of its own — MCP is not one of them.
   const routePrefix = validated.routePrefix ?? '/my-plugin'
 
   return {
@@ -47,14 +48,24 @@ export const myPlugin: CorePlugin<MyPluginOptions> = (options) => (incomingConfi
     collections: [...(incomingConfig.collections ?? []), myCollection],
     endpoints: [
       ...(incomingConfig.endpoints ?? []),
-      {
-        path: `${routePrefix}/mcp`,
-        method: 'post',
-        handler: createMcpHandler(validated),
-      },
+      // Your own HTTP surface, if you have one. Not MCP — see below.
+      { path: `${routePrefix}/webhook`, method: 'post', handler: myWebhook },
     ],
     onInit: async (payload) => {
       if (incomingConfig.onInit) await incomingConfig.onInit(payload)
+
+      /*
+      Tools are built here, not at config time, because each closes over
+      `payload` — and handed to the collector the host passed in. The host has
+      already given that collector's array to `@payloadcms/plugin-mcp`, which
+      reads it per request, so filling it at `onInit` is in time.
+
+      Do not serve MCP yourself. Every plugin in this suite used to mount its
+      own `/<prefix>/mcp` on a hand-written JSON-RPC subset; they are deleted,
+      and one endpoint for every server is the point.
+      */
+      validated.mcpTools?.add([myTool(payload)], { serverName: 'my-plugin' })
+
       getPluginRegistry(payload).register({
         id: '@forumone/throughline-my-plugin',
         version: packageJson.version,
@@ -69,7 +80,8 @@ Three structural rules that are non-negotiable:
 
 - Honour `enabled === false` before doing any work.
 - Never replace `incomingConfig.collections`, `endpoints`, or `hooks.*` arrays — always spread the existing value and append.
-- Route prefixes for top-level endpoints MUST NOT include `/api`. Payload's API base (`config.routes.api`, default `/api`) is prepended automatically, so a `path: '/api/my-plugin/mcp'` registers at `/api/api/my-plugin/mcp`.
+- Route prefixes for top-level endpoints MUST NOT include `/api`. Payload's API base (`config.routes.api`, default `/api`) is prepended automatically, so a `path: '/api/my-plugin/webhook'` registers at `/api/api/my-plugin/webhook`.
+- Do not serve an MCP endpoint. Hand your tools to the collector at `onInit`; the host serves them on one `/api/mcp`.
 
 ## Options validation
 
