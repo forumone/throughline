@@ -1,7 +1,7 @@
 {
   "name": "@forumone/throughline-design-system-payload",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Turns a Throughline design-system manifest into Payload blocks, and those blocks back into React.",
   "exports": {
