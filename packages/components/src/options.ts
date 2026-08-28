@@ -1,3 +1,4 @@
+import { formatZodIssues } from '@forumone/throughline-core'
 import type { McpToolCollector } from '@forumone/throughline-core'
 import { z } from 'zod'
 import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
@@ -75,9 +76,7 @@ export const ComponentsPluginOptionsSchema = z.object({
 export function validateOptions(options: ComponentsPluginOptions): ComponentsPluginOptions {
   const result = ComponentsPluginOptionsSchema.safeParse(options)
   if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
-      .join('\n')
+    const issues = formatZodIssues(result.error)
     throw new Error(`Invalid componentsPlugin options:\n${issues}`)
   }
   return options

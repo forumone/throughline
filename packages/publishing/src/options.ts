@@ -1,3 +1,4 @@
+import { formatZodIssues } from '@forumone/throughline-core'
 import type { McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
 import { z } from 'zod'
@@ -129,9 +130,7 @@ export function validateOptions(options: PublishingPluginOptions): PublishingPlu
   for (const collection of options.collections) {
     const result = PublishableCollectionSchema.safeParse(collection)
     if (!result.success) {
-      const issues = result.error.issues
-        .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
-        .join('\n')
+      const issues = formatZodIssues(result.error)
       throw new Error(`Invalid collection config:\n${issues}`)
     }
   }
