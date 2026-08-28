@@ -1,5 +1,12 @@
 # @forumone/throughline-workflows
 
+## 0.2.8
+
+### Patch Changes
+
+- Updated dependencies [a9262da]
+  - @forumone/throughline-core@0.8.0
+
 ## 0.2.7
 
 ### Patch Changes
