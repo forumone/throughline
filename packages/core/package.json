@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-core",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Core plumbing for Throughline: audit log, MCP authentication and handler, event taxonomy + Inngest client factory, logger, shared utilities.",
   "type": "module",
   "main": "./dist/index.js",
