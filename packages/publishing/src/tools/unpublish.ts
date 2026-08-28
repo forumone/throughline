@@ -4,6 +4,7 @@ import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { PublishingPluginOptions } from '../options.js'
 import { createPublishingService, type PublishingService } from '../service.js'
+import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface UnpublishToolDeps {
   payload: Payload
@@ -22,10 +23,8 @@ export function createUnpublishTool(deps: UnpublishToolDeps): McpToolDefinition 
   const service = deps.service ?? createPublishingService(deps)
 
   return {
-    name: 'unpublish',
+    ...PUBLISHING_TOOLS.unpublish,
     requiredScope: 'publishing.execute',
-    description:
-      'Unpublishes a published document by reverting it to draft. Use when content needs to be removed from the public site without deleting it. Fires content/page.unpublished so revalidation and integrations can react.',
     inputSchema,
     handler: async (input, ctx) =>
       service.unpublish({

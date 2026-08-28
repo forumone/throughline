@@ -3,6 +3,7 @@ import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { deniedEnvelope, isIntegrationsAdmin } from './access.js'
+import { INTEGRATIONS_TOOLS } from './descriptors.js'
 
 export interface TriggerSyncDeps {
   payload: Payload
@@ -24,10 +25,8 @@ export function createTriggerSyncTool(
   deps: TriggerSyncDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'trigger_sync',
+    ...INTEGRATIONS_TOOLS.triggerSync,
     requiredScope: 'integrations.trigger',
-    description:
-      'Manually triggers an integration to send a test payload. Useful for verifying connectivity after a config change or after the integration has been failing. Admin-only because triggering an external POST is a write-side action.',
     inputSchema,
     handler: async (input, ctx) => {
       if (!isIntegrationsAdmin(ctx)) {

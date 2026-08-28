@@ -1,3 +1,4 @@
+export { INTEGRATIONS_TOOLS, INTEGRATIONS_TOOL_DESCRIPTORS } from './descriptors.js'
 export { createListIntegrationsTool } from './list-integrations.js'
 export type { ListIntegrationsDeps } from './list-integrations.js'
 export { createGetIntegrationStatusTool } from './get-integration-status.js'

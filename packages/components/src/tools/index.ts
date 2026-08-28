@@ -1,3 +1,4 @@
+export { COMPONENTS_TOOLS, COMPONENTS_TOOL_DESCRIPTORS } from './descriptors.js'
 export { createListComponentsTool } from './list-components.js'
 export { createGetContractTool } from './get-contract.js'
 export { createGetVariantsTool } from './get-variants.js'

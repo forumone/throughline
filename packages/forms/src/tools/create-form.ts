@@ -10,6 +10,7 @@ import {
   validateSubmitterConfirmation,
 } from './_field-schema.js'
 import { deniedEnvelope, isFormsAuthor } from './access.js'
+import { FORMS_TOOLS } from './descriptors.js'
 
 const inputSchema = withMeta({
   title: z.string().min(1),
@@ -45,10 +46,8 @@ export function createCreateFormTool(
   deps: CreateFormDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'create_form',
+    ...FORMS_TOOLS.createForm,
     requiredScope: 'forms.manage',
-    description:
-      "Creates a form with privacy notice, consent checkbox, and honeypot enabled by default. Destinations must be selected from the allowlist (call list_allowed_destinations first). Field names must be snake_case; every field needs a label (accessibility); submitterConfirmation, if enabled, must point to an existing email-typed field on the form.",
     inputSchema,
     handler: async (input, ctx) => {
       if (!isFormsAuthor(ctx)) {

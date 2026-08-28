@@ -4,6 +4,7 @@ import { withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { PublishingPluginOptions } from '../options.js'
 import { createPublishingService, type PublishingService } from '../service.js'
+import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface GetPublishStatusToolDeps {
   payload: Payload
@@ -23,9 +24,7 @@ export function createGetPublishStatusTool(deps: GetPublishStatusToolDeps): McpT
     createPublishingService({ ...deps, auditWriter: async () => {} })
 
   return {
-    name: 'get_publish_status',
-    description:
-      "Returns the current publishability of a document without actually publishing. Reports current status, whether unpublished changes exist, the last publish timestamp, and a preflight result indicating whether `publish` would currently succeed. Read-only; no audit record is written.",
+    ...PUBLISHING_TOOLS.getPublishStatus,
     inputSchema,
     handler: async (input, ctx) => {
       const status = await service.getStatus({

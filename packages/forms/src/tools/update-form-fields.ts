@@ -10,6 +10,7 @@ import {
   type SubmitterConfirmationConfig,
 } from './_field-schema.js'
 import { deniedEnvelope, isFormsAuthor } from './access.js'
+import { FORMS_TOOLS } from './descriptors.js'
 
 const inputSchema = withMeta({
   formId: z.string(),
@@ -25,10 +26,8 @@ export function createUpdateFormFieldsTool(
   deps: UpdateFormFieldsDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'update_form_fields',
+    ...FORMS_TOOLS.updateFormFields,
     requiredScope: 'forms.manage',
-    description:
-      'Replaces the fields on an existing form. Re-runs the same accessibility / submitter-confirmation checks `create_form` runs against the form\'s current submitterConfirmation config so existing email-field references stay valid.',
     inputSchema,
     handler: async (input, ctx) => {
       if (!isFormsAuthor(ctx)) {

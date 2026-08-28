@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { deniedEnvelope, isIntegrationsReader } from './access.js'
+import { INTEGRATIONS_TOOLS } from './descriptors.js'
 
 export interface GetIntegrationStatusDeps {
   payload: Payload
@@ -18,9 +19,7 @@ export function createGetIntegrationStatusTool(
   deps: GetIntegrationStatusDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'get_integration_status',
-    description:
-      'Detailed status for a single integration instance — including its last sync time, last error, and current configuration metadata (config values themselves are admin-only and not returned).',
+    ...INTEGRATIONS_TOOLS.getIntegrationStatus,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isIntegrationsReader(ctx)) {

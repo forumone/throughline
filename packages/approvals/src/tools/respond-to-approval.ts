@@ -5,6 +5,7 @@ import type { AuditAction } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
+import { APPROVALS_TOOLS } from './descriptors.js'
 
 export interface RespondToApprovalDeps {
   payload: Payload
@@ -35,10 +36,8 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
   })
 
   return {
-    name: 'respond_to_approval',
+    ...APPROVALS_TOOLS.respondToApproval,
     requiredScope: 'approvals.decide',
-    description:
-      "Records an approver's decision on a pending approval. Valid decisions: approve, decline, request_changes. Approvers can also act through the inline action links in their notification emails; this tool is for when they respond conversationally through Claude.",
     inputSchema,
     handler: async (input, ctx) => {
       if (!ctx.user) {

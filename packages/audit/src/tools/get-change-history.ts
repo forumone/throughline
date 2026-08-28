@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
+import { AUDIT_TOOLS } from './descriptors.js'
 
 export interface GetChangeHistoryDeps {
   payload: Payload
@@ -25,9 +26,7 @@ export function createGetChangeHistoryTool(
   deps: GetChangeHistoryDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'get_change_history',
-    description:
-      'Returns the complete chronological history of actions on a single document, including diffs. Use to answer "what has happened to this page?" or "who changed X?". Most-recent first.',
+    ...AUDIT_TOOLS.getChangeHistory,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isAuditReader(ctx)) {

@@ -5,6 +5,7 @@ import { auditContext, withMeta, getAuditWriter } from '@forumone/throughline-co
 import type { ResolvedFormsConfig } from '../options.js'
 import { validateDestinationLabel } from '../destinations.js'
 import { deniedEnvelope, isFormsAuthor } from './access.js'
+import { FORMS_TOOLS } from './descriptors.js'
 
 const inputSchema = withMeta({
   formId: z.string(),
@@ -20,10 +21,8 @@ export function createUpdateFormDestinationsTool(
   deps: UpdateFormDestinationsDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'update_form_destinations',
+    ...FORMS_TOOLS.updateFormDestinations,
     requiredScope: 'forms.manage',
-    description:
-      "Replaces a form's destinations with the given labels. Every label must be on the allowlist (use list_allowed_destinations to discover). The replace-all semantics are deliberate — incremental destination edits are too easy to misuse via prompt injection.",
     inputSchema,
     handler: async (input, ctx) => {
       if (!isFormsAuthor(ctx)) {

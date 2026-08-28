@@ -56,12 +56,16 @@ endpoint of its own, which is why it takes no `routePrefix`.
 
 **The "required role" column has never been enforced.** No `requiredRoles` field
 exists on `McpToolDefinition` and no code has ever read one — the column records an
-intent, not a check. What did get enforced was `requiredScope`, per key, and that
-stopped when the per-server handler was deleted: `@payloadcms/plugin-mcp` gates on
-per-key checkboxes this suite cannot fill at config time, so any key that
-authenticates reaches every tool. #78 tracks getting gating back. Access control on
-the *documents* a tool touches is unaffected — that is Payload's, through the key's
-linked user.
+intent, not a check.
+
+What gates a tool is the per-key checkbox `@payloadcms/plugin-mcp` generates for
+it, one per tool, on the key document. Every box is ticked when a key is created,
+so restricting a key is a deliberate act. `requiredScope` is still declared on the
+consequential tools and still read by nothing; it is the mapping a scope-aware
+default would use.
+
+Access control on the *documents* a tool touches is separate and unaffected — that
+is Payload's, through the key's linked user.
 
 | Tool | Required role | Purpose |
 | --- | --- | --- |

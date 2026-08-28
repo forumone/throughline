@@ -5,6 +5,7 @@ import { type ComponentsPluginOptions, validateOptions } from './options.js'
 import { createManifestLoader, type ManifestLoader } from './manifest-source.js'
 import { createTfidfMatcher } from './matching/index.js'
 import {
+  COMPONENTS_TOOL_DESCRIPTORS,
   createFindAntiPatternTool,
   createGetContractTool,
   createGetTokensTool,
@@ -36,6 +37,14 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
     const options = validateOptions(rawOptions)
     const logger = createNamedLogger('components', options.logger ?? defaultLogger)
     const maxRecommendations = options.matching?.maxRecommendations ?? 5
+
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    options.mcpTools?.declare(COMPONENTS_TOOL_DESCRIPTORS, { serverName: 'components' })
 
     return {
       ...incomingConfig,

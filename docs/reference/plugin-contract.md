@@ -96,8 +96,8 @@ interface McpToolDefinition<Input = unknown, Output = unknown> {
   name: string
   description: string
   inputSchema: ZodSchema<Input>
-  // The API-key scope a caller must hold, e.g. 'publishing.execute'. Declared on
-  // the consequential tools; currently read by nothing — see #78.
+  // Which tools are consequential, e.g. 'publishing.execute'. Read by nothing:
+  // gating is the per-key checkbox plugin-mcp generates per tool.
   requiredScope?: string
   handler: (input: Input, ctx: McpToolContext) => Promise<Output>
 }

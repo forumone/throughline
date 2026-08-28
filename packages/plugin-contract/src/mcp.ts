@@ -18,16 +18,15 @@ export interface McpToolDefinition<Input extends z.ZodType = z.ZodType, Output =
    * decide. A tool with no `requiredScope` is callable by any authenticated
    * key, which is the right default for a read.
    *
-   * **Nothing enforces this today.** The per-server JSON-RPC handler that read
-   * it is gone, and `@payloadcms/plugin-mcp` gates on per-key checkboxes it
-   * generates at config time instead — which this suite cannot fill, because
-   * every tool is built at `onInit`. So a key that authenticates reaches every
-   * collected tool.
+   * **Nothing reads this.** Enforcement is the per-key checkbox
+   * `@payloadcms/plugin-mcp` generates, one per tool, which a server makes
+   * possible by declaring its tools' names as the config is built — see
+   * `createMcpToolCollector`.
    *
-   * Kept, rather than deleted with its enforcer, because this is the tool → scope
-   * mapping those checkboxes need: it is the input to restoring gating, not a
-   * leftover. Deleting it would mean re-deriving eleven declarations by hand.
-   * Tracked as #78.
+   * Kept because it is the tool → scope mapping, and says which tools are
+   * consequential in a way a checkbox list does not: a scope-aware default
+   * (writes off until granted, reads on) would be built from exactly this.
+   * Deleting it would mean re-deriving eleven declarations by hand.
    */
   requiredScope?: string
   /** Handler invoked with validated input plus per-request context. */

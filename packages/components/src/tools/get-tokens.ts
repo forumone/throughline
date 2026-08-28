@@ -1,12 +1,11 @@
 import { z } from 'zod'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { ManifestLoader } from '../manifest-source.js'
+import { COMPONENTS_TOOLS } from './descriptors.js'
 
 export function createGetTokensTool(loader: ManifestLoader): McpToolDefinition {
   return {
-    name: 'get_tokens',
-    description:
-      'Returns the design tokens a component consumes plus the configurable token-backed props and their allowed values.',
+    ...COMPONENTS_TOOLS.getTokens,
     inputSchema: z.object({
       name: z.string().describe('The PascalCase name of the component'),
     }),

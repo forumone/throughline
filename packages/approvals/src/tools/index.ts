@@ -1,3 +1,4 @@
+export { APPROVALS_TOOLS, APPROVALS_TOOL_DESCRIPTORS } from './descriptors.js'
 export {
   createRequestApprovalTool,
   type RequestApprovalDeps,

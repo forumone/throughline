@@ -93,7 +93,9 @@ plugins: [
 ]
 ```
 
-Every tool here is built at `onInit`, because every one closes over `payload`; `mcpPlugin` takes its tools as a config option. The collector bridges that, and it works because the plugin reads `mcp.tools` inside the handler it builds *per request* — so an array handed over at config time is read populated. Hand over `mcpTools.tools` itself rather than a copy.
+Every handler here is built at `onInit`, because every one closes over `payload`; `mcpPlugin` takes its tools as a config option. The collector bridges that in two steps: this plugin **declares** its tools' names and descriptions as the config is built — which is when `mcpPlugin` reads the array to generate one per-key checkbox per tool — and **binds** the handlers at `onInit`, which is still before any request. Hand over `mcpTools.tools` itself rather than a copy.
+
+**`publishingPlugin` must come before `mcpPlugin` in that array.** Declaring after it has been read means no checkboxes, and a tool with no checkbox is denied to every key with no error anywhere.
 
 Omit `mcpTools` and this plugin's tools are unreachable — there is no per-server endpoint left as a fallback, and nothing errors, because from Payload's side nothing is misconfigured. The admin controls, the trust boundary and `publishDocument` all still work.
 

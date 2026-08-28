@@ -7,6 +7,7 @@ import { createIntegrationsCollection } from './collection.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { IntegrationContext } from './types.js'
 import {
+  INTEGRATIONS_TOOL_DESCRIPTORS,
   createGetIntegrationStatusTool,
   createListIntegrationsTool,
   createListIntegrationTypesTool,
@@ -46,6 +47,14 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
     }
 
     const collection = createIntegrationsCollection({ slug: collectionSlug, registry })
+
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    options.mcpTools?.declare(INTEGRATIONS_TOOL_DESCRIPTORS, { serverName: 'integrations' })
 
     return {
       ...incomingConfig,

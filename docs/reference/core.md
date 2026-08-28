@@ -82,31 +82,45 @@ plugins: [
 
 One endpoint — `POST /api/mcp` — for every plugin's tools.
 
-Every Throughline tool is built at `onInit`, because each closes over `payload`, the
-publishing service or the audit writer. At the moment the host writes its config
-there is nothing to hand over. What makes this work rather than a rewrite:
-`mcpPlugin` reads `mcp.tools` inside the handler it builds *per request*, so an
-array handed over at config time and filled at `onInit` is read populated.
+**The plugin reads that array at two different moments, for two different things.**
+Once while the config is being built, to generate a per-key checkbox per tool on
+its key collection; and again inside the handler it builds *per request*, to serve
+them. So a server does two things:
+
+- **declares** its tools' names and descriptions as the config is built. Neither
+  needs a Payload, and this is what the checkboxes are generated from
+- **binds** their handlers at `onInit`, which is the earliest they can exist,
+  since each closes over `payload`, the publishing service or the manifest loader
+
+Both happen inside the plugin. A host passes `mcpTools` and nothing else.
+
+**Order in the plugins array is load-bearing.** Every tool-bearing server must come
+before `mcpPlugin`, or it declares into an array that has already been read — and
+its tools get no checkbox, which means they are denied to every key with no error
+anywhere.
 
 **Hand over the array itself.** A spread or a `.slice()` at config time hands over
-an empty array that stays empty.
+something nobody fills.
 
 | Symbol | Purpose |
 | --- | --- |
-| `createMcpToolCollector(options)` | The array to give `mcpPlugin`, plus `add()` for plugins to fill at `onInit`. Refuses two tools with one name |
+| `createMcpToolCollector(options)` | The array to give `mcpPlugin`, plus `declare()` and `add()` for plugins. Refuses two tools with one name |
+| `collector.unbound` | Tools declared and never bound. Empty once every server has initialised |
 | `toPayloadMcpTool` / `toPayloadMcpTools` | The adapter from an `McpToolDefinition` to the shape `mcpPlugin` takes. `add()` applies it for you |
 | `McpMetaSchema` / `withMeta` | The `_meta` envelope tools use to carry a session id and actor |
+
+Mismatches are refused rather than absorbed. A tool built but never declared throws
+at `onInit`, because it would otherwise be denied to every key silently; a tool
+declared but never bound stays advertised with a handler that says so.
 
 **A plugin given no collector serves no tools at all.** Each used to mount its own
 `/<prefix>/mcp` as a fallback; those are deleted, so an unwired plugin's tools are
 unreachable — with no error, because nothing is misconfigured from Payload's side.
 
-**`requiredScope` is currently unenforced.** `mcpPlugin` gates each custom tool on a
-per-key checkbox it generates from `mcp.tools` while the config is being built —
-when the collector is still empty — so no checkbox exists and its `?? false` denies
-everything. A host works around this with `overrideAuth`, which authenticates
-normally and then answers the tool question from the collector. The cost is that any
-key which authenticates reaches every collected tool. See #78.
+**`requiredScope` is declared and read by nothing.** Enforcement is the per-key
+checkbox. The declarations record which tools are consequential — they are the
+mapping a scope-aware default would be built from — and are deliberately kept
+rather than deleted with the handler that used to read them.
 
 ## Inngest client
 

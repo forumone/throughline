@@ -4,6 +4,7 @@ import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
+import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface RollbackToolDeps {
   payload: Payload
@@ -19,10 +20,8 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
   })
 
   return {
-    name: 'rollback',
+    ...PUBLISHING_TOOLS.rollback,
     requiredScope: 'publishing.execute',
-    description:
-      "Rolls a document back to a prior version from Payload's version history. The restored content lands as a fresh draft; call `publish` afterwards if you want it live again. Audits the rollback under publishing.rollback.",
     inputSchema,
     handler: async (input, ctx) => {
       const collection = resolveCollection(deps.options, input.collection)

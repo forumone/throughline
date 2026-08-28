@@ -3,6 +3,7 @@ import type { Payload, Where } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
+import { AUDIT_TOOLS } from './descriptors.js'
 
 export interface WhoChangedWhatDeps {
   payload: Payload
@@ -33,9 +34,7 @@ export function createWhoChangedWhatTool(
   deps: WhoChangedWhatDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'who_changed_what',
-    description:
-      "A user's recent activity. Use when someone asks 'what has Sarah been working on?' or 'show me my changes today'. If actorId is omitted, defaults to the authenticated caller — so users can ask about themselves without knowing their ID. Other users' activity requires admin/editor.",
+    ...AUDIT_TOOLS.whoChangedWhat,
     inputSchema,
     handler: async (input, ctx) => {
       const callerId = ctx.user?.id
