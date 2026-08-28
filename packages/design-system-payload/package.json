@@ -1,5 +1,5 @@
 {
-  "name": "@forumone/design-system-payload",
+  "name": "@forumone/throughline-design-system-payload",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -14,19 +14,19 @@
     "lint": "eslint ."
   },
   "peerDependencies": {
-    "payload": "^3.87.1",
-    "react": "^19.0.0"
+    "payload": "^3.0.0",
+    "react": "^18.0.0 || ^19.0.0"
   },
   "dependencies": {
     "@forumone/throughline-design-contract": "workspace:*"
   },
   "devDependencies": {
-    "@forumone/eslint-config-es5": "^4.0.0",
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
     "@types/node": "^24.13.2",
-    "@types/react": "^19.2.17",
+    "@types/react": "19.2.14",
     "eslint": "^10.5.0",
-    "payload": "^3.87.1",
-    "react": "^19.2.7",
+    "payload": "3.83.0",
     "tsx": "^4.23.11",
     "typescript": "^5.9.3"
   }

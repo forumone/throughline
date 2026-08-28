@@ -1,33 +1,24 @@
-import f1BaseConfig from '@forumone/eslint-config-es5'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import base from '@forumone/throughline-eslint-config'
 
 /*
-The bridge package had no lint either. Same base config as the design system and
-the app — this package is the seam between them and should not have a third
-house style.
+The suite's shared config, not the consuming site's.
+
+This package used `@forumone/eslint-config-es5` when it lived in the site, for a
+reason that was right there and is wrong here: it was the seam between the design
+system and the app, and a third house style between two would have been noise.
+Its neighbours are now the plugins, and their config is the one it should share.
 */
-const config = defineConfig([
-  ...f1BaseConfig,
-  {
-    languageOptions: {
-      parserOptions: {
-        projectService: {
-          allowDefaultProject: ['eslint.config.js'],
-        },
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-  },
+export default [
+  ...base,
   {
     /*
     Every module here puts its exported function first and its private helpers
     below it, which reads top-down: what the file is for, then how. Function
     declarations are hoisted, so this is correct at runtime — the rule is about
-    ordering, not about a real reference error.
+    ordering, not a real reference error.
 
-    Narrowed rather than switched off: `variables` and `classes` stay on,
-    because a `const` or a class genuinely used before its definition *is* a
-    runtime error.
+    Narrowed rather than switched off: `variables` and `classes` stay on, because
+    a `const` or a class genuinely used before its definition *is* one.
     */
     rules: {
       '@typescript-eslint/no-use-before-define': [
@@ -36,7 +27,5 @@ const config = defineConfig([
       ],
     },
   },
-  globalIgnores(['node_modules']),
-])
-
-export default config
+  { ignores: ['node_modules/**'] },
+]

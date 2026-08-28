@@ -1,19 +1,12 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@forumone/throughline-tsconfig/react.json",
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": [
-      "ES2023",
-      "DOM"
-    ],
-    "jsx": "react-jsx",
+    "composite": false,
     "noEmit": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
