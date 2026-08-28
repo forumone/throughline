@@ -9,6 +9,7 @@ import {
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
+import { APPROVALS_TOOLS } from './descriptors.js'
 
 export interface RequestApprovalDeps {
   payload: Payload
@@ -37,10 +38,8 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
   })
 
   return {
-    name: 'request_approval',
+    ...APPROVALS_TOOLS.requestApproval,
     requiredScope: 'approvals.request',
-    description:
-      "Kicks off the approval workflow for a document that requires approval before publishing. Provide a clear changesSummary explaining what changed and why; approvers see this in their notifications. Returns the approval ID, expiration time, and the list of approvers who were notified.",
     inputSchema,
     handler: async (input, ctx) => {
       if (!ctx.user) {

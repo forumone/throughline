@@ -5,6 +5,7 @@ import type { ComponentContract } from '@forumone/throughline-design-contract'
 import type { ManifestLoader } from '../manifest-source.js'
 import type { Matcher, RankedSuggestion } from '../matching/types.js'
 import { validateComposition } from '../validation/composition.js'
+import { COMPONENTS_TOOLS } from './descriptors.js'
 
 export interface SuggestForIntentDeps {
   loader: ManifestLoader
@@ -34,9 +35,7 @@ export function createSuggestForIntentTool(deps: SuggestForIntentDeps): McpToolD
   })
 
   return {
-    name: 'suggest_for_intent',
-    description:
-      "Given a natural-language description of what the author wants to accomplish, returns ranked component recommendations with reasoning. Optionally accepts the existing page context so duplicate Heroes / composition conflicts surface as warnings on the suggestions.",
+    ...COMPONENTS_TOOLS.suggestForIntent,
     inputSchema,
     handler: async (input, ctx) => {
       const manifest = await deps.loader.get()

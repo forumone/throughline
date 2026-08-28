@@ -1,12 +1,11 @@
 import { z } from 'zod'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { ManifestLoader } from '../manifest-source.js'
+import { COMPONENTS_TOOLS } from './descriptors.js'
 
 export function createGetVariantsTool(loader: ManifestLoader): McpToolDefinition {
   return {
-    name: 'get_variants',
-    description:
-      'Returns the available variants for a component, with descriptions and guidance about when to use each.',
+    ...COMPONENTS_TOOLS.getVariants,
     inputSchema: z.object({
       name: z.string().describe('The PascalCase name of the component'),
     }),

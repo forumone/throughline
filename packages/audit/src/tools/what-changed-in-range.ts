@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { deniedEnvelope, isAuditReader } from './access.js'
+import { AUDIT_TOOLS } from './descriptors.js'
 
 export interface WhatChangedInRangeDeps {
   payload: Payload
@@ -24,9 +25,7 @@ export function createWhatChangedInRangeTool(
   deps: WhatChangedInRangeDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'what_changed_in_range',
-    description:
-      'Summarized activity over a time range, grouped by action type, actor, and target collection. Use for "what happened last week?" or weekly review questions. Returns counts and top contributors rather than individual events. Caps the scan at 1000 events by default — for wider sweeps, raise scanLimit or use query_audit with paging.',
+    ...AUDIT_TOOLS.whatChangedInRange,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isAuditReader(ctx)) {

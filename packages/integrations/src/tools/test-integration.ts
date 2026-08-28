@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { IntegrationRegistry } from '../registry.js'
 import { deniedEnvelope, isIntegrationsReader } from './access.js'
+import { INTEGRATIONS_TOOLS } from './descriptors.js'
 
 export interface TestIntegrationDeps {
   payload: Payload
@@ -18,10 +19,8 @@ export function createTestIntegrationTool(
   deps: TestIntegrationDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'test_integration',
+    ...INTEGRATIONS_TOOLS.testIntegration,
     requiredScope: 'integrations.trigger',
-    description:
-      "Calls the integration's healthcheck. Use to answer 'is the integration reachable / configured correctly?'. Doesn't fire any system events; the test is local to the integration's healthcheck.",
     inputSchema,
     handler: async (input, ctx) => {
       if (!isIntegrationsReader(ctx)) {

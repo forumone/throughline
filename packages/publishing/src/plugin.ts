@@ -8,6 +8,7 @@ import { createRecordDraftWritesHook } from './hooks/draft-writes.js'
 import { createAdminEndpoints } from './endpoints/admin.js'
 import { attachPublishingService, createPublishingService } from './service.js'
 import {
+  PUBLISHING_TOOL_DESCRIPTORS,
   createGetPublishStatusTool,
   createPublishTool,
   createRollbackTool,
@@ -56,6 +57,21 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
           : {}),
       } satisfies CollectionConfig
     })
+
+    /*
+    Declared here, bound at `onInit`.
+
+    `mcpPlugin` generates one per-key checkbox per tool while the config is being
+    built, from the names and descriptions in this array, and denies any tool it
+    has no checkbox for. The handlers cannot exist yet — they close over
+    `payload`, the service and the audit writer — but the names never needed to
+    wait for them.
+
+    This runs when Payload applies the plugin, so **this plugin must come before
+    `mcpPlugin` in the host's array** or the declarations land after the fields
+    are generated.
+    */
+    options.mcpTools?.declare(PUBLISHING_TOOL_DESCRIPTORS, { serverName: 'publishing' })
 
     return {
       ...incomingConfig,

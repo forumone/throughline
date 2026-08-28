@@ -1,12 +1,11 @@
 import { z } from 'zod'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { ManifestLoader } from '../manifest-source.js'
+import { COMPONENTS_TOOLS } from './descriptors.js'
 
 export function createListComponentsTool(loader: ManifestLoader): McpToolDefinition {
   return {
-    name: 'list_components',
-    description:
-      'Returns the list of components available in the design system. Use this to discover what components exist before composing content.',
+    ...COMPONENTS_TOOLS.listComponents,
     inputSchema: z.object({
       category: z
         .string()

@@ -9,6 +9,7 @@ import {
   validateSubmitterConfirmation,
 } from './_field-schema.js'
 import { deniedEnvelope, isFormsAuthor } from './access.js'
+import { FORMS_TOOLS } from './descriptors.js'
 
 const inputSchema = withMeta({
   fields: z.array(FieldSchema).min(1),
@@ -31,9 +32,7 @@ export function createValidateFormTool(
   deps: ValidateFormDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'validate_form',
-    description:
-      'Runs the same checks `create_form` runs (allowlist, accessibility, submitter-confirmation pointer) without writing anything. Use to confirm a form definition is shippable before persisting it.',
+    ...FORMS_TOOLS.validateForm,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isFormsAuthor(ctx)) {

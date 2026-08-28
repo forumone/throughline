@@ -91,8 +91,11 @@ works with no `initialize` handshake. And the response is SSE-framed — `event:
 `sed` is what unwraps it. `Accept` must offer `text/event-stream` or the server
 answers 406.
 
-A count of `0` with a `200` is the failure worth knowing about: it means the key
-authenticated but every tool was gated off. See the note on `overrideAuth` in
+A count of `0` with a `200` is the failure worth knowing about: the key
+authenticated and every tool was gated off. Check the **Tools** panel on the key
+document — every checkbox there should be ticked on a new key. If the panel is
+missing entirely, a server is registered *after* `mcpPlugin` in the host's plugin
+array, so its tools were declared into an array that had already been read. See
 [the core reference](../reference/core.md#mcp-handing-tools-to-payloads-server).
 
 ## Test the connection
@@ -119,7 +122,8 @@ tool-by-tool reference, see the [reference section](../reference/).
 ## Troubleshooting
 
 - **`401 Unauthorized`** — the key is wrong, disabled, or was never enabled. Check **Enable API Key** on the key document in the Payload admin. Nothing here reads a key from `.env.local`.
-- **`200` with an empty tool list** — authentication worked and gating denied everything. The host needs `overrideAuth`; see [the core reference](../reference/core.md#mcp-handing-tools-to-payloads-server).
+- **`200` with an empty tool list** — authentication worked and per-tool gating denied everything. Look at the **Tools** panel on the key: a missing panel means a server is registered after `mcpPlugin`, and unticked boxes are just unticked boxes.
+- **One tool refused while others work** — its checkbox is off on that key. Tools default to on when a key is created, so this is somebody's choice, including a key created before that tool existed.
 - **`406 Not Acceptable`** — your `Accept` header doesn't offer `text/event-stream`.
 - **A tool you expected is missing** — the plugin that owns it wasn't given the `mcpTools` collector. Nothing errors in that case; its tools are simply absent.
 - **`fetch failed`** — your local server isn't running or is on a different port. Confirm `pnpm dev` is up at `http://localhost:3000`.

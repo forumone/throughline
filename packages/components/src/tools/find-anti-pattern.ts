@@ -3,6 +3,7 @@ import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { type AuditWriter, auditContext, withMeta } from '@forumone/throughline-core'
 import type { ManifestLoader } from '../manifest-source.js'
 import { findAntiPatterns } from '../validation/composition.js'
+import { COMPONENTS_TOOLS } from './descriptors.js'
 
 export interface FindAntiPatternDeps {
   loader: ManifestLoader
@@ -22,9 +23,7 @@ export function createFindAntiPatternTool(deps: FindAntiPatternDeps): McpToolDef
   })
 
   return {
-    name: 'find_anti_pattern',
-    description:
-      "Scans a proposed composition for known design anti-patterns (multiple Heroes, Hero at the bottom of a page, etc.). Returns matches with explanation and suggested alternatives. Use before publishing to surface editorial issues.",
+    ...COMPONENTS_TOOLS.findAntiPattern,
     inputSchema,
     handler: async (input, ctx) => {
       const manifest = await deps.loader.get()

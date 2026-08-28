@@ -6,6 +6,7 @@ import { createApprovalsCollection } from './collection.js'
 import { attachApprovalResolver, createApprovalResolver } from './resolver.js'
 import { createActionEndpoint } from './endpoints/action.js'
 import {
+  APPROVALS_TOOL_DESCRIPTORS,
   createGetApprovalStatusTool,
   createListMyRequestsTool,
   createListPendingApprovalsTool,
@@ -30,6 +31,14 @@ export const approvalsPlugin: CorePlugin<ApprovalsPluginOptions> =
       ...(options.usersSlug ? { usersSlug: options.usersSlug } : {}),
       groupSlugs: options.groups.map((g) => g.slug),
     })
+
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    options.mcpTools?.declare(APPROVALS_TOOL_DESCRIPTORS, { serverName: 'approvals' })
 
     return {
       ...incomingConfig,

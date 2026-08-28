@@ -4,6 +4,7 @@ import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { PublishingPluginOptions } from '../options.js'
 import { createPublishingService, type PublishingService } from '../service.js'
+import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface PublishToolDeps {
   payload: Payload
@@ -22,10 +23,14 @@ export function createPublishTool(deps: PublishToolDeps): McpToolDefinition {
   const service = deps.service ?? createPublishingService(deps)
 
   return {
-    name: 'publish',
+    ...PUBLISHING_TOOLS.publish,
+    /*
+    Declared, and read by nothing. The per-key checkbox `plugin-mcp` generates
+    is what gates this tool; this records that publishing is consequential, and
+    is the mapping a scope-aware default would be built from. See
+    `McpToolDefinition`.
+    */
     requiredScope: 'publishing.execute',
-    description:
-      "Publishes a draft document. Runs the full publish pipeline: composition, accessibility, required-field, embargo, and approval checks. Returns success with the publish timestamp, or a specific failedAt step with reason / suggestion when something blocks the publish.",
     inputSchema,
     handler: async (input, ctx) =>
       service.publish({

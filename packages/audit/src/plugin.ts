@@ -7,6 +7,7 @@ import {
   validateOptions,
 } from './options.js'
 import {
+  AUDIT_TOOL_DESCRIPTORS,
   createGetChangeHistoryTool,
   createGetRecentFailuresTool,
   createQueryAuditTool,
@@ -30,6 +31,14 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
     const options = validateOptions(rawOptions)
     const collectionSlug = options.collectionSlug ?? DEFAULT_AUDIT_COLLECTION_SLUG
     const logger = createNamedLogger('audit-query', options.logger ?? defaultLogger)
+
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    options.mcpTools?.declare(AUDIT_TOOL_DESCRIPTORS, { serverName: 'audit' })
 
     return {
       ...incomingConfig,

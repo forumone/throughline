@@ -9,6 +9,7 @@ import { addFormPolicyFields } from './policy-fields.js'
 import { validateDestinationLabel } from './destinations.js'
 import { createSubmitEndpoint } from './submit/endpoint.js'
 import {
+  FORMS_TOOL_DESCRIPTORS,
   createCreateFormTool,
   createGetFormSubmissionsTool,
   createListAllowedDestinationsTool,
@@ -125,6 +126,14 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
 
     const withFormBuilder = formBuilderConfig(incomingConfig)
     const submitEndpoint = createSubmitEndpoint(resolved)
+
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    resolved.options.mcpTools?.declare(FORMS_TOOL_DESCRIPTORS, { serverName: 'forms' })
 
     return {
       ...withFormBuilder,

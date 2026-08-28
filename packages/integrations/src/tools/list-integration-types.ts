@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { IntegrationRegistry } from '../registry.js'
+import { INTEGRATIONS_TOOLS } from './descriptors.js'
 
 export interface ListIntegrationTypesDeps {
   registry: IntegrationRegistry
@@ -12,9 +13,7 @@ export function createListIntegrationTypesTool(
   deps: ListIntegrationTypesDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'list_integration_types',
-    description:
-      'Lists the integration plugins available in this deployment. Use when answering "what kinds of integrations are supported here?" or before suggesting that someone add a new instance.',
+    ...INTEGRATIONS_TOOLS.listIntegrationTypes,
     inputSchema,
     handler: async () => {
       return {

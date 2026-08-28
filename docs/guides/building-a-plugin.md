@@ -43,6 +43,15 @@ export const myPlugin: CorePlugin<MyPluginOptions> = (options) => (incomingConfi
   // serves no HTTP endpoints of its own — MCP is not one of them.
   const routePrefix = validated.routePrefix ?? '/my-plugin'
 
+  /*
+  Declared now, bound at `onInit`. `plugin-mcp` reads names and descriptions
+  here, as the config is built, to generate one per-key checkbox per tool — and
+  a tool with no checkbox is denied to every key, silently. Keep them in a
+  `tools/descriptors.ts` the factories spread from, so the checkbox and the MCP
+  client cannot describe a tool differently.
+  */
+  validated.mcpTools?.declare(MY_PLUGIN_TOOL_DESCRIPTORS, { serverName: 'my-plugin' })
+
   return {
     ...incomingConfig,
     collections: [...(incomingConfig.collections ?? []), myCollection],
@@ -55,10 +64,10 @@ export const myPlugin: CorePlugin<MyPluginOptions> = (options) => (incomingConfi
       if (incomingConfig.onInit) await incomingConfig.onInit(payload)
 
       /*
-      Tools are built here, not at config time, because each closes over
-      `payload` — and handed to the collector the host passed in. The host has
-      already given that collector's array to `@payloadcms/plugin-mcp`, which
-      reads it per request, so filling it at `onInit` is in time.
+      Handlers are built here, not at config time, because each closes over
+      `payload`. They bind into the entries declared above, matched by name —
+      so a tool built without a descriptor throws here rather than going quietly
+      missing from every key.
 
       Do not serve MCP yourself. Every plugin in this suite used to mount its
       own `/<prefix>/mcp` on a hand-written JSON-RPC subset; they are deleted,
@@ -81,7 +90,8 @@ Three structural rules that are non-negotiable:
 - Honour `enabled === false` before doing any work.
 - Never replace `incomingConfig.collections`, `endpoints`, or `hooks.*` arrays — always spread the existing value and append.
 - Route prefixes for top-level endpoints MUST NOT include `/api`. Payload's API base (`config.routes.api`, default `/api`) is prepended automatically, so a `path: '/api/my-plugin/webhook'` registers at `/api/api/my-plugin/webhook`.
-- Do not serve an MCP endpoint. Hand your tools to the collector at `onInit`; the host serves them on one `/api/mcp`.
+- Do not serve an MCP endpoint. Declare your tools as the config is built, bind their handlers at `onInit`, and let the host serve them on one `/api/mcp`.
+- Your plugin must be registered before `mcpPlugin` in the host's array. That is a requirement, not a convention: declaring after it has read the array means no checkboxes, and no checkbox means the tool is denied to every key.
 
 ## Options validation
 

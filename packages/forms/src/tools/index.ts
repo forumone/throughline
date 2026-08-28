@@ -1,3 +1,4 @@
+export { FORMS_TOOLS, FORMS_TOOL_DESCRIPTORS } from './descriptors.js'
 export { createCreateFormTool } from './create-form.js'
 export type { CreateFormDeps } from './create-form.js'
 export { createUpdateFormFieldsTool } from './update-form-fields.js'

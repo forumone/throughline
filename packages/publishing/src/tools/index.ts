@@ -1,3 +1,4 @@
+export { PUBLISHING_TOOLS, PUBLISHING_TOOL_DESCRIPTORS } from './descriptors.js'
 export { createPublishTool, type PublishToolDeps } from './publish.js'
 export { createUnpublishTool, type UnpublishToolDeps } from './unpublish.js'
 export {

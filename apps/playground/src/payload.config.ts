@@ -3,7 +3,8 @@ import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { examplePlugin } from './example-plugin'
-import { auditPlugin, createInngestClient } from '@forumone/throughline-core'
+import { auditPlugin, createInngestClient, createMcpToolCollector } from '@forumone/throughline-core'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
 import { approvalsPlugin } from '@forumone/throughline-approvals'
@@ -81,6 +82,20 @@ const inngest = createInngestClient({
   isDev: process.env.NODE_ENV !== 'production',
 })
 
+/*
+Where every server puts its tools for `mcpPlugin`.
+
+Each plugin declares its tools' names and descriptions as the config is built,
+and binds the handlers at `onInit` — which is the earliest they can exist, since
+each closes over `payload`, the publishing service or the manifest loader. The
+plugin reads this array at both moments: once at config time to generate a
+per-key checkbox per tool, and again per request to serve them.
+
+Handed over as `mcpTools.tools`, the array itself. A spread or a `.slice()` here
+would hand over something nobody fills.
+*/
+const mcpTools = createMcpToolCollector()
+
 export default buildConfig({
   admin: {
     importMap: {
@@ -93,13 +108,10 @@ export default buildConfig({
   the six per-server endpoints; both are gone, and `@payloadcms/plugin-mcp`
   owns keys now.
 
-  **Which leaves this app with no MCP surface at all**, and that is a real gap
-  rather than a tidy-up: the playground is where the architecture gets exercised
-  end to end, and the tools are the architecture. Wiring `mcpPlugin` here needs
-  `payload` moved off `^3.83.0` first — the plugin is exact-pinned to its
-  Payload version, and two Payloads in one graph makes `Block` not assignable to
-  `Block`. Tracked as #79. What still runs here: plugin composition, the
-  capability registry, the audit writer and the publish pipeline.
+  `mcpPlugin` below brings `payload-mcp-api-keys` and serves every plugin's
+  tools on one `/api/mcp`. It is exact-pinned to the Payload version this app
+  runs — `3.83.0`, not a range — because two Payloads in one graph makes `Block`
+  not assignable to `Block`.
   */
   collections: [Users, Pages],
   db: postgresAdapter({
@@ -112,6 +124,19 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(__dirname, 'payload-types.ts'),
   },
+  /*
+  Order is load-bearing twice over.
+
+  `auditPlugin` first: every other Throughline plugin requires the `audit-log`
+  capability at init and refuses to load without it.
+
+  And every tool-bearing server before `mcpPlugin`. Each declares its tools'
+  names and descriptions as the config is built — which is when `mcpPlugin`
+  reads the array, to generate one per-key checkbox per tool — and binds the
+  handlers at `onInit`. A server registered *after* `mcpPlugin` declares into an
+  array that has already been read, so its tools get no checkbox and are then
+  denied to every key with no error anywhere.
+  */
   plugins: [
     auditPlugin({ inngest }),
     componentsPlugin({
@@ -121,6 +146,7 @@ export default buildConfig({
       // The plugin's Zod schema validates the shape at load time anyway.
       manifest: { type: 'object', manifest: referenceManifest as unknown as Manifest },
       matching: { strategy: 'tfidf' },
+      mcpTools,
     }),
     approvalsPlugin({
       inngest,
@@ -133,13 +159,22 @@ export default buildConfig({
       groupResolver: { resolveUsers: async () => [] },
       tokenSecret:
         process.env.APPROVAL_TOKEN_SECRET ?? 'playground-approval-secret-change-me-change-me-change',
+      mcpTools,
     }),
     publishingPlugin({
       inngest,
       collections: [{ slug: Pages.slug }],
+      mcpTools,
     }),
-    auditQueryPlugin({}),
-    integrationsPlugin({ inngest }),
+    auditQueryPlugin({ mcpTools }),
+    integrationsPlugin({ inngest, mcpTools }),
     examplePlugin({ greeting: 'Hello from the playground' }),
+
+    /*
+    Last of the tool-bearing chain, and handed the collector's array itself
+    rather than a copy: it reads `mcp.tools` per request, and the servers above
+    fill that array at `onInit`.
+    */
+    mcpPlugin({ mcp: { tools: mcpTools.tools } }),
   ],
 })

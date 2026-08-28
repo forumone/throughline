@@ -15,7 +15,9 @@ export { createMcpToolCollector } from './collector.js'
 export type {
   AddToolsOptions,
   CreateMcpToolCollectorOptions,
+  DeclareToolsOptions,
   McpToolCollector,
+  McpToolDescriptor,
 } from './collector.js'
 
 export { deniedEnvelope } from './envelope.js'

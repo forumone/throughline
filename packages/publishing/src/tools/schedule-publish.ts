@@ -5,6 +5,7 @@ import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
 import { runPreflightPipeline } from '../pipeline/index.js'
+import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface SchedulePublishToolDeps {
   payload: Payload
@@ -23,10 +24,8 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
   })
 
   return {
-    name: 'schedule_publish',
+    ...PUBLISHING_TOOLS.schedulePublish,
     requiredScope: 'publishing.execute',
-    description:
-      "Schedules a future publish. Validates the document would currently pass the preflight pipeline (composition, accessibility, required fields, embargo, approval), then stores `scheduledPublishAt` on the document. The framework's workflow runner picks up the schedule and executes the full publish pipeline at that time.",
     inputSchema,
     handler: async (input, ctx) => {
       const collection = resolveCollection(deps.options, input.collection)

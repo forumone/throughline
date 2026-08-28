@@ -3,6 +3,7 @@ import type { Payload, Where } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
+import { AUDIT_TOOLS } from './descriptors.js'
 
 export interface QueryAuditDeps {
   payload: Payload
@@ -46,9 +47,7 @@ const inputSchema = z.object({
 
 export function createQueryAuditTool(deps: QueryAuditDeps): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'query_audit',
-    description:
-      "General-purpose audit log query. Filter by collection, document, actor, action, server, date range, or failure-only. Returns chronologically ordered results, most recent first. Use when you need a custom view of system activity that doesn't fit the more specific tools.",
+    ...AUDIT_TOOLS.queryAudit,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isAuditReader(ctx)) {
