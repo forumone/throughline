@@ -5,20 +5,22 @@ import { defaultLogger } from '../logger/index.js'
 /*
 Throughline's tools, in the shape `@payloadcms/plugin-mcp` takes.
 
-**Why this exists.** Payload now ships an MCP server of its own —
+**Why this exists.** Payload ships an MCP server of its own —
 `@payloadcms/plugin-mcp`, exact-pinned to the Payload version — built on the
 official SDK, with streamable HTTP, sessions, per-key capability checkboxes and
-generic CRUD tools derived from the field configs. Against that,
-`createMcpHandler` in this package is a 146-line JSON-RPC subset that speaks
-`tools/list` and `tools/call` and nothing else, mounted six times over.
+generic CRUD tools derived from the field configs. Against that, this package
+used to carry a 146-line JSON-RPC subset that spoke `tools/list` and
+`tools/call` and nothing else, mounted six times over, one endpoint per server.
 
 The transport was never the product. The tools are: a publish pipeline with
-policy gates, approvals, component contracts, an audit trail. Those stay ours;
-what carries them does not have to be.
+policy gates, approvals, component contracts, an audit trail. Those stayed ours;
+what carries them did not have to be.
 
-This adapter is what makes that swap a configuration change rather than a
-rewrite of every tool. It is not wired into anything by default — the playground
-demonstrates it, and the servers move over one at a time.
+This adapter is what made that swap a configuration change rather than a rewrite
+of every tool. It is now the only path: the six endpoints and the handler behind
+them are deleted, and a host that wants these tools reachable passes a collector
+(see `collector.ts`) to each plugin and its array to `mcpPlugin`. A host that
+passes none gets the plugins' non-MCP behaviour and no tools.
 */
 
 /** The tool shape `plugin-mcp` accepts under its `mcp.tools` option. */

@@ -5,9 +5,9 @@ Shared type contracts every Throughline core plugin satisfies, plus the cross-pl
 ## What's in here
 
 - `CorePlugin<Options>` — the Payload plugin signature every core package exports
-- `BaseCorePluginOptions` — options every plugin accepts (`enabled`, `routePrefix`, `logger`)
-- `McpToolDefinition`, `McpToolContext`, `McpMeta` — the MCP server surface
-- `McpAuthenticator`, `McpAuthResult`, `AuthenticatedUser` — shared bearer-token auth types
+- `BaseCorePluginOptions` — options every plugin accepts (`enabled`, `logger`, and `routePrefix` for a plugin that serves HTTP endpoints of its own)
+- `McpToolDefinition`, `McpToolContext`, `McpMeta` — the MCP tool surface
+- `AuthenticatedUser` — the actor a tool handler receives
 - `getPluginRegistry` — the runtime registry plugins use to announce themselves and check for sibling plugins
 - `examplePlugin` — a reference implementation showing the exact shape every future plugin follows
 

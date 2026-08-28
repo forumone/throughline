@@ -4,7 +4,9 @@ Read-only MCP query tools over the Throughline audit log. Pairs with the writer 
 
 ## What this package provides
 
-Five MCP tools served at `/api/audit/mcp`. All are read-only and emit no audit events of their own.
+Five MCP tools, handed to the host's collector at `onInit` and served by
+`@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody.
+All are read-only and emit no audit events of their own.
 
 | Tool | Use it for | Default access |
 |---|---|---|
@@ -74,7 +76,7 @@ auditQueryPlugin({
 
 | Option | Type | Default | Notes |
 |---|---|---|---|
-| `routePrefix` | `string` | `/audit` | Payload prepends `/api`, so the MCP endpoint lands at `/api/audit/mcp` |
+| `mcpTools` | `McpToolCollector` | — | The host's collector. Without it these five tools are unreachable |
 | `collectionSlug` | `string` | `audit-events` | Must match the slug used by core's `auditPlugin` |
 | `readAccess` | `(req) => boolean` | admin / editor | Custom predicate for read-side access |
 | `enabled` | `boolean` | `true` | Set to `false` to no-op the plugin |

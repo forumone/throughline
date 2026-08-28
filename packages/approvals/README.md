@@ -8,7 +8,7 @@ Conversational approval workflow server for Throughline. Provides the resolver t
 - **Approval resolver** that the publishing server's `approvalStep` calls to check for active granted approvals (auto-attached on the Payload instance via Symbol — no manual wiring needed).
 - **HMAC-signed action tokens** (`generateActionToken` / `verifyActionToken`) for inline-action emails. Single-use enforcement via the per-record `consumedTokens` array prevents replay.
 - **HTTP action endpoint** at `/api/approvals/action` that handles email button clicks: verify token → confirmation page → record decision.
-- **Five MCP tools** served at `/api/approvals/mcp`:
+- **Five MCP tools**, handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody:
 
 | Tool | Audit |
 |---|---|

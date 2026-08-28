@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { examplePlugin } from './example-plugin'
-import { auditPlugin, createApiKeysCollection, createInngestClient } from '@forumone/throughline-core'
+import { auditPlugin, createInngestClient } from '@forumone/throughline-core'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
 import { approvalsPlugin } from '@forumone/throughline-approvals'
@@ -88,7 +88,20 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users, Pages, createApiKeysCollection({ usersSlug: 'users' })],
+  /*
+  No key collection of its own. This suite used to mint and store MCP keys for
+  the six per-server endpoints; both are gone, and `@payloadcms/plugin-mcp`
+  owns keys now.
+
+  **Which leaves this app with no MCP surface at all**, and that is a real gap
+  rather than a tidy-up: the playground is where the architecture gets exercised
+  end to end, and the tools are the architecture. Wiring `mcpPlugin` here needs
+  `payload` moved off `^3.83.0` first — the plugin is exact-pinned to its
+  Payload version, and two Payloads in one graph makes `Block` not assignable to
+  `Block`. Tracked as #79. What still runs here: plugin composition, the
+  capability registry, the audit writer and the publish pipeline.
+  */
+  collections: [Users, Pages],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI ?? '',

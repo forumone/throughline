@@ -1,11 +1,6 @@
 import type { CorePlugin, McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import {
-  createMcpHandler,
-  createNamedLogger,
-  defaultLogger,
-  getAuditWriter,
-} from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import { type IntegrationsPluginOptions, validateOptions, DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 import { IntegrationRegistry } from './registry.js'
 import { createIntegrationsCollection } from './collection.js'
@@ -22,11 +17,8 @@ import {
 const PLUGIN_ID = '@forumone/throughline-integrations'
 const PLUGIN_VERSION = '0.1.0'
 
-const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/integrations-mcp-handler')
 const REGISTRY_SYMBOL = Symbol.for('@forumone/throughline/integrations-registry')
 const CONTEXT_SYMBOL = Symbol.for('@forumone/throughline/integrations-context')
-
-type McpHandler = (request: Request) => Promise<Response>
 
 /**
  * Integrations server. Registers the Integrations collection, the
@@ -45,7 +37,6 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
 
     const options = validateOptions(rawOptions)
     const collectionSlug = options.collectionSlug ?? DEFAULT_INTEGRATIONS_SLUG
-    const routePrefix = options.routePrefix ?? '/integrations'
     const logger = createNamedLogger('integrations', options.logger ?? defaultLogger)
 
     const registry = new IntegrationRegistry()
@@ -59,25 +50,6 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
     return {
       ...incomingConfig,
       collections: [...(incomingConfig.collections ?? []), collection],
-      endpoints: [
-        ...(incomingConfig.endpoints ?? []),
-        {
-          path: `${routePrefix}/mcp`,
-          method: 'post',
-          handler: async (req) => {
-            const handler = (req.payload as unknown as Record<symbol, unknown>)[
-              MCP_HANDLER_SYMBOL
-            ] as McpHandler | undefined
-            if (!handler) {
-              return new Response(
-                JSON.stringify({ error: 'Integrations MCP not initialized' }),
-                { status: 503, headers: { 'content-type': 'application/json' } },
-              )
-            }
-            return handler(req as unknown as Request)
-          },
-        },
-      ],
       onInit: async (payload) => {
         if (incomingConfig.onInit) await incomingConfig.onInit(payload)
 
@@ -148,24 +120,11 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
           createListIntegrationTypesTool({ registry }),
         ] as unknown as McpToolDefinition[]
 
-        // Payload's own MCP plugin, when the host is using it. See the option's
-        // note — `onInit` is both the earliest these tools can exist and still
-        // early enough that the array is read populated.
+        // Payload's own MCP plugin, and the only transport these tools have.
+        // `onInit` is both the earliest they can exist and still early enough
+        // that `mcpPlugin` reads the array populated.
         options.mcpTools?.add(tools, { serverName: 'integrations', logger })
 
-        const handler = createMcpHandler({
-          payload,
-          serverName: 'integrations',
-          tools,
-          logger,
-        })
-
-        Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
-          value: handler,
-          enumerable: false,
-          writable: false,
-          configurable: false,
-        })
         Object.defineProperty(payload, REGISTRY_SYMBOL, {
           value: registry,
           enumerable: false,
@@ -187,7 +146,6 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
 
         logger.info('Integrations server ready', {
           collectionSlug,
-          routePrefix,
           integrationCount: registry.size,
         })
       },

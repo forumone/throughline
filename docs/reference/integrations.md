@@ -50,7 +50,8 @@ integrationsPlugin({
   inngest,                                   // required
   integrations: Integration[],               // required; the registered set
   collectionSlug?: string,                   // default 'integrations'
-  routePrefix?: string,                      // default '/integrations'
+  mcpTools?: McpToolCollector,                // hand it the host's collector, or
+                                              // its five tools reach nobody
 })
 ```
 
@@ -59,7 +60,10 @@ The plugin:
 - Creates the `integrations` collection (one row per configured instance)
 - Registers `integrations` in the capability registry
 - Exposes the `IntegrationRegistry` and `IntegrationContext` via Symbol-keyed slots on the Payload instance
-- Registers MCP tools at `/api/integrations/mcp`
+- Adds its five MCP tools to the collector, for the host's `/api/mcp`
+
+It serves no HTTP endpoint of its own, which is why it takes no `routePrefix` —
+passing one is a compile error rather than a setting that does nothing.
 
 ## The `Integration` interface
 

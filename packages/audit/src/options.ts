@@ -2,7 +2,13 @@ import type { McpToolCollector } from '@forumone/throughline-core'
 import type { PayloadRequest } from 'payload'
 import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
 
-export interface AuditQueryPluginOptions extends BaseCorePluginOptions {
+/*
+`routePrefix` is omitted rather than ignored. This server's only endpoint was
+`/<prefix>/mcp`, and its tools now reach a client through the host's `mcpPlugin`
+instead — so there is no path left for a prefix to name. Accepting one would
+make it config that reads as if it does something.
+*/
+export interface AuditQueryPluginOptions extends Omit<BaseCorePluginOptions, 'routePrefix'> {
   /**
    * Override the audit collection slug. Must match the slug `auditPlugin`
    * (in `@forumone/throughline-core`) writes to. Default: `'audit-events'`.

@@ -1,6 +1,11 @@
 # Architecture overview
 
-A Throughline project is one Next.js application running Payload CMS, plus an Inngest endpoint, plus a constellation of MCP servers exposed at sibling routes. There is no separate backend — everything lives in `apps/web`.
+A Throughline project is one Next.js application running Payload CMS, plus an Inngest endpoint, plus a set of MCP tool servers reached through a single MCP endpoint. There is no separate backend — everything lives in `apps/web`.
+
+"Server" here means a bounded set of tools and the plugin that owns them, not a
+port or a route. Each plugin builds its tools at `onInit` and hands them to a
+collector; the host passes that collector's array to `@payloadcms/plugin-mcp`,
+which serves all of them on one endpoint.
 
 ## The runtime
 
@@ -9,18 +14,21 @@ A Throughline project is one Next.js application running Payload CMS, plus an In
                      │  Claude (or any MCP  │
                      │      client)         │
                      └──────────┬───────────┘
-                                │ JSON-RPC over HTTP+Bearer
+                                │ streamable HTTP + Bearer
                                 ▼
        ┌────────────────────────────────────────────────────┐
        │  Next.js app routes  (apps/web/src/app/api)        │
        │                                                    │
-       │  /api/payload/mcp     CRUD on collections          │
-       │  /api/components/mcp  propose / validate           │
-       │  /api/publishing/mcp  publish / schedule / rollback│
-       │  /api/approvals/mcp   request / decide / list      │
-       │  /api/audit/mcp       query change history         │
-       │  /api/forms/mcp       form definitions             │
-       │  /api/integrations/mcp  trigger / inspect          │
+       │  /api/mcp             every tool, one endpoint:    │
+       │                         components  propose / validate
+       │                         publishing  publish / schedule / rollback
+       │                         approvals   request / decide / list
+       │                         audit       query change history
+       │                         forms       form definitions
+       │                         integrations trigger / inspect
+       │  /api/publishing/*    admin publish controls       │
+       │  /api/approvals/action  approval link target       │
+       │  /api/forms/submit    public form post             │
        │  /api/inngest         workflow webhook             │
        │  /admin               Payload admin UI             │
        │  /(frontend)          your published site          │
@@ -35,11 +43,13 @@ A Throughline project is one Next.js application running Payload CMS, plus an In
 
 Everything in the dashed box is your project. Everything below it is infrastructure.
 
-## What each MCP server does
+## What each set of tools does
 
-| Server | Role |
+Each row is a plugin's contribution to the one endpoint, not an endpoint of its own.
+
+| Tools | Role |
 | --- | --- |
-| **Payload MCP** | Generic CRUD: list collections, find/create/update/delete documents. The "what's in the database" surface. |
+| **Payload's own** | Generic CRUD: list collections, find/create/update/delete documents. The "what's in the database" surface. Off unless the host names collections in `mcpPlugin`. |
 | **Components** | Reasons about your design system. Returns components matching an intent, validates that a layout satisfies the contract, surfaces anti-pattern violations. |
 | **Publishing** | The trust boundary. Publishes drafts through a seven-stage policy pipeline. Direct `_status` writes through Payload MCP are blocked. |
 | **Approvals** | Manages approval workflows. Resolves approver groups to users. Issues HMAC-signed action tokens for email-based decisions. |
@@ -103,10 +113,10 @@ The seam between core and project is a configuration boundary, not a fork. Upgra
 | --- | --- |
 | Plugin order + wiring | `apps/web/src/payload.config.ts` |
 | Inngest functions registered | `apps/web/src/app/api/inngest/route.ts` |
-| MCP endpoints | `apps/web/src/app/api/<server>/mcp/route.ts` (registered by each plugin) |
+| The MCP endpoint | `POST /api/mcp`, served by `@payloadcms/plugin-mcp` — the host registers it with a collector's array, and each plugin fills that array at `onInit` |
 | Audit log records | `audit-log` collection in Payload |
 | Approval records | `approvals` collection |
-| API keys | `api-keys` collection |
+| API keys | `payload-mcp-api-keys` collection, from `@payloadcms/plugin-mcp` |
 | Design system manifest | wherever `componentsPlugin({ manifest })` points |
 
 ## Next reading

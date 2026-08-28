@@ -93,11 +93,38 @@ createRevalidateOnPublishFunction({
 
 `next` is declared as an optional peer (`peerDependenciesMeta.next.optional = true`) so non-Next consumers don't see a missing-peer warning.
 
-## Why scheduled publishes call through the MCP
+## Why scheduled publishes go through the pipeline
 
-`createExecuteScheduledPublishesFunction` calls `POST /api/publishing/mcp` with a Bearer token rather than calling `payload.update` directly. That means scheduled publishes go through the same composition / accessibility / approval pipeline as Claude-initiated publishes — a composition error in a scheduled publish gets the same treatment as one caught interactively.
+`createExecuteScheduledPublishesFunction` never writes to Payload. It finds what is
+due and calls the `publish` callback you give it, which must be wired to the
+publishing service — so a scheduled publish runs the same composition /
+accessibility / approval pipeline as an interactive one. A composition error fails
+it loudly (audit log + `lastError`) instead of silently writing through, and a
+`payload.update` here would skip every gate.
 
-A composition error fails the publish loudly (audit log + `lastError`) instead of silently writing through.
+```ts
+import { getPublishingService } from '@forumone/throughline-publishing'
+
+publish: async ({ collection, id, reasoning }) => {
+  const outcome = await getPublishingService(payload).publish({
+    collection,
+    id,
+    actor: { apiKeyName: 'scheduled-publish', channel: 'mcp' },
+    meta: { reasoning },
+  })
+  return { published: outcome.published, reason: outcome.reason }
+}
+```
+
+Injected rather than built in because this package depends on `core` alone, and the
+service lives in the publishing package.
+
+It used to `fetch` `POST /api/publishing/mcp` with a bearer key from
+`PUBLISHING_SYSTEM_API_KEY`. That endpoint is gone — one `/api/mcp` replaced the six
+per-server ones — and the self-call was the wrong shape regardless: a function
+invocation per document, a base URL and a key that both had to be right, and a 401
+rather than a publish if the deployment URL sat behind access protection. Neither
+option exists any more; wire `publish`.
 
 ## Customizing audit fan-out
 

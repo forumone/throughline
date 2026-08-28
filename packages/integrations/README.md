@@ -7,7 +7,7 @@ Plugin architecture for connecting Throughline-powered Payload sites to external
 - **`Integration` contract** — id, name, description, configFields, validateConfig, subscribes, createFunctions, mcpTools (optional), healthcheck. Every Salesforce / Mailchimp / Slack / etc. integration uses this exact shape.
 - **`IntegrationRegistry`** — process-local, per-plugin-init store keyed by integration id. Rejects duplicates synchronously.
 - **Integrations collection** — `name`, `integrationType`, `enabled`, `config` (json), and read-only `lastSyncAt` / `lastSyncStatus` / `lastError`. Admin-only writes; admin/editor reads.
-- **Five MCP tools** at `/api/integrations/mcp`:
+- **Five MCP tools**, handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody:
 
 | Tool | Use it for | Access |
 |---|---|---|
@@ -101,7 +101,7 @@ The HMAC is computed over the entire request body (a JSON-stringified envelope o
 | `inngest` | `Inngest` | required | Throws at validate if missing |
 | `integrations` | `Integration[]` | `[]` | Appended to the built-in webhook integration |
 | `collectionSlug` | `string` | `'integrations'` | |
-| `routePrefix` | `string` | `'/integrations'` | Payload prepends `/api`, so MCP lands at `/api/integrations/mcp` |
+| `mcpTools` | `McpToolCollector` | — | The host's collector. Without it these five tools are unreachable. This plugin serves no HTTP endpoint of its own and takes no `routePrefix` |
 | `enabled` | `boolean` | `true` | Set to false to no-op |
 | `logger` | `Logger` | `defaultLogger` | |
 

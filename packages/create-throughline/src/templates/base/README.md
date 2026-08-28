@@ -40,20 +40,19 @@ pnpm dev
 
 ## After admin signup
 
-1. In the Payload admin, open the **API Keys** collection and create one key per MCP server (Component, Publishing, Approvals, Audit, Forms, Integrations). Paste each key into `.env.local` (`COMPONENT_SERVER_API_KEY`, etc.) and restart `pnpm dev`.
+1. In the Payload admin, open **MCP → Payload MCP API Keys** and create one key. Pick a **User** — required; the key inherits that user's access control — tick **Enable API Key**, save, and copy the key. It is shown once, and it does not go in `.env.local`.
 
-2. **Plug the MCP servers into Claude (or your MCP client).** The endpoints are:
+2. **Plug it into Claude (or your MCP client).** One endpoint carries every server's tools:
 
    ```
-   /api/components/mcp
-   /api/publishing/mcp
-   /api/approvals/mcp
-   /api/audit/mcp
-   /api/forms/mcp
-   /api/integrations/mcp
+   POST /api/mcp
+   Authorization: Bearer <your key>
    ```
 
-   Authenticate with the corresponding API key from `.env.local`.
+   ```bash
+   claude mcp add throughline http://localhost:3000/api/mcp \
+     --header "Authorization: Bearer $THROUGHLINE_API_KEY"
+   ```
 
 3. **Replace the example `pages` collection** in `apps/web/src/payload.config.ts` with your real content model. Keep the `policy` group on collections that should require approval — that field shape is what the approvals plugin reads.
 

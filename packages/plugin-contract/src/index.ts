@@ -8,9 +8,15 @@ export interface BaseCorePluginOptions {
   /** Enable or disable the plugin without removing it from the config. Defaults to `true`. */
   enabled?: boolean
   /**
-   * Route prefix the plugin mounts its MCP server and API endpoints under.
-   * Defaults to a plugin-specific value (e.g. `/api/publishing`). Override
-   * to avoid collisions or to expose under a different path.
+   * Route prefix the plugin mounts its HTTP endpoints under. Defaults to a
+   * plugin-specific value (e.g. `/api/publishing`). Override to avoid
+   * collisions or to expose under a different path.
+   *
+   * MCP is not among those endpoints any more: tools reach a client through
+   * the host's `@payloadcms/plugin-mcp`, on one `/api/mcp`. A plugin serving
+   * no HTTP endpoints of its own omits this option rather than accepting one
+   * it cannot honour — see `auditQueryPlugin`, `componentsPlugin` and
+   * `integrationsPlugin`.
    */
   routePrefix?: string
   /** Logger used for plugin diagnostics. Falls back to a console logger if omitted. */
@@ -33,5 +39,4 @@ export type CorePlugin<Options extends BaseCorePluginOptions = BaseCorePluginOpt
 ) => Plugin
 
 export * from './mcp.js'
-export * from './auth.js'
 export * from './registry.js'

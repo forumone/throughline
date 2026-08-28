@@ -8,7 +8,7 @@ Policy-gated publishing server for Throughline. The trust boundary that decides 
 - **A trust boundary** — a `beforeChange` hook on every configured collection that rejects direct writes to `_status`. The pipeline is the only sanctioned way to publish.
 - **Admin controls** — Publish and Unpublish buttons that run the pipeline as the logged-in editor. Installed automatically; no host-side code.
 - **A server-side API** — `publishDocument` / `unpublishDocument` / `getPublishStatus` for host code that needs to publish outside the admin.
-- **Five MCP tools** served at `/api/publishing/mcp`: `publish`, `unpublish`, `schedule_publish`, `get_publish_status`, `rollback`.
+- **Five MCP tools** — `publish`, `unpublish`, `schedule_publish`, `get_publish_status`, `rollback` — handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody.
 
 ## Installation
 
@@ -71,11 +71,14 @@ With `adminComponents: false` the admin has **no** working publish path until yo
 |---|---|---|
 | `POST /api/publishing/publish` | Payload session | `{ collection, id }` |
 | `POST /api/publishing/unpublish` | Payload session | `{ collection, id }` |
-| `POST /api/publishing/mcp` | Bearer API key | JSON-RPC |
 
-### Serving these tools through Payload's MCP plugin instead
+Those two, and nothing else. This plugin used to serve `POST /api/publishing/mcp`
+on a JSON-RPC subset written here; it is deleted, along with the five others like
+it.
 
-Payload ships `@payloadcms/plugin-mcp` — the official MCP SDK, streamable HTTP, sessions, and per-key per-tool capability checkboxes an admin can see and change. This plugin's tools can be served through it rather than through the endpoint above:
+### Serving these tools through Payload's MCP plugin
+
+Payload ships `@payloadcms/plugin-mcp` — the official MCP SDK, streamable HTTP, sessions, and per-key per-tool capability checkboxes an admin can see and change. It is now the only way these tools reach a client:
 
 ```ts
 import { createMcpToolCollector } from '@forumone/throughline-core'
@@ -92,7 +95,7 @@ plugins: [
 
 Every tool here is built at `onInit`, because every one closes over `payload`; `mcpPlugin` takes its tools as a config option. The collector bridges that, and it works because the plugin reads `mcp.tools` inside the handler it builds *per request* — so an array handed over at config time is read populated. Hand over `mcpTools.tools` itself rather than a copy.
 
-Omit `mcpTools` and nothing changes, which is what lets a host move one server at a time. The endpoint above stays either way until the host stops using it.
+Omit `mcpTools` and this plugin's tools are unreachable — there is no per-server endpoint left as a fallback, and nothing errors, because from Payload's side nothing is misconfigured. The admin controls, the trust boundary and `publishDocument` all still work.
 
 One thing does not survive the move: `plugin-mcp` resolves a key to its linked user and does not carry the key document forward, so the calling key's *name* is not recoverable. Audit rows record the strategy instead, or a name the host passes as `apiKeyName`.
 

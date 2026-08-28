@@ -7,11 +7,16 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 | Subsystem | Subpath | Role |
 |---|---|---|
 | Audit | `./audit` | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS` |
-| Auth | `./auth` | `createApiKeysCollection`, `createBearerTokenAuthenticator`, `generateApiKey`, `sha256Hex` |
 | Events | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam) |
-| MCP | `./mcp` | `createMcpHandler`, `McpMetaSchema`, `withMeta` |
+| MCP | `./mcp` | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext` |
 | Logger | (main) | `defaultLogger`, `createNamedLogger` |
-| Utils | (main) | `documentContentHash` |
+| Utils | (main) | `documentContentHash`, `sha256Hex`, `formatZodIssues` |
+
+There is no `./auth` any more. It held an MCP key collection, a bearer-token
+authenticator and `createMcpHandler` — a JSON-RPC subset each plugin mounted at its
+own `/mcp`. `@payloadcms/plugin-mcp` owns the transport, the keys and authentication
+now; `createMcpToolCollector` is how this suite's tools get to it. `sha256Hex`
+survived, under `./utils`.
 
 The main entry re-exports everything; the subpath exports keep bundles smaller for consumers who only need one slice.
 
