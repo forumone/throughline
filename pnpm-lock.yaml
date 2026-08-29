@@ -500,9 +500,15 @@ importers:
       '@forumone/throughline-tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@payloadcms/ui':
+        specifier: ^3.83.0
+        version: 3.83.0(@types/react@19.2.14)(monaco-editor@0.55.1)(next@16.2.4(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.83.0(graphql@16.13.2)(typescript@5.9.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.9.3)
       '@types/node':
         specifier: ^20.17.0
         version: 20.19.39
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.14
       eslint:
         specifier: ^9.15.0
         version: 9.39.4
@@ -512,6 +518,9 @@ importers:
       payload:
         specifier: ^3.83.0
         version: 3.83.0(graphql@16.13.2)(typescript@5.9.3)
+      react:
+        specifier: 19.2.5
+        version: 19.2.5
       typescript:
         specifier: ^5.6.0
         version: 5.9.3

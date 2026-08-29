@@ -99,3 +99,52 @@ describe('createIntegrationsCollection', () => {
     expect(result).toBe(data)
   })
 })
+
+describe('the manual-sync control', () => {
+  function collectionWith(slug?: string) {
+    const registry = new IntegrationRegistry()
+    registry.register(fakeIntegration())
+    return createIntegrationsCollection({
+      ...(slug ? { slug } : {}),
+      registry,
+      endpoints: [{ path: '/:id/sync', method: 'post', handler: () => new Response(null) }],
+    })
+  }
+
+  it('mounts the endpoints it was given', () => {
+    const endpoints = collectionWith().endpoints
+    expect(Array.isArray(endpoints) && endpoints.map((e) => `${e.method} ${e.path}`)).toEqual([
+      'post /:id/sync',
+    ])
+  })
+
+  it('is a ui field, so it adds no column and nothing to save', () => {
+    const field = collectionWith().fields.find((f) => 'name' in f && f.name === 'triggerSync')
+    expect(field?.type).toBe('ui')
+  })
+
+  // Beside the three status fields it moves, which is where an operator
+  // waiting for a sync is already looking.
+  it('sits in the sidebar, above lastSyncAt', () => {
+    const fields = collectionWith().fields
+    const names = fields.filter((f) => 'name' in f).map((f) => (f as { name: string }).name)
+    expect(names.indexOf('triggerSync')).toBeLessThan(names.indexOf('lastSyncAt'))
+    const field = fields.find((f) => 'name' in f && f.name === 'triggerSync')
+    expect(field?.admin?.position).toBe('sidebar')
+  })
+
+  // The component POSTs to `<slug>/:id/sync`, so it has to be told the slug a
+  // host may have overridden.
+  it('passes the collection slug through to the client component', () => {
+    const field = collectionWith('connections').fields.find(
+      (f) => 'name' in f && f.name === 'triggerSync',
+    )
+    const component = (field?.admin as { components?: { Field?: unknown } } | undefined)?.components
+      ?.Field
+    expect(component).toMatchObject({
+      path: '@forumone/throughline-integrations/client',
+      exportName: 'SyncButton',
+      clientProps: { collectionSlug: 'connections' },
+    })
+  })
+})

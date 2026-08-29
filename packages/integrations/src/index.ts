@@ -22,6 +22,17 @@ export type {
   IntegrationSyncStatus,
 } from './types.js'
 
+export { requestManualSync, MANUAL_SYNC_EVENT } from './sync/manual-sync.js'
+export type {
+  ManualSyncRefusal,
+  RequestManualSyncArgs,
+  RequestManualSyncDeps,
+  RequestManualSyncResult,
+} from './sync/manual-sync.js'
+
+export { createSyncEndpoint, ADMIN_TRIGGER_REASON } from './endpoints/sync.js'
+export type { CreateSyncEndpointDeps } from './endpoints/sync.js'
+
 export {
   createListIntegrationsTool,
   createGetIntegrationStatusTool,
