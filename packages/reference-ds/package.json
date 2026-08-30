@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-reference-ds",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A competent, brand-neutral reference design system demonstrating contract compliance for Throughline.",
   "type": "module",
   "main": "./dist/index.js",
