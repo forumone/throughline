@@ -75,7 +75,7 @@
     "@forumone/throughline-tsconfig": "workspace:*",
     "@payloadcms/db-sqlite": "^3.83.0",
     "@payloadcms/ui": "^3.83.0",
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.13.2",
     "@types/react": "^19.2.0",
     "eslint": "^9.15.0",
     "inngest": "^4.2.0",
