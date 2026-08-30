@@ -1,5 +1,12 @@
 # @forumone/throughline-playground
 
+## 0.0.23
+
+### Patch Changes
+
+- Updated dependencies [3ca0453]
+  - @forumone/throughline-integrations@0.8.0
+
 ## 0.0.22
 
 ### Patch Changes
