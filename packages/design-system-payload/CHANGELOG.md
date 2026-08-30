@@ -1,5 +1,12 @@
 # @forumone/throughline-design-system-payload
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [957403b]
+  - @forumone/throughline-design-contract@0.5.1
+
 ## 0.4.0
 
 ### Minor Changes
