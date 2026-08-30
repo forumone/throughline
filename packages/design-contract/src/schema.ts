@@ -81,6 +81,7 @@ export type ContentField = {
   type: z.infer<typeof FieldTypeSchema>
   required: boolean
   maxLength?: number | undefined
+  defaultValue?: boolean | undefined
   constraints?: string | undefined
   of?: ContentField[] | undefined
 }
@@ -91,6 +92,7 @@ export type ContentFieldInput = {
   type: z.infer<typeof FieldTypeSchema>
   required?: boolean | undefined
   maxLength?: number | undefined
+  defaultValue?: boolean | undefined
   constraints?: string | undefined
   of?: ContentFieldInput[] | undefined
 }
@@ -101,10 +103,43 @@ const ContentFieldSchema: z.ZodType<ContentField, z.ZodTypeDef, ContentFieldInpu
     type: FieldTypeSchema,
     required: z.boolean().default(false),
     maxLength: z.number().int().positive().optional(),
+    /*
+    What the field holds before an author touches it, for `boolean` only.
+
+    A component's own default lives in its signature — `hasFacade = true` — and
+    is reachable only when the prop arrives as `undefined`. A generated CMS
+    field never leaves it undefined: a checkbox is stored ticked or unticked,
+    so the component is always handed an explicit value and its default can
+    never apply. Without somewhere to declare it, every boolean a contract
+    describes reaches the component as `false`, whatever the component says.
+
+    That inverted `VideoEmbed.hasFacade`, whose whole purpose is to keep a
+    provider's iframe and its third-party cookies off the page until a reader
+    presses play. The contract said "Leave on"; every embed an author added
+    shipped with it off.
+
+    Deliberately boolean-only. `text` and `number` defaults are a different
+    question — an empty string and a missing number are already meaningful, and
+    a default there competes with `required` rather than completing it. Widen
+    this when a component needs it, not before.
+    */
+    defaultValue: z.boolean().optional(),
     /** Human-readable constraint description the AI reasons about. */
     constraints: z.string().optional(),
     /** For array or group fields, the nested field shape. */
     of: z.array(ContentFieldSchema).optional(),
+  }).superRefine((field, ctx) => {
+    // Only `boolean` reads `defaultValue`, so anywhere else it is a value the
+    // author expects to take effect and nothing ever will. Rejecting it is the
+    // difference between a contract that fails validation and a field that
+    // quietly ignores half of what it was told.
+    if (field.defaultValue !== undefined && field.type !== 'boolean') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['defaultValue'],
+        message: `defaultValue is only read for boolean fields; "${field.name}" is ${field.type}.`,
+      })
+    }
   }),
 )
 
