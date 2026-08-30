@@ -56,12 +56,21 @@ function describe(field: ContentField): string | undefined {
  * Internal links hold a relationship, not a path, so renaming a page cannot
  * break every link that pointed at it — the renderer resolves the current slug
  * at read time.
+ *
+ * `required` is enforced by a validate rather than by Payload's own flag, for
+ * the reason `requiredLink` gives.
  */
-export function linkField(name: string, ctx: FieldContext, description?: string): Field {
+export function linkField(
+  name: string,
+  ctx: FieldContext,
+  description?: string,
+  required = false,
+): Field {
   return {
     name,
     type: 'group',
     ...(description ? { admin: { description } } : {}),
+    ...(required ? { validate: requiredLink() } : {}),
     fields: [
       {
         name: 'mode',
@@ -219,7 +228,7 @@ export function toPayloadField(
       }
 
     case 'link':
-      return linkField(field.name, ctx, description)
+      return linkField(field.name, ctx, description, field.required)
 
     case 'select': {
       const options = override?.options ?? ctx.resolveSelectOptions(ctx.component, path)
@@ -311,41 +320,6 @@ function relaxRequired(fields: Field[]): Field[] {
 function allOrNothing(children: ContentField[]) {
   const names = children.filter(child => child.required).map(child => child.name)
 
-  /*
-  Emptiness has to be recursive, which is not obvious until it bites.
-
-  A group holding a link sub-group is never literally empty: `linkField` gives
-  `mode` a default of `'internal'`, so an untouched `caseStudy` arrives as
-  `{ stat: {}, href: { mode: 'internal' } }`. Compared shallowly that is a
-  filled group, and the rule then demands the title of an author who has typed
-  nothing — this validation firing on exactly the case it exists to allow.
-
-  `mode` is skipped for that reason: it is a discriminator that says which
-  *kind* of link this would be if there were one, and it is present whether or
-  not anybody chose anything. It is never evidence that a group was filled in.
-
-  **An unticked checkbox is the same thing, and is why `false` counts as
-  empty.** `boolean` fields are generated with `defaultValue: false`, so a group
-  holding one is never literally empty either — and `false` is indistinguishable
-  from "nobody touched this", because Payload stores the default and an
-  author's deliberate untick identically. Treating it as filled makes the rule
-  demand the group's required children of somebody who has typed nothing, which
-  is the same defect this comment already describes, arriving by a second route.
-
-  It did arrive: `ManagedForm.consent` holds a `required` boolean beside a
-  required `text`, and adding the block failed to save with "Consent is
-  invalid" before an editor could touch it.
-  */
-  const isEmpty = (value: unknown): boolean => {
-    if (value === undefined || value === null || value === '') return true
-    if (value === false) return true
-    if (Array.isArray(value)) return value.every(isEmpty)
-    if (typeof value === 'object') {
-      return Object.entries(value).every(([key, held]) => key === 'mode' || isEmpty(held))
-    }
-    return false
-  }
-
   return (value: unknown): true | string => {
     if (!value || typeof value !== 'object') return true
 
@@ -360,6 +334,93 @@ function allOrNothing(children: ContentField[]) {
       ? `${missing[0]} is needed once anything else here is filled in. Clear the rest to leave this out entirely.`
       : `${missing.join(' and ')} are needed once anything else here is filled in. Clear the rest to leave this out entirely.`
   }
+}
+
+/**
+ * A required link must actually go somewhere.
+ *
+ * `required: true` on a contract link field bought nothing for as long as this
+ * generator existed: the flag was read for every other field type and dropped
+ * for this one, and Payload's own `required` could not have replaced it anyway
+ * — on a group it asserts only that the object exists, which it always does,
+ * and on the children it would demand a `url` of a link whose author chose the
+ * internal mode. So the promise is kept here, against the branch the author
+ * actually picked.
+ *
+ * It cost a live defect. `FeaturedWork` marks each item's `href` required and
+ * types it `string`; two items on `/work` were saved with the link untouched,
+ * `resolveHref` returned `undefined`, React dropped the attribute, and the page
+ * shipped four `<a>` elements with no `href` — not links at all: skipped by
+ * crawlers, unreachable by keyboard, and scoring 0 on Lighthouse's
+ * `crawlable-anchors`. Nothing in the CMS had objected. See #483.
+ *
+ * **Silent until the surroundings are filled in.** A block or an array row
+ * Payload has only just created holds defaults, and refusing to save one before
+ * anybody has typed into it is the #354 defect — an error on a block the editor
+ * cannot yet act on. So the rule reads its siblings: everything around it empty
+ * means nobody has been here, and the link is left alone. That is the same
+ * bargain `allOrNothing` strikes one level up, and it lands on the case that
+ * matters — a row carrying a title and a paragraph and no destination.
+ */
+function requiredLink() {
+  return (value: unknown, options?: { siblingData?: unknown }): true | string => {
+    const link = (value ?? {}) as {
+      mode?: string | null
+      reference?: unknown
+      url?: unknown
+      anchor?: unknown
+    }
+
+    const mode = link.mode ?? 'internal'
+    if (mode === 'internal' && !isEmpty(link.reference)) return true
+    if (mode === 'external' && !isEmpty(link.url)) return true
+    if (mode === 'anchor' && !isEmpty(link.anchor)) return true
+
+    if (isEmpty(options?.siblingData)) return true
+
+    if (mode === 'external') return 'Enter the URL this link goes to.'
+    if (mode === 'anchor') return 'Name the id this link scrolls to.'
+    return 'Choose the page this link goes to.'
+  }
+}
+
+/*
+"Nobody has been here yet", and why it has to be recursive — which is not
+obvious until it bites.
+
+A group holding a link sub-group is never literally empty: `linkField` gives
+`mode` a default of `'internal'`, so an untouched `caseStudy` arrives as
+`{ stat: {}, href: { mode: 'internal' } }`. Compared shallowly that is a filled
+group, and `allOrNothing` then demands the title of an author who has typed
+nothing — that validation firing on exactly the case it exists to allow.
+
+`mode` is skipped for that reason: it is a discriminator that says which *kind*
+of link this would be if there were one, and it is present whether or not
+anybody chose anything. It is never evidence that a group was filled in.
+
+**An unticked checkbox is the same thing, and is why `false` counts as empty.**
+`boolean` fields are generated with `defaultValue: false`, so a group holding
+one is never literally empty either — and `false` is indistinguishable from
+"nobody touched this", because Payload stores the default and an author's
+deliberate untick identically. Treating it as filled makes the rule demand the
+group's required children of somebody who has typed nothing, which is the same
+defect this comment already describes, arriving by a second route.
+
+It did arrive: `ManagedForm.consent` holds a `required` boolean beside a
+required `text`, and adding the block failed to save with "Consent is invalid"
+before an editor could touch it.
+
+`requiredLink` asks the same question of a link's *siblings*, which is what
+keeps it quiet on a block or a row nobody has typed into yet.
+*/
+function isEmpty(value: unknown): boolean {
+  if (value === undefined || value === null || value === '') return true
+  if (value === false) return true
+  if (Array.isArray(value)) return value.every(isEmpty)
+  if (typeof value === 'object') {
+    return Object.entries(value).every(([key, held]) => key === 'mode' || isEmpty(held))
+  }
+  return false
 }
 
 function childFields(children: ContentField[], ctx: FieldContext, parentPath: string): Field[] {
