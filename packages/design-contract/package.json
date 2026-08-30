@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-design-contract",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "The contract every AI-ready design system satisfies to be consumable by Throughline.",
   "type": "module",
   "main": "./dist/index.js",
