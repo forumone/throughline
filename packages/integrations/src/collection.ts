@@ -1,10 +1,18 @@
-import type { Access, CollectionConfig } from 'payload'
+import type { Access, CollectionConfig, Endpoint } from 'payload'
 import type { IntegrationRegistry } from './registry.js'
 import { DEFAULT_INTEGRATIONS_SLUG } from './options.js'
+
+/**
+ * Where Payload resolves the admin controls from. A package specifier, not a
+ * path, so the host's import map picks it up without any host-side file.
+ */
+const CLIENT_ENTRY = '@forumone/throughline-integrations/client'
 
 export interface CreateIntegrationsCollectionOptions {
   slug?: string
   registry: IntegrationRegistry
+  /** Collection endpoints to mount, e.g. the manual-sync trigger. */
+  endpoints?: Endpoint[]
 }
 
 const adminOrEditor: Access = ({ req }) => {
@@ -24,6 +32,9 @@ const adminOnly: Access = ({ req }) => {
  *
  * Editors can read instance status (used by the listing/status MCP tools);
  * write operations are reserved for admins editing in the Payload UI.
+ *
+ * The one control on the document that is not a field is the sidebar's Sync
+ * now button, which POSTs to the `:id/sync` endpoint passed in `endpoints`.
  */
 export function createIntegrationsCollection(
   options: CreateIntegrationsCollectionOptions,
@@ -79,6 +90,30 @@ export function createIntegrationsCollection(
         },
       },
       {
+        /*
+        The only admin component this plugin ships. In the sidebar rather than
+        `beforeDocumentControls` because it belongs with the three fields it
+        moves — an operator watching for a sync to land is already reading
+        `lastSyncAt` — and because `beforeDocumentControls` also renders on the
+        create view, where there is no instance to sync.
+
+        A `ui` field: no column, no value, nothing to save.
+        */
+        name: 'triggerSync',
+        type: 'ui',
+        label: 'Manual sync',
+        admin: {
+          position: 'sidebar',
+          components: {
+            Field: {
+              path: CLIENT_ENTRY,
+              exportName: 'SyncButton',
+              clientProps: { collectionSlug: slug },
+            },
+          },
+        },
+      },
+      {
         name: 'lastSyncAt',
         type: 'date',
         admin: { readOnly: true, position: 'sidebar' },
@@ -101,6 +136,7 @@ export function createIntegrationsCollection(
         admin: { readOnly: true },
       },
     ],
+    endpoints: options.endpoints ?? [],
     indexes: [
       { fields: ['integrationType', 'enabled'] },
       { fields: ['lastSyncStatus'] },

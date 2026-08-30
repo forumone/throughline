@@ -4,6 +4,7 @@ import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/thro
 import { type IntegrationsPluginOptions, validateOptions, DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 import { IntegrationRegistry } from './registry.js'
 import { createIntegrationsCollection } from './collection.js'
+import { createSyncEndpoint } from './endpoints/sync.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { IntegrationContext } from './types.js'
 import {
@@ -22,15 +23,19 @@ const REGISTRY_SYMBOL = Symbol.for('@forumone/throughline/integrations-registry'
 const CONTEXT_SYMBOL = Symbol.for('@forumone/throughline/integrations-context')
 
 /**
- * Integrations server. Registers the Integrations collection, the
- * five-tool MCP server, and a process-local registry of integration
- * modules. The webhook integration is registered automatically; clients
+ * Integrations server. Registers the Integrations collection — with its
+ * manual-sync endpoint and the Sync now button in its sidebar — the five-tool
+ * MCP server, and a process-local registry of integration modules. The webhook integration is registered automatically; clients
  * extend the registry by passing additional integrations via options.
  *
  * Integration Inngest functions are not served here — they are exposed
  * via `getIntegrationRegistry(payload)` so the client app's Inngest
  * endpoint can merge them with its own functions. See
  * `docs/integrations-wiring.md` in the repository root.
+ *
+ * The collection carries one admin component, the sidebar's Sync now button,
+ * so hosts must run `payload generate:importmap` after adding this plugin (the
+ * dev server does it automatically). A stale import map 500s the admin screen.
  */
 export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
   (rawOptions) => (incomingConfig) => {
@@ -46,7 +51,14 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
       registry.register(integration)
     }
 
-    const collection = createIntegrationsCollection({ slug: collectionSlug, registry })
+    const collection = createIntegrationsCollection({
+      slug: collectionSlug,
+      registry,
+      // The admin's path to `integration/manual-sync`, sharing
+      // `requestManualSync` with the `trigger_sync` MCP tool so the two cannot
+      // disagree about what a trigger checks or what event it sends.
+      endpoints: [createSyncEndpoint({ collectionSlug, inngest: options.inngest })],
+    })
 
     /*
     Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
