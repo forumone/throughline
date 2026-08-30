@@ -57,6 +57,40 @@ describe('createIntegrationsCollection', () => {
     expect(access.delete?.(fakeReq(['editor']))).toBe(false)
   })
 
+  it('keeps the credentials out of an editor read', () => {
+    /*
+    Document read is admin *or* editor, so an editor can see whether last
+    night's sync ran. `config` is the one field on the row that would hand them
+    a credential with it — a HubSpot private app token, a signing secret — so
+    it carries its own rule. Without this the collection's docblock described
+    an intent the code did not hold.
+    */
+    const registry = new IntegrationRegistry()
+    registry.register(fakeIntegration())
+    const collection = createIntegrationsCollection({ registry })
+
+    const configField = collection.fields.find(
+      (field) => 'name' in field && field.name === 'config',
+    ) as { access?: Record<string, (args: unknown) => boolean> } | undefined
+    expect(configField, 'the config field is gone').toBeDefined()
+
+    const asRole = (roles: string[]) => ({ req: { user: { roles } } })
+
+    for (const operation of ['read', 'create', 'update'] as const) {
+      const rule = configField?.access?.[operation]
+      expect(typeof rule, `config has no field-level ${operation} rule`).toBe('function')
+      expect(rule?.(asRole(['admin']))).toBe(true)
+      expect(rule?.(asRole(['editor']))).toBe(false)
+      expect(rule?.(asRole([]))).toBe(false)
+    }
+
+    // The sibling status fields stay readable, which is the point of the split.
+    const status = collection.fields.find(
+      (field) => 'name' in field && field.name === 'lastSyncStatus',
+    ) as { access?: unknown } | undefined
+    expect(status?.access).toBeUndefined()
+  })
+
   it('beforeChange runs validateConfig and surfaces failures', async () => {
     const registry = new IntegrationRegistry()
     registry.register(fakeIntegration({ id: 'webhook' }))
