@@ -22,6 +22,8 @@ export interface ContentField {
     | 'number'
   required: boolean
   maxLength?: number
+  /** `boolean` only — see the contract schema. */
+  defaultValue?: boolean
   constraints?: string
   of?: ContentField[]
 }
@@ -184,7 +186,18 @@ export function toPayloadField(
     case 'boolean':
       // `required` on a checkbox would mean "must be ticked", which is never
       // what a contract means by it.
-      return { name: field.name, type: 'checkbox', defaultValue: false, ...admin }
+      //
+      // `defaultValue` was hardcoded `false` here, which made a component's own
+      // default unreachable: `coerce` turns whatever is stored into a real
+      // boolean, so the prop is never `undefined` and a signature default like
+      // `hasFacade = true` can never apply. A contract that wants the box
+      // ticked to begin with now says so and is believed.
+      return {
+        name: field.name,
+        type: 'checkbox',
+        defaultValue: field.defaultValue ?? false,
+        ...admin,
+      }
 
     case 'richtext':
       return { name: field.name, type: 'richText', ...required, ...admin }
@@ -320,12 +333,31 @@ function relaxRequired(fields: Field[]): Field[] {
 function allOrNothing(children: ContentField[]) {
   const names = children.filter(child => child.required).map(child => child.name)
 
+  /*
+  Booleans this group defaults to ticked.
+
+  `isEmpty` answers for a value alone and reads `false` as "nobody touched
+  this", which is right for a checkbox that starts unticked. A checkbox the
+  contract starts *ticked* says the same thing with the opposite value, and
+  `isEmpty` cannot know that without being told which field it is looking at.
+  Left unhandled, such a field makes its group permanently non-empty and
+  `allOrNothing` demands the group's required children of an author who has
+  typed nothing — the third route to the defect this file's `isEmpty` comment
+  describes.
+  */
+  const defaultTicked = new Set(
+    children.filter(child => child.type === 'boolean' && child.defaultValue === true).map(child => child.name),
+  )
+
+  const untouched = (name: string, v: unknown) =>
+    defaultTicked.has(name) ? v === true || isEmpty(v) : isEmpty(v)
+
   return (value: unknown): true | string => {
     if (!value || typeof value !== 'object') return true
 
     const entries = Object.entries(value as Record<string, unknown>)
 
-    if (entries.every(([, v]) => isEmpty(v))) return true
+    if (entries.every(([k, v]) => untouched(k, v))) return true
 
     const missing = names.filter(name => isEmpty((value as Record<string, unknown>)[name]))
     if (missing.length === 0) return true
@@ -399,8 +431,8 @@ of link this would be if there were one, and it is present whether or not
 anybody chose anything. It is never evidence that a group was filled in.
 
 **An unticked checkbox is the same thing, and is why `false` counts as empty.**
-`boolean` fields are generated with `defaultValue: false`, so a group holding
-one is never literally empty either — and `false` is indistinguishable from
+`boolean` fields are generated with `defaultValue: false` unless the contract
+declares otherwise, so a group holding one is never literally empty either — and `false` is indistinguishable from
 "nobody touched this", because Payload stores the default and an author's
 deliberate untick identically. Treating it as filled makes the rule demand the
 group's required children of somebody who has typed nothing, which is the same
@@ -409,6 +441,10 @@ defect this comment already describes, arriving by a second route.
 It did arrive: `ManagedForm.consent` holds a `required` boolean beside a
 required `text`, and adding the block failed to save with "Consent is invalid"
 before an editor could touch it.
+
+A checkbox the contract starts *ticked* says "nobody touched this" with `true`
+instead, which this function cannot see — it is handed a value, not a field.
+`allOrNothing` knows the field shapes and handles that case itself.
 
 `requiredLink` asks the same question of a link's *siblings*, which is what
 keeps it quiet on a block or a row nobody has typed into yet.

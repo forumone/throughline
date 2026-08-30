@@ -102,6 +102,49 @@ describe('ComponentContractSchema', () => {
     }
   })
 
+  it('carries a boolean field’s defaultValue through', () => {
+    const contract = makeHeroContract({
+      content: {
+        fields: [{ name: 'hasFacade', type: 'boolean', required: false, defaultValue: true }],
+      },
+    })
+    const result = ComponentContractSchema.safeParse(contract)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.content.fields[0]?.defaultValue).toBe(true)
+    }
+  })
+
+  it('leaves defaultValue undefined when a boolean field omits it', () => {
+    const contract = makeHeroContract({
+      content: { fields: [{ name: 'isCompact', type: 'boolean', required: false }] },
+    })
+    const result = ComponentContractSchema.safeParse(contract)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.content.fields[0]?.defaultValue).toBeUndefined()
+    }
+  })
+
+  // Only `boolean` reads it, so anywhere else it is a value that would silently
+  // never take effect.
+  it('rejects defaultValue on a non-boolean field', () => {
+    const contract = makeHeroContract({
+      content: {
+        fields: [
+          { name: 'headline', type: 'text', required: true, defaultValue: true } as never,
+        ],
+      },
+    })
+    const result = ComponentContractSchema.safeParse(contract)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(
+        result.error.issues.some((i) => i.path.join('.').endsWith('defaultValue')),
+      ).toBe(true)
+    }
+  })
+
   it('accepts recursive content fields via `of`', () => {
     const contract = makeHeroContract({
       content: {
