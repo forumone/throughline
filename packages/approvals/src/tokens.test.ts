@@ -52,6 +52,25 @@ describe('generateActionToken / verifyActionToken', () => {
     if (!verified.ok) expect(verified.error).toMatch(/expired/i)
   })
 
+  it('accepts a token inside seventy-two hours and refuses one outside it', async () => {
+    /*
+    Pins the default, which nothing asserted before. It was fourteen days —
+    outliving the approval it acts on, since `plugin.ts` expires a request
+    after seven (`expirationDays ?? 7`), so the second week of a token's life
+    could only ever act on something already gone.
+
+    Seventy-two hours covers a weekend, which is the realistic gap between
+    sending a request and somebody opening their mail, and stays well inside
+    the request's own expiry so the two cannot disagree.
+    forumone/forumone-2026#486, F-13.
+    */
+    const encoded = await generateActionToken(baseToken, SECRET)
+    const hours = (n: number) => baseToken.issuedAt + n * 60 * 60 * 1000
+
+    expect((await verifyActionToken(encoded, SECRET, { now: hours(71) })).ok).toBe(true)
+    expect((await verifyActionToken(encoded, SECRET, { now: hours(73) })).ok).toBe(false)
+  })
+
   it('honors a custom maxAgeMs', async () => {
     const encoded = await generateActionToken(baseToken, SECRET)
     const oneHourLater = baseToken.issuedAt + 60 * 60 * 1000
