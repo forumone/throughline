@@ -85,12 +85,23 @@ export interface CoerceContext {
  *
  * `mode` is skipped because `linkField` gives it a default: it says which kind
  * of link this *would* be, and is present whether or not anybody chose
- * anything. The same reasoning as the group validation in `generate/fields.ts`,
- * and the two have to agree — one decides whether a group may be saved, the
- * other whether it reaches a component.
+ * anything. `false` is skipped for the same kind of reason — Payload stores a
+ * checkbox's default and an author's deliberate untick identically, so an
+ * unticked box is no evidence that anybody has been here.
+ *
+ * This is `isEmpty` in `generate/fields.ts`, and the two have to agree: one
+ * decides whether a group may be saved, the other whether it reaches a
+ * component. They did not agree about `false`, and the gap was live.
+ * `ManagedForm.consent` is an optional group whose `required` boolean is
+ * stored `false` on every block nobody has configured — so the validation
+ * called it empty and let the block save, and this called it filled and handed
+ * the component `{ required: false, text: '' }`. That is a truthy object of
+ * empty values, which is exactly the shape the note in the `group` branch
+ * below exists to prevent, arriving by the one route that note did not cover.
  */
 function isEmptyValue(value: unknown): boolean {
   if (value === undefined || value === null || value === '') return true
+  if (value === false) return true
   if (Array.isArray(value)) return value.every(isEmptyValue)
   if (typeof value === 'object') {
     return Object.entries(value).every(([key, held]) => key === 'mode' || isEmptyValue(held))
