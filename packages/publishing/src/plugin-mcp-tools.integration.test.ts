@@ -22,13 +22,20 @@ import { publishingPlugin } from './plugin.js'
 
 const inngest = { send: async () => ({}) } as unknown as Inngest
 
+/*
+A database this file alone can see — see the note in
+`hooks/block-status-writes.integration.test.ts`. `:memory:` is private to the
+client that opens it; a shared-cache name is not.
+*/
+const DATABASE_URL = ':memory:'
+
 let payload: Payload
 const collector = createMcpToolCollector()
 
 beforeAll(async () => {
   const config = await buildConfig({
     secret: 'integration-secret-integration-secret',
-    db: sqliteAdapter({ client: { url: 'file::memory:?cache=shared' } }),
+    db: sqliteAdapter({ client: { url: DATABASE_URL } }),
     collections: [
       {
         slug: 'pages',
