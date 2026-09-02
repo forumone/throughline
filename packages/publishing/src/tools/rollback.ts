@@ -2,7 +2,9 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
+import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface RollbackToolDeps {
   payload: Payload
@@ -18,9 +20,8 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
   })
 
   return {
-    name: 'rollback',
-    description:
-      "Rolls a document back to a prior version from Payload's version history. The restored content lands as a fresh draft; call `publish` afterwards if you want it live again. Audits the rollback under publishing.rollback.",
+    ...PUBLISHING_TOOLS.rollback,
+    requiredScope: 'publishing.execute',
     inputSchema,
     handler: async (input, ctx) => {
       const collection = resolveCollection(deps.options, input.collection)
@@ -56,7 +57,9 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
         id: input.versionId,
       })
 
-      await deps.options.inngest.send({
+      // The version is already restored; a failed emission must not undo
+      // that or lose the audit record below.
+      const warning = await sendEventSafely(deps.options.inngest, {
         name: 'content/page.rolled_back',
         data: {
           collection: collection.slug,
@@ -88,6 +91,7 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
         restored: true,
         toVersionId: input.versionId,
         note: 'The restored content is a draft. Call `publish` to make it live.',
+        ...(warning ? { warnings: [warning] } : {}),
       }
     },
   }

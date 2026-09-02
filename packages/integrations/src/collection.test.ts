@@ -57,6 +57,40 @@ describe('createIntegrationsCollection', () => {
     expect(access.delete?.(fakeReq(['editor']))).toBe(false)
   })
 
+  it('keeps the credentials out of an editor read', () => {
+    /*
+    Document read is admin *or* editor, so an editor can see whether last
+    night's sync ran. `config` is the one field on the row that would hand them
+    a credential with it — a HubSpot private app token, a signing secret — so
+    it carries its own rule. Without this the collection's docblock described
+    an intent the code did not hold.
+    */
+    const registry = new IntegrationRegistry()
+    registry.register(fakeIntegration())
+    const collection = createIntegrationsCollection({ registry })
+
+    const configField = collection.fields.find(
+      (field) => 'name' in field && field.name === 'config',
+    ) as { access?: Record<string, (args: unknown) => boolean> } | undefined
+    expect(configField, 'the config field is gone').toBeDefined()
+
+    const asRole = (roles: string[]) => ({ req: { user: { roles } } })
+
+    for (const operation of ['read', 'create', 'update'] as const) {
+      const rule = configField?.access?.[operation]
+      expect(typeof rule, `config has no field-level ${operation} rule`).toBe('function')
+      expect(rule?.(asRole(['admin']))).toBe(true)
+      expect(rule?.(asRole(['editor']))).toBe(false)
+      expect(rule?.(asRole([]))).toBe(false)
+    }
+
+    // The sibling status fields stay readable, which is the point of the split.
+    const status = collection.fields.find(
+      (field) => 'name' in field && field.name === 'lastSyncStatus',
+    ) as { access?: unknown } | undefined
+    expect(status?.access).toBeUndefined()
+  })
+
   it('beforeChange runs validateConfig and surfaces failures', async () => {
     const registry = new IntegrationRegistry()
     registry.register(fakeIntegration({ id: 'webhook' }))
@@ -97,5 +131,54 @@ describe('createIntegrationsCollection', () => {
     const data = { integrationType: 'webhook', config: { invalid: true } }
     const result = await hook({ data, operation: 'read' as 'create' })
     expect(result).toBe(data)
+  })
+})
+
+describe('the manual-sync control', () => {
+  function collectionWith(slug?: string) {
+    const registry = new IntegrationRegistry()
+    registry.register(fakeIntegration())
+    return createIntegrationsCollection({
+      ...(slug ? { slug } : {}),
+      registry,
+      endpoints: [{ path: '/:id/sync', method: 'post', handler: () => new Response(null) }],
+    })
+  }
+
+  it('mounts the endpoints it was given', () => {
+    const endpoints = collectionWith().endpoints
+    expect(Array.isArray(endpoints) && endpoints.map((e) => `${e.method} ${e.path}`)).toEqual([
+      'post /:id/sync',
+    ])
+  })
+
+  it('is a ui field, so it adds no column and nothing to save', () => {
+    const field = collectionWith().fields.find((f) => 'name' in f && f.name === 'triggerSync')
+    expect(field?.type).toBe('ui')
+  })
+
+  // Beside the three status fields it moves, which is where an operator
+  // waiting for a sync is already looking.
+  it('sits in the sidebar, above lastSyncAt', () => {
+    const fields = collectionWith().fields
+    const names = fields.filter((f) => 'name' in f).map((f) => (f as { name: string }).name)
+    expect(names.indexOf('triggerSync')).toBeLessThan(names.indexOf('lastSyncAt'))
+    const field = fields.find((f) => 'name' in f && f.name === 'triggerSync')
+    expect(field?.admin?.position).toBe('sidebar')
+  })
+
+  // The component POSTs to `<slug>/:id/sync`, so it has to be told the slug a
+  // host may have overridden.
+  it('passes the collection slug through to the client component', () => {
+    const field = collectionWith('connections').fields.find(
+      (f) => 'name' in f && f.name === 'triggerSync',
+    )
+    const component = (field?.admin as { components?: { Field?: unknown } } | undefined)?.components
+      ?.Field
+    expect(component).toMatchObject({
+      path: '@forumone/throughline-integrations/client',
+      exportName: 'SyncButton',
+      clientProps: { collectionSlug: 'connections' },
+    })
   })
 })

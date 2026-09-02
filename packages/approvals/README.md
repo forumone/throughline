@@ -8,7 +8,7 @@ Conversational approval workflow server for Throughline. Provides the resolver t
 - **Approval resolver** that the publishing server's `approvalStep` calls to check for active granted approvals (auto-attached on the Payload instance via Symbol — no manual wiring needed).
 - **HMAC-signed action tokens** (`generateActionToken` / `verifyActionToken`) for inline-action emails. Single-use enforcement via the per-record `consumedTokens` array prevents replay.
 - **HTTP action endpoint** at `/api/approvals/action` that handles email button clicks: verify token → confirmation page → record decision.
-- **Five MCP tools** served at `/api/approvals/mcp`:
+- **Five MCP tools**, handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody:
 
 | Tool | Audit |
 |---|---|
@@ -77,7 +77,11 @@ If you need a custom resolver (e.g. you store approvals in an external system), 
 ## Phase 1 semantics
 
 - **First-decision-wins.** Multi-party approvals (e.g. legal AND communications must both approve) are deferred to Phase 2. The Phase 1 model handles "any one approver from the configured groups," which covers the most common case.
-- **Approvals are tied to versions.** An approval granted against one draft does not apply to a subsequent edit. The resolver checks `targetVersion` against the document version under consideration.
+- **Approvals are tied to content, not to a timestamp.** `request_approval` stores `documentContentHash(document)` in `targetVersion`, and publishing's approval step recomputes the same hash from the document it is about to publish. So an approval granted against one draft does not apply to a subsequent edit — but it does survive a save that changed nothing, and it comes back if an edit is reverted.
+
+  This is what lets **autosave and approvals both be on**. The binding used to be `updatedAt`, which moves on every save: an editor fixing a typo while an approver read the request invalidated the approval, and autosave did that every couple of seconds. See the note under `documentContentHash` in `@forumone/throughline-core` for what counts as content — in short, everything except `id`, `createdAt`, `updatedAt`, `_status` and the other storage bookkeeping, at every level of the document.
+
+  Both sides must load the document the same way for the hashes to agree; both use `payload.findByID({ collection, id, draft: true })`. A populated relationship and a bare relationship id are different values, so a caller hashing a document fetched at a different depth would match nothing.
 - **Action tokens are single-use, 14-day validity.** Once an approver clicks an action link, the token is appended to the request's `consumedTokens` array; reusing it returns an error.
 - **Self-approval is blocked.** The respond_to_approval tool refuses if the caller is the requester.
 - **Group resolution is configurable.** Clients define what "editorial" or "legal" means via the `groupResolver.resolveUsers` callback. Core does not hardcode group membership logic.

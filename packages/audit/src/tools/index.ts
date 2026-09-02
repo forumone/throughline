@@ -1,3 +1,4 @@
+export { AUDIT_TOOLS, AUDIT_TOOL_DESCRIPTORS } from './descriptors.js'
 export { createQueryAuditTool } from './query-audit.js'
 export type { QueryAuditDeps } from './query-audit.js'
 export { createGetChangeHistoryTool } from './get-change-history.js'

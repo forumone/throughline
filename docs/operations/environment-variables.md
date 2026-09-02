@@ -73,30 +73,20 @@ The Forms plugin hashes submitter IPs (rather than storing them raw) for spam-ra
 
 Missing or shorter than 32 chars? The Forms plugin fails to boot.
 
-## MCP server keys
+## MCP keys are not environment variables
 
-```
-COMPONENT_SERVER_API_KEY
-PUBLISHING_SERVER_API_KEY
-APPROVALS_SERVER_API_KEY
-AUDIT_SERVER_API_KEY
-FORMS_SERVER_API_KEY
-INTEGRATIONS_SERVER_API_KEY
-```
+There are none of these any more. The six `*_SERVER_API_KEY` variables went with the
+six per-server endpoints they authenticated against; if they are still in a
+`.env.local` or a Vercel project, they are read by nothing and can be deleted.
 
-Each is a Bearer token a connected MCP client (Claude Desktop, Claude Code, etc.) uses to authenticate against that server's `/api/<server>/mcp` endpoint.
+An MCP key now lives in two places and neither is an env var: a row in
+`payload-mcp-api-keys`, created in the Payload admin under **MCP**, and the
+`Authorization: Bearer <key>` header in the client's own config. One key reaches
+every tool on `/api/mcp`.
 
-These are not generated locally. The flow:
-
-1. Open Payload admin
-2. Open the **API Keys** collection
-3. Create one entry per server. Set a descriptive `name` (e.g., `component-server`)
-4. The entry's `keyValue` is the Bearer token
-5. Paste each into the matching `*_API_KEY` env var
-
-The server reads the Bearer token from the `Authorization: Bearer <key>` header on each MCP request and validates against the `api-keys` collection. There's no env-var-only fallback.
-
-If an env var is unset, the matching MCP client cannot connect (it won't have a token to send). The server itself runs fine.
+The one adjacent variable that remains is `PUBLISHING_SYSTEM_API_KEY`, and it is not
+an MCP key — Inngest calls the publish pipeline directly for scheduled publishes.
+See below.
 
 ## System keys
 

@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-playground",
-  "version": "0.0.8",
+  "version": "0.0.27",
   "private": true,
   "description": "Internal Next.js + Payload app used to develop and smoke-test @forumone/throughline core plugins. Never published.",
   "type": "module",
@@ -27,6 +27,7 @@
     "@forumone/throughline-reference-ds": "workspace:*",
     "@payloadcms/db-postgres": "^3.83.0",
     "@payloadcms/next": "^3.83.0",
+    "@payloadcms/plugin-mcp": "3.83.0",
     "@payloadcms/richtext-lexical": "^3.83.0",
     "graphql": "^16.8.1",
     "inngest": "^4.2.0",

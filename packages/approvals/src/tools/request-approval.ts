@@ -1,9 +1,15 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import {
+  type AuditWriter,
+  auditContext,
+  documentContentHash,
+  withMeta,
+} from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
+import { APPROVALS_TOOLS } from './descriptors.js'
 
 export interface RequestApprovalDeps {
   payload: Payload
@@ -32,9 +38,8 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
   })
 
   return {
-    name: 'request_approval',
-    description:
-      "Kicks off the approval workflow for a document that requires approval before publishing. Provide a clear changesSummary explaining what changed and why; approvers see this in their notifications. Returns the approval ID, expiration time, and the list of approvers who were notified.",
+    ...APPROVALS_TOOLS.requestApproval,
+    requiredScope: 'approvals.request',
     inputSchema,
     handler: async (input, ctx) => {
       if (!ctx.user) {
@@ -62,7 +67,16 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
         }
       }
 
-      const targetVersion = String(document['updatedAt'] ?? document['id'] ?? input.id)
+      /*
+      What the approval is bound to. A hash of the document's content, not of
+      its `updatedAt` — so a save that changed nothing leaves a granted
+      approval standing, and one that changed something invalidates it.
+
+      Publishing's approval step hashes the same document the same way, with
+      the same function, from a `findByID` with the same arguments. That is
+      the only reason the two agree; see `documentContentHash`.
+      */
+      const targetVersion = await documentContentHash(document)
       const targetTitle =
         typeof document['title'] === 'string' ? document['title'] : input.id
       const slug =
@@ -109,20 +123,13 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
       })
 
       await deps.auditWriter({
-        actor: {
-          type: 'user',
-          userId: ctx.user.id,
-          userName: ctx.user.name,
-          apiKeyName: ctx.apiKeyName,
-        },
+        ...auditContext(ctx, input._meta),
         action: 'approval.requested',
         mcpServer: 'approvals',
         mcpTool: 'request_approval',
         targetCollection: input.collection,
         targetId: input.id,
         targetTitle,
-        prompt: input._meta?.userPrompt,
-        reasoning: input._meta?.reasoning,
         changesSummary: input.changesSummary,
         approvalRequestId: approvalId,
         success: true,

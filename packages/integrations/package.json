@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-integrations",
-  "version": "0.2.1",
+  "version": "0.8.2",
   "description": "Plugin architecture for connecting Throughline-powered Payload sites to external systems. Ships the Integration contract, registry, collection, MCP tools, and a generic outbound-webhook integration as the first concrete example.",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/exports/client.d.ts",
+      "default": "./dist/exports/client.js"
     }
   },
   "files": [
@@ -45,8 +49,18 @@
     "access": "public"
   },
   "peerDependencies": {
+    "@payloadcms/ui": "^3.0.0",
     "inngest": "^4.0.0",
-    "payload": "^3.0.0"
+    "payload": "^3.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@payloadcms/ui": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@forumone/throughline-core": "workspace:*",
@@ -56,10 +70,13 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
-    "@types/node": "^20.17.0",
+    "@payloadcms/ui": "^3.83.0",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.0",
     "eslint": "^9.15.0",
     "inngest": "^4.2.0",
     "payload": "^3.83.0",
+    "react": "^19.2.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }

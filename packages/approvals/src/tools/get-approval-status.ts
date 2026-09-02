@@ -1,9 +1,10 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { withMeta } from '@forumone/throughline-core'
+import { unwrapRelationshipId, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
+import { APPROVALS_TOOLS } from './descriptors.js'
 
 export interface GetApprovalStatusDeps {
   payload: Payload
@@ -16,9 +17,7 @@ export function createGetApprovalStatusTool(deps: GetApprovalStatusDeps): McpToo
   })
 
   return {
-    name: 'get_approval_status',
-    description:
-      "Returns the current status of an approval request including who decided, when, and any notes. Read-only; no audit record is written.",
+    ...APPROVALS_TOOLS.getApprovalStatus,
     inputSchema,
     handler: async (input) => {
       const approval = (await deps.payload.findByID({
@@ -44,13 +43,4 @@ export function createGetApprovalStatusTool(deps: GetApprovalStatusDeps): McpToo
       }
     },
   }
-}
-
-function unwrapRelationshipId(value: unknown): string | null {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'string') return value
-  if (typeof value === 'object' && 'id' in value) {
-    return String((value as { id: unknown }).id)
-  }
-  return null
 }

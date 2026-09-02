@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import { type AuditWriter, auditContext, withMeta } from '@forumone/throughline-core'
 import type { ComponentContract } from '@forumone/throughline-design-contract'
 import type { ManifestLoader } from '../manifest-source.js'
 import type { Matcher, RankedSuggestion } from '../matching/types.js'
 import { validateComposition } from '../validation/composition.js'
+import { COMPONENTS_TOOLS } from './descriptors.js'
 
 export interface SuggestForIntentDeps {
   loader: ManifestLoader
@@ -34,9 +35,7 @@ export function createSuggestForIntentTool(deps: SuggestForIntentDeps): McpToolD
   })
 
   return {
-    name: 'suggest_for_intent',
-    description:
-      "Given a natural-language description of what the author wants to accomplish, returns ranked component recommendations with reasoning. Optionally accepts the existing page context so duplicate Heroes / composition conflicts surface as warnings on the suggestions.",
+    ...COMPONENTS_TOOLS.suggestForIntent,
     inputSchema,
     handler: async (input, ctx) => {
       const manifest = await deps.loader.get()
@@ -60,17 +59,13 @@ export function createSuggestForIntentTool(deps: SuggestForIntentDeps): McpToolD
 
       // Audit (fire-and-forget; never blocks the response).
       await deps.auditWriter({
-        actor: {
-          type: 'user',
-          userId: ctx.user?.id,
-          userName: ctx.user?.name,
-          apiKeyName: ctx.apiKeyName,
-        },
+        ...auditContext(ctx, input._meta),
         action: 'design.suggest',
         mcpServer: 'component',
         mcpTool: 'suggest_for_intent',
+        // The intent *is* the prompt when the client sent no `_meta`, which is
+        // the whole record of why this call was made.
         prompt: input._meta?.userPrompt ?? input.intent,
-        reasoning: input._meta?.reasoning,
         changesSummary: `Suggested components for: ${input.intent.slice(0, 120)}`,
       })
 

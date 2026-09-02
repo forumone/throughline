@@ -58,10 +58,12 @@ export function createFakePayload(instances: FakeInstance[]): {
   return { payload, finds }
 }
 
-export function createFakeInngest(): { inngest: Inngest; sends: SendCall[] } {
+/** `failWith` stands in for an Inngest that will not take the event. */
+export function createFakeInngest(failWith?: Error): { inngest: Inngest; sends: SendCall[] } {
   const sends: SendCall[] = []
   const inngest = {
     send: async (event: SendCall) => {
+      if (failWith) throw failWith
       sends.push(event)
     },
   } as unknown as Inngest

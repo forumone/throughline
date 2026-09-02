@@ -10,6 +10,7 @@ import {
   createPayloadReachableCheck,
   createRevalidateOnPublishFunction,
 } from '@forumone/throughline-workflows'
+import { getPublishingService } from '@forumone/throughline-publishing'
 import { getEmailFunctions } from '@forumone/throughline-email'
 import { getFormsFunctions } from '@forumone/throughline-forms'
 import {
@@ -39,15 +40,31 @@ export const { GET, POST, PUT } = serve({
       inngest,
       payload,
       collections: [{ slug: 'pages' }],
-      publishingServerUrl: process.env.NEXT_PUBLIC_SERVER_URL!,
-      systemApiKey: process.env.PUBLISHING_SYSTEM_API_KEY!,
+      /*
+      Through the publishing service, in process — so a scheduled publish passes
+      the same composition, accessibility and approval gates as an interactive
+      one. Not `payload.update`, which skips all of them.
+
+      No API key and no URL: this used to POST to `/api/publishing/mcp`, which
+      meant the deployment calling itself over HTTP, and broke whenever the
+      base URL or the key was wrong.
+      */
+      publish: async ({ collection, id, reasoning }) => {
+        const outcome = await getPublishingService(payload).publish({
+          collection,
+          id,
+          actor: { apiKeyName: 'scheduled-publish', channel: 'mcp' },
+          meta: { reasoning },
+        })
+        return { published: outcome.published, reason: outcome.reason }
+      },
     }),
     createExpireStaleApprovalsFunction({ inngest, payload }),
     createAuditEventEchoFunction({ inngest }),
     createHealthcheckFunction({
       inngest,
       payload,
-      checks: [createPayloadReachableCheck({ payload })],
+      checks: [createPayloadReachableCheck()],
     }),
     ...emailFunctions,
     ...formsFunctions,

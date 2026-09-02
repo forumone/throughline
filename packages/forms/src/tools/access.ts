@@ -12,6 +12,5 @@ export function isPiiReader(ctx: McpToolContext): boolean {
   return roles.includes('admin') || roles.includes('form-admin')
 }
 
-export function deniedEnvelope(reason: string): { error: string } {
-  return { error: reason }
-}
+// `deniedEnvelope` lives in core: three servers had identical copies.
+export { deniedEnvelope } from '@forumone/throughline-core'

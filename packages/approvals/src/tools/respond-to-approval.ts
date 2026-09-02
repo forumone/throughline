@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import { auditContext, type AuditWriter, unwrapRelationshipId, withMeta } from '@forumone/throughline-core'
 import type { AuditAction } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
+import { APPROVALS_TOOLS } from './descriptors.js'
 
 export interface RespondToApprovalDeps {
   payload: Payload
@@ -35,9 +36,8 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
   })
 
   return {
-    name: 'respond_to_approval',
-    description:
-      "Records an approver's decision on a pending approval. Valid decisions: approve, decline, request_changes. Approvers can also act through the inline action links in their notification emails; this tool is for when they respond conversationally through Claude.",
+    ...APPROVALS_TOOLS.respondToApproval,
+    requiredScope: 'approvals.decide',
     inputSchema,
     handler: async (input, ctx) => {
       if (!ctx.user) {
@@ -96,12 +96,7 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
       })
 
       await deps.auditWriter({
-        actor: {
-          type: 'user',
-          userId: ctx.user.id,
-          userName: ctx.user.name,
-          apiKeyName: ctx.apiKeyName,
-        },
+        ...auditContext(ctx, input._meta),
         action: decisionToAuditAction[decision],
         mcpServer: 'approvals',
         mcpTool: 'respond_to_approval',
@@ -111,7 +106,8 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
           typeof approval['targetTitle'] === 'string'
             ? approval['targetTitle']
             : String(approval['targetId']),
-        prompt: input._meta?.userPrompt,
+        // The decision notes are the reasoning when there are any: they are
+        // what the approver actually wrote.
         reasoning: input.notes ?? input._meta?.reasoning,
         approvalRequestId: input.approvalId,
         success: true,
@@ -120,12 +116,4 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
       return { success: true, status: newStatus, decidedAt }
     },
   }
-}
-
-function unwrapRelationshipId(value: unknown): string | null {
-  if (typeof value === 'string') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    return String((value as { id: unknown }).id)
-  }
-  return null
 }

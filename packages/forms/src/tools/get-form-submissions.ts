@@ -3,6 +3,7 @@ import type { Payload, Where } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { ResolvedFormsConfig } from '../options.js'
 import { deniedEnvelope, isFormsAuthor, isPiiReader } from './access.js'
+import { FORMS_TOOLS } from './descriptors.js'
 
 const inputSchema = z.object({
   formId: z.string(),
@@ -23,9 +24,7 @@ export function createGetFormSubmissionsTool(
   deps: GetFormSubmissionsDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'get_form_submissions',
-    description:
-      "Lists submissions for a form. Defaults to redacted output (counts + timestamps). Set includePii=true to read submission data; that requires admin or form-admin role.",
+    ...FORMS_TOOLS.getFormSubmissions,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isFormsAuthor(ctx)) {

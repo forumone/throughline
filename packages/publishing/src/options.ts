@@ -1,3 +1,5 @@
+import { formatZodIssues } from '@forumone/throughline-core'
+import type { McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
 import { z } from 'zod'
 import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
@@ -56,10 +58,45 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
   collections: PublishableCollection[]
   /** Optional: extra accessibility checks beyond the built-ins. */
   accessibilityChecks?: AccessibilityCheck[]
+  /**
+   * Optional: names of built-in accessibility checks to skip —
+   * `'alt-text'`, `'heading-hierarchy'`, `'link-labels'`.
+   *
+   * `accessibilityChecks` only appends, so without this a built-in that
+   * misfires on a host's content shape blocks every publish until the
+   * plugin ships a fix. Switch one off here and supply your own.
+   */
+  disableAccessibilityChecks?: string[]
   /** Optional: resolver consulted when a document's policy requires approval. */
   approvalResolver?: ApprovalResolver
   /** Required: Inngest client used to fire publishing events. */
   inngest: Inngest
+  /**
+   * Whether to install the plugin's Publish / Unpublish controls on each
+   * configured collection. Default: `true`.
+   *
+   * Payload's native buttons write `_status` directly, which the plugin's
+   * trust boundary rejects — so with this off, the admin has no working
+   * publish path until the host supplies its own control (see
+   * `publishDocument`).
+   */
+  adminComponents?: boolean
+
+  /**
+   * Where to put this server's MCP tools so Payload's own MCP plugin can serve
+   * them.
+   *
+   * Payload ships `@payloadcms/plugin-mcp`, which takes its tools as a config
+   * option — and every tool here is built at `onInit`, because every one closes
+   * over `payload`. `createMcpToolCollector()` from `@forumone/throughline-core`
+   * bridges that: the host hands the collector's array to `mcpPlugin` at config
+   * time and this plugin fills it at init, which is before any request and
+   * therefore before the plugin reads it.
+   *
+   * Omit it and nothing changes — this server keeps its own `/mcp` endpoint,
+   * which is what lets a host move one server at a time.
+   */
+  mcpTools?: McpToolCollector
 }
 
 export type ResolvedCollection = Required<Omit<PublishableCollection, 'requiredFields'>> &
@@ -93,9 +130,7 @@ export function validateOptions(options: PublishingPluginOptions): PublishingPlu
   for (const collection of options.collections) {
     const result = PublishableCollectionSchema.safeParse(collection)
     if (!result.success) {
-      const issues = result.error.issues
-        .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
-        .join('\n')
+      const issues = formatZodIssues(result.error)
       throw new Error(`Invalid collection config:\n${issues}`)
     }
   }

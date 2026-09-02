@@ -1,5 +1,5 @@
 import type { Inngest } from 'inngest'
-import type { Payload } from 'payload'
+import type { Payload, TypedUser } from 'payload'
 import type { AuthenticatedUser } from '@forumone/throughline-plugin-contract'
 import type {
   AccessibilityIssue,
@@ -11,6 +11,13 @@ export interface PipelineActor {
   user: AuthenticatedUser | null
   apiKeyName: string
   sessionId?: string | undefined
+  /**
+   * When set, Payload reads and writes inside the pipeline run as this user
+   * with `overrideAccess: false`, so the collection's own access control
+   * applies. The admin path sets it to the logged-in editor; the MCP path
+   * leaves it unset because the API key is its own trust boundary.
+   */
+  enforceAccessAs?: TypedUser | undefined
 }
 
 export interface PipelineMeta {
@@ -38,6 +45,11 @@ export interface PipelineStepResult {
   code?: string
   issues?: PipelineIssue[]
   suggestion?: string
+  /**
+   * Non-fatal problems. The step did what it was asked to; something
+   * adjacent to it did not. Warnings never fail a step.
+   */
+  warnings?: string[]
 }
 
 export type PipelineStep = (context: PipelineContext) => Promise<PipelineStepResult>
@@ -50,4 +62,6 @@ export interface PipelineResult {
   issues?: PipelineIssue[]
   suggestion?: string
   publishedAt?: string
+  /** Non-fatal problems collected across the steps that ran. */
+  warnings?: string[]
 }

@@ -1,7 +1,7 @@
 {
   "name": "@forumone/throughline-core",
-  "version": "0.2.1",
-  "description": "Core plumbing for Throughline: audit log, MCP authentication and handler, event taxonomy + Inngest client factory, env handling, logger, shared utilities.",
+  "version": "0.8.1",
+  "description": "Core plumbing for Throughline: audit log, MCP authentication and handler, event taxonomy + Inngest client factory, logger, shared utilities.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,10 +25,6 @@
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",
       "default": "./dist/mcp/index.js"
-    },
-    "./env": {
-      "types": "./dist/env/index.d.ts",
-      "default": "./dist/env/index.js"
     }
   },
   "files": [
@@ -75,7 +71,7 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.13.2",
     "eslint": "^9.15.0",
     "inngest": "^4.2.0",
     "payload": "^3.83.0",

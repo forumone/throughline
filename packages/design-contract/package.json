@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-design-contract",
-  "version": "0.2.0",
+  "version": "0.5.1",
   "description": "The contract every AI-ready design system satisfies to be consumable by Throughline.",
   "type": "module",
   "main": "./dist/index.js",
@@ -53,7 +53,7 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.13.2",
     "eslint": "^9.15.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

@@ -50,7 +50,10 @@ export function createApprovalsCollection(
         name: 'targetVersion',
         type: 'text',
         required: true,
-        admin: { description: 'Document version at request time. Approvals are tied to this version.' },
+        admin: {
+          description:
+            'Hash of the document content at request time. An approval resolves only against a document that still hashes to this, so a save that changed nothing keeps it and a save that changed something invalidates it.',
+        },
       },
       { name: 'previewUrl', type: 'text' },
 

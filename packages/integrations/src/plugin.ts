@@ -1,17 +1,14 @@
 import type { CorePlugin, McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import {
-  createMcpHandler,
-  createNamedLogger,
-  defaultLogger,
-  getAuditWriter,
-} from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import { type IntegrationsPluginOptions, validateOptions, DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 import { IntegrationRegistry } from './registry.js'
 import { createIntegrationsCollection } from './collection.js'
+import { createSyncEndpoint } from './endpoints/sync.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { IntegrationContext } from './types.js'
 import {
+  INTEGRATIONS_TOOL_DESCRIPTORS,
   createGetIntegrationStatusTool,
   createListIntegrationsTool,
   createListIntegrationTypesTool,
@@ -22,22 +19,23 @@ import {
 const PLUGIN_ID = '@forumone/throughline-integrations'
 const PLUGIN_VERSION = '0.1.0'
 
-const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/integrations-mcp-handler')
 const REGISTRY_SYMBOL = Symbol.for('@forumone/throughline/integrations-registry')
 const CONTEXT_SYMBOL = Symbol.for('@forumone/throughline/integrations-context')
 
-type McpHandler = (request: Request) => Promise<Response>
-
 /**
- * Integrations server. Registers the Integrations collection, the
- * five-tool MCP server, and a process-local registry of integration
- * modules. The webhook integration is registered automatically; clients
+ * Integrations server. Registers the Integrations collection — with its
+ * manual-sync endpoint and the Sync now button in its sidebar — the five-tool
+ * MCP server, and a process-local registry of integration modules. The webhook integration is registered automatically; clients
  * extend the registry by passing additional integrations via options.
  *
  * Integration Inngest functions are not served here — they are exposed
  * via `getIntegrationRegistry(payload)` so the client app's Inngest
  * endpoint can merge them with its own functions. See
  * `docs/integrations-wiring.md` in the repository root.
+ *
+ * The collection carries one admin component, the sidebar's Sync now button,
+ * so hosts must run `payload generate:importmap` after adding this plugin (the
+ * dev server does it automatically). A stale import map 500s the admin screen.
  */
 export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
   (rawOptions) => (incomingConfig) => {
@@ -45,7 +43,6 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
 
     const options = validateOptions(rawOptions)
     const collectionSlug = options.collectionSlug ?? DEFAULT_INTEGRATIONS_SLUG
-    const routePrefix = options.routePrefix ?? '/integrations'
     const logger = createNamedLogger('integrations', options.logger ?? defaultLogger)
 
     const registry = new IntegrationRegistry()
@@ -54,30 +51,26 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
       registry.register(integration)
     }
 
-    const collection = createIntegrationsCollection({ slug: collectionSlug, registry })
+    const collection = createIntegrationsCollection({
+      slug: collectionSlug,
+      registry,
+      // The admin's path to `integration/manual-sync`, sharing
+      // `requestManualSync` with the `trigger_sync` MCP tool so the two cannot
+      // disagree about what a trigger checks or what event it sends.
+      endpoints: [createSyncEndpoint({ collectionSlug, inngest: options.inngest })],
+    })
+
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    options.mcpTools?.declare(INTEGRATIONS_TOOL_DESCRIPTORS, { serverName: 'integrations' })
 
     return {
       ...incomingConfig,
       collections: [...(incomingConfig.collections ?? []), collection],
-      endpoints: [
-        ...(incomingConfig.endpoints ?? []),
-        {
-          path: `${routePrefix}/mcp`,
-          method: 'post',
-          handler: async (req) => {
-            const handler = (req.payload as unknown as Record<symbol, unknown>)[
-              MCP_HANDLER_SYMBOL
-            ] as McpHandler | undefined
-            if (!handler) {
-              return new Response(
-                JSON.stringify({ error: 'Integrations MCP not initialized' }),
-                { status: 503, headers: { 'content-type': 'application/json' } },
-              )
-            }
-            return handler(req as unknown as Request)
-          },
-        },
-      ],
       onInit: async (payload) => {
         if (incomingConfig.onInit) await incomingConfig.onInit(payload)
 
@@ -148,19 +141,11 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
           createListIntegrationTypesTool({ registry }),
         ] as unknown as McpToolDefinition[]
 
-        const handler = createMcpHandler({
-          payload,
-          serverName: 'integrations',
-          tools,
-          logger,
-        })
+        // Payload's own MCP plugin, and the only transport these tools have.
+        // `onInit` is both the earliest they can exist and still early enough
+        // that `mcpPlugin` reads the array populated.
+        options.mcpTools?.add(tools, { serverName: 'integrations', logger })
 
-        Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
-          value: handler,
-          enumerable: false,
-          writable: false,
-          configurable: false,
-        })
         Object.defineProperty(payload, REGISTRY_SYMBOL, {
           value: registry,
           enumerable: false,
@@ -182,15 +167,34 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
 
         logger.info('Integrations server ready', {
           collectionSlug,
-          routePrefix,
           integrationCount: registry.size,
         })
       },
     }
   }
 
-export function getIntegrationRegistry(payload: unknown): IntegrationRegistry | undefined {
-  return (payload as Record<symbol, unknown>)[REGISTRY_SYMBOL] as IntegrationRegistry | undefined
+/**
+ * The registry this plugin attached at init, if it did.
+ *
+ * `Fn` is the host's own Inngest function type. Naming it is what lets the host
+ * serve `createFunctions()` results without asserting them back — the registry
+ * stores integrations at `unknown` otherwise, and an `unknown[]` cannot be
+ * handed to `serve()`:
+ *
+ * ```ts
+ * const registry = getIntegrationRegistry<InngestFunction.Any>(payload)
+ * ```
+ *
+ * There is no checking behind it either way — the value comes off a symbol on
+ * the Payload instance. What the parameter buys is that the assertion happens
+ * once, here, in terms of the host's own types, rather than at every read.
+ */
+export function getIntegrationRegistry<Fn = unknown>(
+  payload: unknown,
+): IntegrationRegistry<Fn> | undefined {
+  return (payload as Record<symbol, unknown>)[REGISTRY_SYMBOL] as
+    | IntegrationRegistry<Fn>
+    | undefined
 }
 
 export function getIntegrationContext(payload: unknown): IntegrationContext | undefined {

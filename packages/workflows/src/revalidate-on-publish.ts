@@ -59,6 +59,24 @@ export function createRevalidateOnPublishFunction(
 }
 
 /**
+ * How stale a caller may find a tag after this runs: not at all.
+ *
+ * Next 16 made `revalidateTag`'s second argument required — it is a cache-life
+ * profile — and one-argument calls log a deprecation warning on every publish.
+ * `{ expire: 0 }` is the immediate expiry the one-argument form used to mean,
+ * and it is what an editor pressing Publish expects.
+ *
+ * Passed unconditionally rather than behind a version check. The peer range is
+ * `next >= 15`, and Next 15's `revalidateTag` takes one parameter and ignores a
+ * second, so the two-argument call is correct on both.
+ *
+ * `updateTag`, which Next offers as the other way out of the deprecation, is
+ * not usable here: it throws outside a Server Action, and this runs in an
+ * Inngest step behind a route handler.
+ */
+const IMMEDIATE = { expire: 0 }
+
+/**
  * Default revalidator: dynamic-imports `next/cache` so the package can be
  * imported in environments without Next.js (e.g. test runners that don't
  * stub the module). Calls `revalidatePath` only when `path` is non-empty
@@ -67,8 +85,8 @@ export function createRevalidateOnPublishFunction(
 const defaultRevalidate: RevalidateFn = async ({ path, tags }: RevalidatePathsInput) => {
   const { revalidatePath, revalidateTag } = (await import('next/cache')) as {
     revalidatePath: (path: string) => void
-    revalidateTag: (tag: string) => void
+    revalidateTag: (tag: string, profile: string | { expire: number }) => void
   }
   if (path) revalidatePath(path)
-  for (const tag of tags) revalidateTag(tag)
+  for (const tag of tags) revalidateTag(tag, IMMEDIATE)
 }

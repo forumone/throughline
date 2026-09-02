@@ -2,8 +2,10 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
 import { runPreflightPipeline } from '../pipeline/index.js'
+import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface SchedulePublishToolDeps {
   payload: Payload
@@ -22,9 +24,8 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
   })
 
   return {
-    name: 'schedule_publish',
-    description:
-      "Schedules a future publish. Validates the document would currently pass the preflight pipeline (composition, accessibility, required fields, embargo, approval), then stores `scheduledPublishAt` on the document. The framework's workflow runner picks up the schedule and executes the full publish pipeline at that time.",
+    ...PUBLISHING_TOOLS.schedulePublish,
+    requiredScope: 'publishing.execute',
     inputSchema,
     handler: async (input, ctx) => {
       const collection = resolveCollection(deps.options, input.collection)
@@ -75,14 +76,19 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         }
       }
 
+      // Writing a date onto a document somebody is editing is the same
+      // collision as publishing it — quieter, and harder to notice afterwards.
       await deps.payload.update({
         collection: collection.slug,
         id: input.id,
         data: { [collection.scheduledPublishField]: input.publishAt },
+        overrideLock: false,
         context: { bypassPublishingServer: false },
       })
 
-      await deps.options.inngest.send({
+      // The schedule is already persisted; a failed emission must not undo
+      // that or lose the audit record below.
+      const warning = await sendEventSafely(deps.options.inngest, {
         name: 'content/page.scheduled',
         data: {
           collection: collection.slug,
@@ -105,7 +111,11 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         success: true,
       })
 
-      return { scheduled: true, scheduledFor: input.publishAt }
+      return {
+        scheduled: true,
+        scheduledFor: input.publishAt,
+        ...(warning ? { warnings: [warning] } : {}),
+      }
     },
   }
 }

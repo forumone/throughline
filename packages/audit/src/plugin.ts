@@ -1,12 +1,13 @@
 import type { CorePlugin, McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import { createMcpHandler, createNamedLogger, defaultLogger } from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger } from '@forumone/throughline-core'
 import {
   type AuditQueryPluginOptions,
   DEFAULT_AUDIT_COLLECTION_SLUG,
   validateOptions,
 } from './options.js'
 import {
+  AUDIT_TOOL_DESCRIPTORS,
   createGetChangeHistoryTool,
   createGetRecentFailuresTool,
   createQueryAuditTool,
@@ -16,10 +17,6 @@ import {
 
 const PLUGIN_ID = '@forumone/throughline-audit'
 const PLUGIN_VERSION = '0.1.0'
-const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/audit-mcp-handler')
-
-type McpHandler = (request: Request) => Promise<Response>
-
 /**
  * Read-only MCP server over the audit log. Pairs with `auditPlugin` from
  * `@forumone/throughline-core` (which writes records). The query plugin
@@ -32,31 +29,19 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
     if (rawOptions.enabled === false) return incomingConfig
 
     const options = validateOptions(rawOptions)
-    const routePrefix = options.routePrefix ?? '/audit'
     const collectionSlug = options.collectionSlug ?? DEFAULT_AUDIT_COLLECTION_SLUG
     const logger = createNamedLogger('audit-query', options.logger ?? defaultLogger)
 
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    options.mcpTools?.declare(AUDIT_TOOL_DESCRIPTORS, { serverName: 'audit' })
+
     return {
       ...incomingConfig,
-      endpoints: [
-        ...(incomingConfig.endpoints ?? []),
-        {
-          path: `${routePrefix}/mcp`,
-          method: 'post',
-          handler: async (req) => {
-            const handler = (req.payload as unknown as Record<symbol, unknown>)[
-              MCP_HANDLER_SYMBOL
-            ] as McpHandler | undefined
-            if (!handler) {
-              return new Response(
-                JSON.stringify({ error: 'Audit query MCP not initialized' }),
-                { status: 503, headers: { 'content-type': 'application/json' } },
-              )
-            }
-            return handler(req as unknown as Request)
-          },
-        },
-      ],
       onInit: async (payload) => {
         if (incomingConfig.onInit) await incomingConfig.onInit(payload)
 
@@ -72,19 +57,10 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
           createGetRecentFailuresTool(deps),
         ] as unknown as McpToolDefinition[]
 
-        const handler = createMcpHandler({
-          payload,
-          serverName: 'audit',
-          tools,
-          logger,
-        })
-
-        Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
-          value: handler,
-          enumerable: false,
-          writable: false,
-          configurable: false,
-        })
+        // Payload's own MCP plugin, and the only transport these tools have.
+        // `onInit` is both the earliest they can exist and still early enough
+        // that `mcpPlugin` reads the array populated.
+        options.mcpTools?.add(tools, { serverName: 'audit', logger })
 
         registry.register({
           id: PLUGIN_ID,
@@ -94,7 +70,6 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
 
         logger.info('Audit query server ready', {
           collectionSlug,
-          routePrefix,
           toolCount: tools.length,
         })
       },

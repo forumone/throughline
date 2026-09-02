@@ -1,16 +1,12 @@
 import type { CorePlugin } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import {
-  createMcpHandler,
-  createNamedLogger,
-  defaultLogger,
-  getAuditWriter,
-} from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import { type ApprovalsPluginOptions, validateOptions } from './options.js'
 import { createApprovalsCollection } from './collection.js'
 import { attachApprovalResolver, createApprovalResolver } from './resolver.js'
 import { createActionEndpoint } from './endpoints/action.js'
 import {
+  APPROVALS_TOOL_DESCRIPTORS,
   createGetApprovalStatusTool,
   createListMyRequestsTool,
   createListPendingApprovalsTool,
@@ -20,10 +16,7 @@ import {
 
 const PLUGIN_ID = '@forumone/throughline-approvals'
 const PLUGIN_VERSION = '0.1.0'
-const MCP_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/approvals-mcp-handler')
 const ACTION_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/approvals-action-handler')
-
-type McpHandler = (request: Request) => Promise<Response>
 
 export const approvalsPlugin: CorePlugin<ApprovalsPluginOptions> =
   (rawOptions) => (incomingConfig) => {
@@ -39,27 +32,19 @@ export const approvalsPlugin: CorePlugin<ApprovalsPluginOptions> =
       groupSlugs: options.groups.map((g) => g.slug),
     })
 
+    /*
+    Declared here, bound at `onInit` — `mcpPlugin` generates its per-key
+    checkboxes from these names and descriptions while the config is built, and
+    denies any tool it has no checkbox for. This plugin must therefore come
+    before `mcpPlugin` in the host's array.
+    */
+    options.mcpTools?.declare(APPROVALS_TOOL_DESCRIPTORS, { serverName: 'approvals' })
+
     return {
       ...incomingConfig,
       collections: [...(incomingConfig.collections ?? []), collection],
       endpoints: [
         ...(incomingConfig.endpoints ?? []),
-        {
-          path: `${routePrefix}/mcp`,
-          method: 'post',
-          handler: async (req) => {
-            const handler = (req.payload as unknown as Record<symbol, unknown>)[
-              MCP_HANDLER_SYMBOL
-            ] as McpHandler | undefined
-            if (!handler) {
-              return new Response(
-                JSON.stringify({ error: 'Approvals MCP not initialized' }),
-                { status: 503, headers: { 'content-type': 'application/json' } },
-              )
-            }
-            return handler(req as unknown as Request)
-          },
-        },
         {
           path: `${routePrefix}/action`,
           method: 'get',
@@ -106,19 +91,10 @@ export const approvalsPlugin: CorePlugin<ApprovalsPluginOptions> =
           createListMyRequestsTool({ payload, options }),
         ]
 
-        const handler = createMcpHandler({
-          payload,
-          serverName: 'approvals',
-          tools,
-          logger,
-        })
-
-        Object.defineProperty(payload, MCP_HANDLER_SYMBOL, {
-          value: handler,
-          enumerable: false,
-          writable: false,
-          configurable: false,
-        })
+        // Payload's own MCP plugin, and the only transport these tools have.
+        // `onInit` is both the earliest they can exist and still early enough
+        // that `mcpPlugin` reads the array populated.
+        options.mcpTools?.add(tools, { serverName: 'approvals', logger })
 
         registry.register({
           id: PLUGIN_ID,

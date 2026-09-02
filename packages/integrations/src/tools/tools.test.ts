@@ -134,6 +134,18 @@ describe('createTriggerSyncTool', () => {
       reason: 'verifying after change',
     })
   })
+
+  // Used to escape as an unhandled rejection and reach the client as a generic
+  // tool failure, with nothing to say the sync had never been queued.
+  it('reports an unreachable Inngest as an error envelope', async () => {
+    const { payload } = createFakePayload(seed)
+    const { inngest } = createFakeInngest(new Error('ECONNREFUSED'))
+    const tool = createTriggerSyncTool({ payload, collectionSlug: SLUG, inngest })
+    const result = (await tool.handler({ integrationId: 'inst-1' }, makeContext())) as {
+      error?: string
+    }
+    expect(result.error).toMatch(/Could not reach Inngest/)
+  })
 })
 
 describe('createTestIntegrationTool', () => {

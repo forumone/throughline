@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-approvals",
-  "version": "0.2.1",
+  "version": "0.8.0",
   "description": "Conversational approval workflow server for Throughline. Provides the approval resolver the publishing server consumes plus MCP tools for requesting and responding to approvals.",
   "type": "module",
   "main": "./dist/index.js",
@@ -57,7 +57,7 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.13.2",
     "eslint": "^9.15.0",
     "inngest": "^4.2.0",
     "payload": "^3.83.0",

@@ -5,8 +5,14 @@ import type { AccessibilityCheck, AccessibilityIssue } from '../options.js'
  * a `url` or `filename` property whose `mimeType`, if present, starts with
  * `image/`). Flags any whose `alt` is missing or empty.
  *
- * Heuristic, not exhaustive — clients with non-standard image shapes
- * register their own check via `accessibilityChecks`.
+ * Skips an upload's `sizes` map: Payload's generated derivatives carry
+ * `filename` and `mimeType` but never `alt`, which lives on the parent
+ * document. They are renditions of an image already checked, not images in
+ * their own right — walking into them reports one false failure per
+ * configured `imageSize`.
+ *
+ * Heuristic, not exhaustive. A host can add checks via `accessibilityChecks`
+ * and switch a built-in off via `disableAccessibilityChecks`.
  */
 export const altTextCheck: AccessibilityCheck = {
   name: 'alt-text',
@@ -41,11 +47,14 @@ function walkForImages(
   }
 
   const obj = value as Record<string, unknown>
-  if (looksLikeImage(obj)) {
+  const isImage = looksLikeImage(obj)
+  if (isImage) {
     visit(obj, path || '(root)')
   }
 
   for (const key of Object.keys(obj)) {
+    // An image's own derivatives are not separate images.
+    if (isImage && key === 'sizes') continue
     walkForImages(obj[key], visit, path ? `${path}.${key}` : key)
   }
 }

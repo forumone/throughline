@@ -34,11 +34,54 @@ const CategorySchema = z.enum([
   'utility',
 ])
 
+/**
+ * Where an editor looks for a component, as distinct from what the component
+ * *is*.
+ *
+ * `category` answers the second question and several consumers reason about it
+ * as a kind. It is a poor answer to the first: a real design system files
+ * roughly half its library under `section`, so a picker grouped on `category`
+ * hands back the flat list the grouping was meant to avoid, while `card` and
+ * `navigation` hold one entry each. Redistributing within `category` to even
+ * the shelves out would file components under the wrong kind for every other
+ * consumer.
+ *
+ * So this is a second, optional field. The values are shelf labels, chosen to
+ * split the sections a `category` cannot:
+ *
+ * - `hero`       — page openers
+ * - `narrative`  — sections that explain, walk through, or tell
+ * - `proof`      — sections that evidence a claim: testimony, clients, results
+ * - `listing`    — collections of records, usually repeating
+ * - `media`      — image, video, audio, and their captions
+ * - `form`       — anything an editor thinks of as a form
+ * - `cta`        — asks
+ * - `navigation` — wayfinding within or across pages
+ * - `utility`    — structural or incidental
+ *
+ * There is deliberately no `section`: a shelf that holds half the library is
+ * the problem this field exists to solve. There is no `card` or `data` either
+ * — both name a kind rather than a place to look, and their contents belong on
+ * `listing` and `proof` respectively.
+ */
+const GroupSchema = z.enum([
+  'hero',
+  'narrative',
+  'proof',
+  'listing',
+  'media',
+  'form',
+  'cta',
+  'navigation',
+  'utility',
+])
+
 export type ContentField = {
   name: string
   type: z.infer<typeof FieldTypeSchema>
   required: boolean
   maxLength?: number | undefined
+  defaultValue?: boolean | undefined
   constraints?: string | undefined
   of?: ContentField[] | undefined
 }
@@ -49,6 +92,7 @@ export type ContentFieldInput = {
   type: z.infer<typeof FieldTypeSchema>
   required?: boolean | undefined
   maxLength?: number | undefined
+  defaultValue?: boolean | undefined
   constraints?: string | undefined
   of?: ContentFieldInput[] | undefined
 }
@@ -59,10 +103,43 @@ const ContentFieldSchema: z.ZodType<ContentField, z.ZodTypeDef, ContentFieldInpu
     type: FieldTypeSchema,
     required: z.boolean().default(false),
     maxLength: z.number().int().positive().optional(),
+    /*
+    What the field holds before an author touches it, for `boolean` only.
+
+    A component's own default lives in its signature — `hasFacade = true` — and
+    is reachable only when the prop arrives as `undefined`. A generated CMS
+    field never leaves it undefined: a checkbox is stored ticked or unticked,
+    so the component is always handed an explicit value and its default can
+    never apply. Without somewhere to declare it, every boolean a contract
+    describes reaches the component as `false`, whatever the component says.
+
+    That inverted `VideoEmbed.hasFacade`, whose whole purpose is to keep a
+    provider's iframe and its third-party cookies off the page until a reader
+    presses play. The contract said "Leave on"; every embed an author added
+    shipped with it off.
+
+    Deliberately boolean-only. `text` and `number` defaults are a different
+    question — an empty string and a missing number are already meaningful, and
+    a default there competes with `required` rather than completing it. Widen
+    this when a component needs it, not before.
+    */
+    defaultValue: z.boolean().optional(),
     /** Human-readable constraint description the AI reasons about. */
     constraints: z.string().optional(),
     /** For array or group fields, the nested field shape. */
     of: z.array(ContentFieldSchema).optional(),
+  }).superRefine((field, ctx) => {
+    // Only `boolean` reads `defaultValue`, so anywhere else it is a value the
+    // author expects to take effect and nothing ever will. Rejecting it is the
+    // difference between a contract that fails validation and a field that
+    // quietly ignores half of what it was told.
+    if (field.defaultValue !== undefined && field.type !== 'boolean') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['defaultValue'],
+        message: `defaultValue is only read for boolean fields; "${field.name}" is ${field.type}.`,
+      })
+    }
   }),
 )
 
@@ -70,6 +147,12 @@ export const ComponentContractSchema = z.object({
   // Identity
   name: z.string().min(1).regex(/^[A-Z][A-Za-z0-9]+$/, 'Component names must be PascalCase'),
   category: CategorySchema,
+  /**
+   * The shelf an authoring UI files this component under. Optional: when it is
+   * absent, {@link groupOf} falls back to {@link category}, so a design system
+   * that sets none groups exactly as it did before this field existed.
+   */
+  group: GroupSchema.optional(),
   description: z.string().min(20).max(280),
   intent: z.string().min(20).max(500),
 
@@ -152,5 +235,20 @@ export const ComponentContractSchema = z.object({
 
 export type ComponentContract = z.infer<typeof ComponentContractSchema>
 export type ComponentCategory = z.infer<typeof CategorySchema>
+export type ComponentGroup = z.infer<typeof GroupSchema>
+
+/**
+ * The shelf a component is filed under: its `group` when set, otherwise its
+ * `category`.
+ *
+ * Anything that groups components should call this rather than reading either
+ * field directly, so a design system part-way through adopting `group` groups
+ * consistently instead of half one way and half the other. It takes a
+ * structural type so it also accepts the looser component shapes consumers
+ * carry around, not only a fully parsed {@link ComponentContract}.
+ */
+export function groupOf(component: { category: string; group?: string | undefined }): string {
+  return component.group ?? component.category
+}
 export type ComponentPlacement = z.infer<typeof PlacementSchema>
 export type ContentFieldType = z.infer<typeof FieldTypeSchema>

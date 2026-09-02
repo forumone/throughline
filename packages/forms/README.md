@@ -9,7 +9,7 @@ After this package, an authorized user can ask Claude "build me a contact form t
 - **`formsPlugin`** — composes the Form Builder plugin and adds the policy layer.
 - **`addFormPolicyFields`** — appends the `policy` group (privacy notice, consent, spam protection, destinations, submitter confirmation) to the Forms collection's fields.
 - **Submit endpoint** at `/api/<routePrefix>/submit` (default `/api/forms/submit`) — public POST that runs honeypot → form lookup → consent → rate limit → persist → fan-out.
-- **MCP server** at `/api/<routePrefix>/mcp` with six tools:
+- **Six MCP tools**, handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody:
 
 | Tool | Use it for | Access |
 |---|---|---|
@@ -127,7 +127,7 @@ Consent is enforced server-side. A request to `/api/forms/submit` with `consent:
 | `ipHashSecret` | `FORMS_IP_HASH_SECRET` env | Required, ≥32 chars |
 | `formsCollectionSlug` | `'forms'` | |
 | `submissionsCollectionSlug` | `'form-submissions'` | |
-| `routePrefix` | `'/forms'` | Payload prepends `/api`; submit lands at `/api/forms/submit`, MCP at `/api/forms/mcp` |
+| `routePrefix` | `'/forms'` | Payload prepends `/api`; the public submit endpoint lands at `/api/forms/submit`. It is the only endpoint this plugin serves |
 | `enabled` | `true` | Set to false to no-op |
 
 ## Related packages

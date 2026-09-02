@@ -32,12 +32,20 @@ export async function generate(answers: Answers, options: GenerateOptions = {}):
   const templatesDir = options.templatesDir ?? DEFAULT_TEMPLATES_DIR
   const onProgress = options.onProgress ?? (() => {})
 
+  // Precompute the design-system package name. The renderer has no nesting, so
+  // we can't put `{{#if packageScope}}...{{/if}}` inside another `{{#if}}`
+  // block (e.g. inside `{{#if useReferenceDs}}` in payload.config).
+  const designSystemName = answers.packageScope
+    ? `@${answers.packageScope}/design-system`
+    : `${answers.projectName}-design-system`
+  const data = { ...answers, designSystemName } as unknown as Record<string, unknown>
+
   onProgress('Creating project structure')
   await mkdir(answers.targetDir, { recursive: true })
   await renderDirectory({
     source: join(templatesDir, 'base'),
     target: answers.targetDir,
-    data: answers as unknown as Record<string, unknown>,
+    data,
   })
 
   onProgress(answers.useReferenceDs ? 'Wiring reference design system' : 'Preparing design system placeholder')
@@ -45,7 +53,7 @@ export async function generate(answers: Answers, options: GenerateOptions = {}):
   await renderDirectory({
     source: join(templatesDir, overlay),
     target: answers.targetDir,
-    data: answers as unknown as Record<string, unknown>,
+    data,
   })
 
   if (answers.initializeGit && !options.skipSideEffects) {
@@ -87,7 +95,7 @@ async function renderDirectory({ source, target, data }: RenderArgs): Promise<vo
   await mkdir(target, { recursive: true })
 
   for (const entry of entries) {
-    const renderedName = renderTemplate(entry.name, data)
+    const renderedName = applyDotfileRename(renderTemplate(entry.name, data))
     const sourcePath = join(source, entry.name)
     const targetPath = join(target, renderedName)
 
@@ -133,6 +141,18 @@ function isBinary(filename: string): boolean {
   return BINARY_EXTENSIONS.has(filename.slice(dot).toLowerCase())
 }
 
+/**
+ * npm strips files literally named `.gitignore` from a published tarball, so
+ * we author them as `gitignore` in templates and restore the dot on output.
+ */
+const DOTFILE_RENAMES: Record<string, string> = {
+  gitignore: '.gitignore',
+}
+
+function applyDotfileRename(name: string): string {
+  return DOTFILE_RENAMES[name] ?? name
+}
+
 async function initGit(dir: string): Promise<void> {
   await runCommand('git', ['init'], dir)
   await runCommand('git', ['add', '.'], dir)
@@ -160,4 +180,4 @@ function runCommand(cmd: string, args: string[], cwd: string): Promise<void> {
 
 // Re-exports kept around so tests in adjacent packages can stub these without
 // reaching into the implementation. Not part of the public API surface.
-export const __testing = { renderDirectory, isBinary, rename, rm, stat }
+export const __testing = { renderDirectory, isBinary, applyDotfileRename, rename, rm, stat }

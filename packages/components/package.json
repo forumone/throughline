@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-components",
-  "version": "0.2.3",
+  "version": "0.5.3",
   "description": "MCP server that exposes a design system manifest as conversational primitives for Throughline.",
   "type": "module",
   "main": "./dist/index.js",
@@ -56,7 +56,7 @@
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-reference-ds": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.13.2",
     "eslint": "^9.15.0",
     "payload": "^3.83.0",
     "typescript": "^5.6.0",

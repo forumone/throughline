@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-workflows",
-  "version": "0.2.1",
+  "version": "0.2.9",
   "description": "Composable Inngest function factories for the Throughline framework — revalidation, scheduled publishing, approval expiration, audit fan-out, healthcheck.",
   "type": "module",
   "main": "./dist/index.js",
@@ -59,7 +59,7 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.13.2",
     "eslint": "^9.15.0",
     "inngest": "^4.2.0",
     "next": "^16.2.4",

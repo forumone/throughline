@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Payload, Where } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { deniedEnvelope, isIntegrationsReader } from './access.js'
+import { INTEGRATIONS_TOOLS } from './descriptors.js'
 
 export interface ListIntegrationsDeps {
   payload: Payload
@@ -23,9 +24,7 @@ export function createListIntegrationsTool(
   deps: ListIntegrationsDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'list_integrations',
-    description:
-      'Lists configured integration instances and their last-sync status. Use to answer "what connections are set up?" or "is the webhook to Slack still working?". Read-only.',
+    ...INTEGRATIONS_TOOLS.listIntegrations,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isIntegrationsReader(ctx)) {

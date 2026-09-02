@@ -4,6 +4,7 @@ import { withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
+import { APPROVALS_TOOLS } from './descriptors.js'
 
 export interface ListMyRequestsDeps {
   payload: Payload
@@ -26,9 +27,7 @@ export function createListMyRequestsTool(deps: ListMyRequestsDeps): McpToolDefin
   })
 
   return {
-    name: 'list_my_requests',
-    description:
-      "Returns approval requests the current user has submitted, optionally filtered by status. Use to answer 'what's the state of my pending approvals?'. Read-only.",
+    ...APPROVALS_TOOLS.listMyRequests,
     inputSchema,
     handler: async (input, ctx) => {
       if (!ctx.user) return { error: 'Must be authenticated to list approval requests' }

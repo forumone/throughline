@@ -53,6 +53,8 @@ interface BaseCorePluginOptions {
 
 Common option shape every Throughline plugin extends. Always honour `enabled === false` (return the incoming config unchanged) and never include `/api` in `routePrefix` (Payload prepends it).
 
+`routePrefix` covers a plugin's own HTTP endpoints — admin controls, an approval action link, a public form post. It does not cover MCP: tools reach a client through the host's `@payloadcms/plugin-mcp`, on one `/api/mcp`. A plugin that serves no HTTP endpoints of its own should `Omit` this option rather than accept one it cannot honour — `auditQueryPlugin`, `componentsPlugin` and `integrationsPlugin` all do.
+
 ### `PluginRegistry`
 
 ```typescript
@@ -85,19 +87,7 @@ interface AuthenticatedUser {
 
 The shape MCP tool handlers receive after Bearer-token auth resolves. The `roles` and `groups` fields drive role-gated tool access.
 
-### `McpAuthenticator`
-
-```typescript
-interface McpAuthResult {
-  ok: boolean
-  user?: AuthenticatedUser
-  reason?: string
-}
-
-type McpAuthenticator = (request: { headers: Headers; body: unknown }) => Promise<McpAuthResult>
-```
-
-The function signature for "validate this MCP request and return a user." Core's `createBearerTokenAuthenticator` produces one of these.
+`McpAuthenticator` and `McpAuthResult` used to live here, describing "validate this MCP request and return a user". Authentication is `@payloadcms/plugin-mcp`'s now — it does the key lookup and hands the tool its user — so both types are gone rather than kept as a shape nothing implements.
 
 ### `McpToolDefinition`
 
@@ -106,14 +96,14 @@ interface McpToolDefinition<Input = unknown, Output = unknown> {
   name: string
   description: string
   inputSchema: ZodSchema<Input>
-  outputSchema?: ZodSchema<Output>
-  // 'admin' | 'editor' | 'approver' | 'form-admin' | string
-  requiredRoles?: string[]
+  // Which tools are consequential, e.g. 'publishing.execute'. Read by nothing:
+  // gating is the per-key checkbox plugin-mcp generates per tool.
+  requiredScope?: string
   handler: (input: Input, ctx: McpToolContext) => Promise<Output>
 }
 ```
 
-What an MCP tool looks like. Throughline plugins build arrays of these and pass them to `createMcpHandler`.
+What an MCP tool looks like. Throughline plugins build arrays of these at `onInit` and hand them to the collector the host passed in — `createMcpToolCollector` in `@forumone/throughline-core` — whose array the host has already given to `@payloadcms/plugin-mcp`.
 
 ### `McpToolContext`
 

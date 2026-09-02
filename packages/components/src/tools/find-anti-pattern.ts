@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { type AuditWriter, withMeta } from '@forumone/throughline-core'
+import { type AuditWriter, auditContext, withMeta } from '@forumone/throughline-core'
 import type { ManifestLoader } from '../manifest-source.js'
 import { findAntiPatterns } from '../validation/composition.js'
+import { COMPONENTS_TOOLS } from './descriptors.js'
 
 export interface FindAntiPatternDeps {
   loader: ManifestLoader
@@ -22,26 +23,17 @@ export function createFindAntiPatternTool(deps: FindAntiPatternDeps): McpToolDef
   })
 
   return {
-    name: 'find_anti_pattern',
-    description:
-      "Scans a proposed composition for known design anti-patterns (multiple Heroes, Hero at the bottom of a page, etc.). Returns matches with explanation and suggested alternatives. Use before publishing to surface editorial issues.",
+    ...COMPONENTS_TOOLS.findAntiPattern,
     inputSchema,
     handler: async (input, ctx) => {
       const manifest = await deps.loader.get()
       const matches = findAntiPatterns({ blocks: input.blocks }, manifest)
 
       await deps.auditWriter({
-        actor: {
-          type: 'user',
-          userId: ctx.user?.id,
-          userName: ctx.user?.name,
-          apiKeyName: ctx.apiKeyName,
-        },
+        ...auditContext(ctx, input._meta),
         action: 'design.find_anti_pattern',
         mcpServer: 'component',
         mcpTool: 'find_anti_pattern',
-        prompt: input._meta?.userPrompt,
-        reasoning: input._meta?.reasoning,
       })
 
       return { matches }

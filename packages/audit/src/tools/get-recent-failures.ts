@@ -3,6 +3,7 @@ import type { Payload, Where } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
+import { AUDIT_TOOLS } from './descriptors.js'
 
 export interface GetRecentFailuresDeps {
   payload: Payload
@@ -34,9 +35,7 @@ export function createGetRecentFailuresTool(
   deps: GetRecentFailuresDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'get_recent_failures',
-    description:
-      'Recent failed operations across all MCP servers. Use for "what broke recently?" or when diagnosing issues. Returns actions with success=false and their error messages, most recent first.',
+    ...AUDIT_TOOLS.getRecentFailures,
     inputSchema,
     handler: async (input, ctx) => {
       if (!isAuditReader(ctx)) {

@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { withMeta, getAuditWriter } from '@forumone/throughline-core'
+import { auditContext, withMeta, getAuditWriter } from '@forumone/throughline-core'
 import type { ResolvedFormsConfig } from '../options.js'
 import { validateDestinationLabel } from '../destinations.js'
 import { deniedEnvelope, isFormsAuthor } from './access.js'
+import { FORMS_TOOLS } from './descriptors.js'
 
 const inputSchema = withMeta({
   formId: z.string(),
@@ -20,9 +21,8 @@ export function createUpdateFormDestinationsTool(
   deps: UpdateFormDestinationsDeps,
 ): McpToolDefinition<typeof inputSchema> {
   return {
-    name: 'update_form_destinations',
-    description:
-      "Replaces a form's destinations with the given labels. Every label must be on the allowlist (use list_allowed_destinations to discover). The replace-all semantics are deliberate — incremental destination edits are too easy to misuse via prompt injection.",
+    ...FORMS_TOOLS.updateFormDestinations,
+    requiredScope: 'forms.manage',
     inputSchema,
     handler: async (input, ctx) => {
       if (!isFormsAuthor(ctx)) {
@@ -62,20 +62,13 @@ export function createUpdateFormDestinationsTool(
 
       const auditWriter = getAuditWriter(deps.payload)
       await auditWriter({
-        actor: {
-          type: 'user',
-          ...(ctx.user?.id ? { userId: ctx.user.id } : {}),
-          ...(ctx.user?.name ? { userName: ctx.user.name } : {}),
-          ...(ctx.apiKeyName ? { apiKeyName: ctx.apiKeyName } : {}),
-        },
+        ...auditContext(ctx, input._meta),
         action: 'form.updated',
         mcpServer: 'forms',
         mcpTool: 'update_form_destinations',
         targetCollection: deps.resolved.formsCollectionSlug,
         targetId: input.formId,
         targetTitle: typeof existing['title'] === 'string' ? (existing['title'] as string) : undefined,
-        ...(input._meta?.userPrompt ? { prompt: input._meta.userPrompt } : {}),
-        ...(input._meta?.reasoning ? { reasoning: input._meta.reasoning } : {}),
         changesSummary: `Set destinations to: ${input.destinationLabels.join(', ')}.`,
       })
 

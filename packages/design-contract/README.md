@@ -64,6 +64,27 @@ export const contract: ComponentContract = {
 
 Your design system's build tooling aggregates these into a `Manifest`. See the reference design system for a canonical example.
 
+## `category` and `group`
+
+Two fields, two questions.
+
+`category` is what the component **is** — `hero`, `section`, `card`, `media`, `cta`, `navigation`, `data`, `form`, `utility`. It is required, and consumers reason about it as a kind: `list_components` in the components MCP server filters on it.
+
+`group` is where an **editor looks for it** — `hero`, `narrative`, `proof`, `listing`, `media`, `form`, `cta`, `navigation`, `utility`. It is optional, and exists because `category` is a bad answer to that second question at any real size. A design system of sixty blocks files roughly half of them under `section`, so an authoring UI grouped on `category` hands back the flat list the grouping was meant to avoid, while `card` and `navigation` hold one entry each. Evening the shelves out by moving components between categories would file them under the wrong *kind* for every other consumer, so the fix is a second field rather than a looser first one.
+
+There is deliberately no `section` in the group vocabulary — a shelf holding half the library is the problem this field exists to solve — and no `card` or `data`, both of which name a kind rather than a place to look.
+
+Read the resolved value with `groupOf`, never either field directly:
+
+```typescript
+import { groupOf } from '@forumone/throughline-design-contract'
+
+groupOf({ category: 'section', group: 'proof' }) // 'proof'
+groupOf({ category: 'hero' })                    // 'hero' — falls back
+```
+
+The fallback is what makes this a non-breaking addition: a design system that sets no `group` anywhere groups exactly as it did before the field existed, and one part-way through adopting it stays consistent instead of grouping half one way and half the other.
+
 ## Loading a manifest at runtime
 
 ```typescript
@@ -77,6 +98,12 @@ console.log(hero.intent)
 
 for (const name of loaded.listByCategory('card')) {
   console.log(name)
+}
+
+// Grouped for an authoring UI. Matches on the resolved group, so components
+// with no `group` are found by their category.
+for (const shelf of loaded.listGroups()) {
+  console.log(shelf, loaded.listByGroup(shelf).length)
 }
 ```
 
