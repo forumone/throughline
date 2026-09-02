@@ -18,12 +18,28 @@ import { createRecordDraftWritesHook } from './draft-writes.js'
 
 const BYPASS = { bypassPublishingServer: true }
 
+/*
+A database this file alone can see.
+
+Both integration suites here used to open `file::memory:?cache=shared`, and
+`cache=shared` scopes an in-memory SQLite database to that *name* rather than to
+a connection — so two files opening it in one worker got the same tables. The
+symptom was a write this file expects to be refused being allowed, roughly once
+in several runs, which reads as a defect in the hook rather than as two suites
+sharing a `pages` table.
+
+`:memory:` is private to the client that opens it, which is one per test file.
+The libSQL client `@payloadcms/db-sqlite` uses rejects `?mode=memory`, so a
+distinct shared-cache name is not available as the alternative.
+*/
+const DATABASE_URL = ':memory:'
+
 let payload: Payload
 
 beforeAll(async () => {
   const config = await buildConfig({
     secret: 'integration-secret-integration-secret',
-    db: sqliteAdapter({ client: { url: 'file::memory:?cache=shared' } }),
+    db: sqliteAdapter({ client: { url: DATABASE_URL } }),
     collections: [
       {
         slug: 'pages',
