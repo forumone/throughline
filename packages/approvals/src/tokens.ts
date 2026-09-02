@@ -19,7 +19,27 @@ export interface ActionToken {
   issuedAt: number
 }
 
-const DEFAULT_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
+/**
+ * How long an emailed action link stays usable.
+ *
+ * Was fourteen days, which outlived the thing the link acts on: `plugin.ts`
+ * expires an approval request after seven (`expirationDays ?? 7`), so the
+ * second week of a token's life could only ever act on something already gone.
+ *
+ * Seventy-two hours is what an approval actually needs. It covers a weekend,
+ * which is the realistic gap between sending a request and somebody opening
+ * their mail, and it is well inside the request's own expiry so the two cannot
+ * disagree. `createExpireStaleApprovalsFunction` handles anything that ages
+ * out either way.
+ *
+ * The token is otherwise well built — HMAC-SHA256, constant-time compare, bound
+ * to one approval, action and approver, single-use, with a confirmation
+ * interstitial — so this is narrowing a window rather than closing a hole.
+ * forumone/forumone-2026#486, F-13.
+ *
+ * Overridable per call through `maxAgeMs`, which is unchanged.
+ */
+const DEFAULT_MAX_AGE_MS = 72 * 60 * 60 * 1000
 const TOKEN_PARTS = 5
 const VALID_ACTIONS = new Set<ActionTokenAction>(['approve', 'decline', 'changes', 'discuss'])
 const ENCODER = new TextEncoder()

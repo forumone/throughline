@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-forms",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Policy-aware forms layer for the Throughline framework. Wraps Payload's Form Builder with privacy notices, consent, honeypot spam protection, IP rate limiting, a destination allowlist, and submitter confirmation. Six MCP tools for Claude-driven form management; submissions fan out to email and webhook destinations via Inngest.",
   "type": "module",
   "main": "./dist/index.js",

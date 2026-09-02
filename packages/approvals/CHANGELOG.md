@@ -1,5 +1,83 @@
 # @forumone/throughline-approvals
 
+## 0.8.0
+
+### Minor Changes
+
+- a12fa96: An emailed approval link lasts 72 hours, not 14 days
+
+  The action token's default lifetime outlived the thing it acts on. `plugin.ts`
+  expires an approval request after seven days (`expirationDays ?? 7`), so the
+  second week of a token's life could only ever act on a request that was already
+  gone — a link that still verifies and then finds nothing.
+
+  Seventy-two hours is what an approval actually needs: it covers a weekend, which
+  is the realistic gap between sending a request and somebody opening their mail,
+  and it stays well inside the request's own expiry so the two cannot disagree.
+  `createExpireStaleApprovalsFunction` handles anything that ages out either way.
+
+  The token is otherwise well built — HMAC-SHA256, constant-time compare, bound to
+  one approval, action and approver, single-use, with a confirmation interstitial
+  — so this narrows a window rather than closing a hole.
+
+  `maxAgeMs` per call is unchanged, so a host that wants the old behaviour can
+  pass it. **Minor rather than patch**: a link somebody was sitting on for a week
+  stops working, which is a behaviour change even though it is the intended one.
+
+  Nothing asserted the default before. There is now a test that does, and it says
+  why the number is what it is, so it cannot drift back without somebody deciding
+  to.
+
+  Found auditing the host that consumes this suite: forumone/forumone-2026#486,
+  F-13.
+
+## 0.7.1
+
+### Patch Changes
+
+- 957403b: One `@types/node`, so a host does not end up with two copies of `@payloadcms/ui`
+
+  Twelve packages asked for `@types/node@^20.17.0` and `design-system-payload`
+  asked for `^24.13.2`. Inside this repository that is untidy. Inside a host that
+  consumes the suite from source — which is how `forumone/forumone-2026` uses it,
+  as a git submodule in one pnpm workspace — it is a runtime failure.
+
+  pnpm hashes a package's identity with its resolved peers. `publishing` and
+  `integrations` both take `@payloadcms/ui` as a peer _and_ as a devDependency, so
+  each got its own copy resolved against `@types/node@20`, while the host's copy
+  resolved against `@types/node@24`. Same version, 3.87.1, two directories:
+
+      apps/web                     → @payloadcms+ui@3.87.1_…_9ce0de5c…
+      packages/publishing          → @payloadcms+ui@3.87.1_…_13184ec4…
+      packages/integrations        → @payloadcms+ui@3.87.1_…_13184ec4…
+
+  Two directories are two module instances. Two instances of `@payloadcms/ui` are
+  two `ConfigContext` objects, and `PublishButton` read the one the admin's
+  provider had never populated:
+
+      TypeError: Cannot destructure property 'config' of useConfig() as it is undefined
+
+  The host saw an intermittent 500 on every admin document view — `PublishButton`
+  is installed on each collection with a publish policy, so lists, `/admin` and
+  the login screen were all fine and only editing broke. Nothing caught it:
+  install, `--frozen-lockfile`, typecheck, lint and every test passed, because the
+  two copies are byte-identical and the split exists only at module resolution.
+  forumone/forumone-2026#498.
+
+  Aligning on `^24.13.2` collapses them to one instance. Nothing here targets a
+  Node 20 API deliberately; the packages typecheck and test unchanged against the
+  newer types.
+
+  `create-throughline` keeps `^20.17.0` on purpose. It is the one package
+  declaring `engines.node: >=20.9.0`, and typechecking a CLI against types newer
+  than the runtime it promises to support is how a Node 24-only call ships to
+  somebody on Node 20.
+
+- Updated dependencies [957403b]
+  - @forumone/throughline-core@0.8.1
+  - @forumone/throughline-plugin-contract@0.4.1
+  - @forumone/throughline-publishing@0.9.1
+
 ## 0.7.0
 
 ### Minor Changes
