@@ -104,9 +104,34 @@ const publishTool: McpToolDefinition = {
 }
 ```
 
-A tool that declares no `requiredScope` is callable by any authenticated key, which is the right default for a read. A tool that declares one is **hidden from `tools/list`** and refused on a direct call unless the key names that scope — hidden as well as refused, because an agent shown a tool it will be turned away from will try it, fail, and report the tool as broken when what is narrow is the key.
+> **Nothing enforces this today.** The paragraphs below describe how
+> `requiredScope` behaved when each server mounted its own `/api/<server>/mcp`
+> endpoint behind a hand-written JSON-RPC handler. That handler — and the
+> `auth.ts` that held callers to their scopes — were removed by "one MCP
+> transport, not seven" (#80), which consolidated every server onto Payload's
+> `/api/mcp`. The scope declarations survived the refactor; the enforcement did
+> not, and this section was not updated to say so. Audit 04 F-02.
+>
+> **What gates a tool now** is the per-key checkbox `@payloadcms/plugin-mcp`
+> generates, one per tool name. Two consequences worth knowing before relying
+> on either: all 27 of them **default to `true`**
+> (`createApiKeysCollection.js:4-15`), and a checkbox list cannot express
+> "writes off until granted, reads on" the way a scope can.
+>
+> The declarations are kept because they are the tool → scope mapping a
+> scope-aware default would be built from — see the note on `requiredScope` in
+> `@forumone/throughline-plugin-contract`, which states the same thing at the
+> type. Reinstating enforcement means putting it on the surviving transport.
 
-A key carrying no scopes at all passes nothing scoped. Absent is read as none, not as everything.
+Historically, and as the intended design: a tool that declares no
+`requiredScope` is callable by any authenticated key, which is the right
+default for a read. A tool that declares one was **hidden from `tools/list`**
+and refused on a direct call unless the key named that scope — hidden as well
+as refused, because an agent shown a tool it will be turned away from will try
+it, fail, and report the tool as broken when what is narrow is the key.
+
+A key carrying no scopes at all passed nothing scoped. Absent was read as none,
+not as everything.
 
 The consequential tools in this suite and the scopes they require:
 

@@ -24,6 +24,18 @@ export const fakeContext: McpToolContext = {
   logger: noopLogger,
 }
 
+/*
+What a `Bearer`-authenticated MCP call actually looks like.
+
+`plugin-mcp` never assigns `req.user`, so Throughline's `contextFrom(req)`
+reads it and finds null — audit 04 F-03. Every publishing tool used to accept
+this and write at `overrideAccess: true`; all five now refuse it.
+*/
+export const anonymousContext: McpToolContext = {
+  ...fakeContext,
+  user: null,
+}
+
 export interface MakeDepsOverrides {
   document?: Record<string, unknown>
   payloadFindByID?: ReturnType<typeof vi.fn>
@@ -75,9 +87,10 @@ export function makeDeps(overrides: MakeDepsOverrides = {}) {
 export async function callTool<I extends Record<string, unknown>>(
   tool: McpToolDefinition,
   args: I,
+  ctx: McpToolContext = fakeContext,
 ): Promise<unknown> {
   const parsed = tool.inputSchema.parse(args)
-  return tool.handler(parsed, fakeContext)
+  return tool.handler(parsed, ctx)
 }
 
 export function attachComponentValidator(

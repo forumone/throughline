@@ -4,6 +4,7 @@ import { withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { PublishingPluginOptions } from '../options.js'
 import { createPublishingService, type PublishingService } from '../service.js'
+import { resolvePublishingActor } from './actor.js'
 import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface GetPublishStatusToolDeps {
@@ -27,10 +28,13 @@ export function createGetPublishStatusTool(deps: GetPublishStatusToolDeps): McpT
     ...PUBLISHING_TOOLS.getPublishStatus,
     inputSchema,
     handler: async (input, ctx) => {
+      const actor = resolvePublishingActor(ctx)
+      if ('error' in actor) return actor
+
       const status = await service.getStatus({
         collection: input.collection,
         id: input.id,
-        actor: { user: ctx.user, apiKeyName: ctx.apiKeyName, channel: 'mcp' },
+        actor,
       })
 
       return {

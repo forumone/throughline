@@ -5,6 +5,7 @@ import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
 import { runPreflightPipeline } from '../pipeline/index.js'
+import { resolvePublishingActor } from './actor.js'
 import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface SchedulePublishToolDeps {
@@ -28,6 +29,9 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
     requiredScope: 'publishing.execute',
     inputSchema,
     handler: async (input, ctx) => {
+      const actor = resolvePublishingActor(ctx)
+      if ('error' in actor) return actor
+
       const collection = resolveCollection(deps.options, input.collection)
       const publishAtMs = Date.parse(input.publishAt)
       if (publishAtMs <= Date.now()) {
@@ -37,10 +41,14 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         }
       }
 
+      // As the caller, so scheduling a document they cannot read is refused
+      // here rather than at the moment the cron fires it.
       const document = (await deps.payload.findByID({
         collection: collection.slug,
         id: input.id,
         draft: true,
+        user: actor.enforceAccessAs,
+        overrideAccess: false,
       })) as Record<string, unknown>
 
       const preflight = await runPreflightPipeline({
@@ -50,7 +58,7 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         collection,
         document,
         documentId: input.id,
-        actor: { user: ctx.user, apiKeyName: ctx.apiKeyName },
+        actor,
         ...(input._meta ? { meta: input._meta } : {}),
       })
 
@@ -84,6 +92,10 @@ export function createSchedulePublishTool(deps: SchedulePublishToolDeps): McpToo
         data: { [collection.scheduledPublishField]: input.publishAt },
         overrideLock: false,
         context: { bypassPublishingServer: false },
+        // As the caller. Scheduling is a write to a published document, and it
+        // ran at `overrideAccess: true` like the other four — audit 04 F-02.
+        user: actor.enforceAccessAs,
+        overrideAccess: false,
       })
 
       // The schedule is already persisted; a failed emission must not undo

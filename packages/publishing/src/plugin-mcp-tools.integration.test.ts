@@ -97,9 +97,20 @@ describe('publishingPlugin mcpTools', () => {
   it('serves a tool that reaches the real pipeline', async () => {
     const publish = collector.tools.find(tool => tool.name === 'publish')
 
+    /*
+    An identity, which this used to pass as `user: null`. All five publishing
+    tools now refuse that before touching the pipeline (audit 04 F-02), so the
+    null form no longer tests what this is named for — it tests the guard, and
+    the case below does that deliberately.
+    */
     const result = await publish?.handler(
       { collection: 'pages', id: '404' },
-      { user: null, payloadAPI: 'MCP', payload } as never,
+      {
+        user: { id: 'u1', email: 'tester@example.com', name: 'Tester', roles: ['admin'], groups: [] },
+        apiKeyName: 'test-key',
+        payloadAPI: 'MCP',
+        payload,
+      } as never,
       undefined,
     )
 
@@ -109,5 +120,28 @@ describe('publishingPlugin mcpTools', () => {
     }
     expect(body.published).toBe(false)
     expect(body.failedAt).toBe('exist')
+  })
+
+  /*
+  And the other half, through the same transport: with no identity the call is
+  refused before the pipeline is reached. This is the shape a real
+  `Bearer`-authenticated MCP request has, because `plugin-mcp` never assigns
+  `req.user` — audit 04 F-03.
+  */
+  it('refuses a tool call carrying no identity', async () => {
+    const publish = collector.tools.find(tool => tool.name === 'publish')
+
+    const result = await publish?.handler(
+      { collection: 'pages', id: '404' },
+      { user: null, apiKeyName: 'test-key', payloadAPI: 'MCP', payload } as never,
+      undefined,
+    )
+
+    const body = JSON.parse(String(result?.content[0]?.text)) as {
+      error?: string
+      failedAt?: string
+    }
+    expect(body.error).toMatch(/must be authenticated/i)
+    expect(body.failedAt, 'the pipeline ran anyway').toBeUndefined()
   })
 })
