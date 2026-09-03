@@ -1,5 +1,12 @@
 # @forumone/throughline-integrations
 
+## 0.8.3
+
+### Patch Changes
+
+- Updated dependencies [262768a]
+  - @forumone/throughline-core@0.8.2
+
 ## 0.8.2
 
 ### Patch Changes
