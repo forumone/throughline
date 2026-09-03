@@ -110,7 +110,7 @@ The boundary is enforced at the application layer. Database access bypasses it (
 | Sessions | Cookies | Signed (not encrypted) by `PAYLOAD_SECRET` |
 | MCP API keys | `api-keys` collection | Plaintext at rest (Postgres); use database-level encryption-at-rest for sensitive deployments |
 | Integration configs | `integrations` collection | Plaintext at rest |
-| Audit log diffs | `audit-log` collection | Plaintext; can include sensitive `before`/`after` values |
+| Audit log diffs | `audit-events` collection, `diff` column | Plaintext; each entry is `{ before, after }` and can hold sensitive values |
 | Approval tokens (in email URLs) | Not stored after send; signed | HMAC; verify-only |
 
 If your compliance posture requires field-level encryption (HIPAA, PCI), that's a Phase 2 expansion — Payload supports custom field hooks that can transparently en/decrypt values, but it's not built into Throughline.

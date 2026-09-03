@@ -116,7 +116,7 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
         at all. This plugin used to serve its own `/mcp` endpoint as a fallback;
         it no longer does.
         */
-        options.mcpTools?.add(tools, { serverName: 'publishing', logger })
+        options.mcpTools?.add(tools, { serverName: 'publishing', logger, audit: auditWriter })
 
         registry.register({
           id: PLUGIN_ID,

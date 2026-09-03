@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import type { Logger, McpToolContext, McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import type { AuditMcpServer } from '../audit/types.js'
+import type { AuditWriter } from '../audit/writer.js'
 import { defaultLogger } from '../logger/index.js'
+import { auditContext } from './audit-context.js'
+import { McpMetaSchema } from './meta.js'
 
 /*
 Throughline's tools, in the shape `@payloadcms/plugin-mcp` takes.
@@ -60,6 +64,20 @@ export interface ToPayloadMcpToolOptions {
    */
   apiKeyName?: string
   logger?: Logger
+  /**
+   * Where a tool's unhandled throw is recorded, as `system.error`.
+   *
+   * Optional, and absent means the previous behaviour: the throw reaches
+   * `plugin-mcp`, becomes a JSON-RPC error, and leaves no trace. Every server
+   * in the suite passes one; a host wiring a tool by hand need not.
+   */
+  audit?: AuditWriter
+  /**
+   * Which `mcpServer` those rows are attributed to. Derived from the collector's
+   * `serverName` by `auditServerFor`, which is not the identity function — see
+   * `audit-server.ts`.
+   */
+  auditServer?: AuditMcpServer
 }
 
 /**
@@ -88,9 +106,87 @@ export function toPayloadMcpTool(
     description: tool.description,
     parameters: shape,
     handler: async (args, req) => {
-      const result = await tool.handler(args, contextFrom(req, options))
-      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+      const context = contextFrom(req, options)
+      try {
+        const result = await tool.handler(args, context)
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+      } catch (error) {
+        await recordToolFailure(tool.name, error, args, context, options)
+        throw error
+      }
     },
+  }
+}
+
+/*
+The one place a tool's crash becomes a row, and the reason `system.error` had a
+name in the taxonomy and no writer.
+
+Audit 12 H3: `'system.error'` was declared in `audit/types.ts`, present in the
+Postgres enum, and written by nothing — while `observability.md` opened with
+"the audit log is the single most useful debugging tool" and listed errors among
+what lands there. A tool that returns `deniedEnvelope` or an `{ error }` result
+audits itself; a tool that *throws* did not, so the failures most worth reading
+were the only ones absent.
+
+This is the choke point every tool in the suite passes through — all six
+servers, every tool — so wrapping here is one wrap rather than one per tool,
+and a tool added tomorrow is covered without its author knowing this file
+exists. It also covers the tools that audit nothing else: `list_components`,
+`get_contract`, `get_variants`, `get_tokens` and the five audit reads write no
+row on success, so a crash is the only thing they have ever recorded.
+
+Three properties it has to have, in order:
+
+**The original error still propagates.** `plugin-mcp` turns a throw into a
+JSON-RPC error and the client needs that. Recording is a side effect, not a
+handler.
+
+**Recording cannot itself fail the call.** `createAuditWriter` already swallows
+its own write failures, but `options.audit` is an interface and a caller may
+pass something less careful, so the `await` is wrapped too. An audit miss is a
+gap in a log; a throw from here would replace the tool's real error with this
+file's, which is the one outcome that would make debugging worse rather than
+better.
+
+**The message is the error's, and nothing else.** No stack: `errorMessage` is a
+`varchar` on a table admins and editors can read through the admin UI, and a
+stack names file paths and sometimes argument values. The arguments are not
+recorded either — a tool's input can carry a form submission or a draft — but
+`_meta` is, because the agent's own prompt and reasoning are what make a crash
+row legible, and they are already recorded on every successful write.
+*/
+async function recordToolFailure(
+  toolName: string,
+  error: unknown,
+  args: Record<string, unknown>,
+  context: McpToolContext,
+  options: ToPayloadMcpToolOptions,
+): Promise<void> {
+  const { audit, auditServer } = options
+  const logger = context.logger ?? defaultLogger
+  const message = error instanceof Error ? error.message : String(error)
+
+  logger.error(`MCP tool "${toolName}" threw`, { tool: toolName, error: message })
+
+  if (!audit || !auditServer) return
+
+  try {
+    const meta = McpMetaSchema.safeParse(args['_meta'])
+    await audit({
+      ...auditContext(context, meta.success ? meta.data : undefined),
+      action: 'system.error',
+      mcpServer: auditServer,
+      mcpTool: toolName,
+      summary: `${toolName} threw: ${message}`,
+      success: false,
+      errorMessage: message,
+    })
+  } catch (recordError) {
+    logger.error('Recording an MCP tool failure failed', {
+      tool: toolName,
+      error: String(recordError),
+    })
   }
 }
 

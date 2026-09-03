@@ -179,4 +179,56 @@ describe('createMcpToolCollector', () => {
 
     expect((handler.mock.calls[0]?.[1] as { apiKeyName: string }).apiKeyName).toBe('publishing')
   })
+  /*
+  The audit wiring for 12 H3's `system.error`. The collector is where a
+  server's collector name becomes the audit log's `mcpServer`, and the two
+  vocabularies disagree about one entry — see `audit-server.ts`.
+  */
+  it('resolves the audit server name for the server that passes a writer', async () => {
+    const audit = vi.fn(async () => {})
+    const collector = createMcpToolCollector()
+    collector.declare([descriptor('suggest-for-intent')], { serverName: 'components' })
+    collector.add(
+      [
+        {
+          ...tool('suggest-for-intent'),
+          handler: (async () => {
+            throw new Error('the manifest is unreachable')
+          }) as McpToolDefinition['handler'],
+        },
+      ],
+      { serverName: 'components', audit },
+    )
+
+    await collector.tools[0]
+      ?.handler({}, { user: null, payloadAPI: 'MCP' }, undefined)
+      .catch(() => {})
+
+    // `component`, not `components`. The collector's name is not the enum's.
+    expect(audit.mock.calls[0]?.[0]).toMatchObject({
+      action: 'system.error',
+      mcpServer: 'component',
+      mcpTool: 'suggest-for-intent',
+    })
+  })
+
+  it('refuses at boot when a server passes a writer and has no audit name', () => {
+    const collector = createMcpToolCollector()
+    collector.declare([descriptor('narrate')], { serverName: 'narration' })
+
+    expect(() =>
+      collector.add([tool('narrate')], { serverName: 'narration', audit: vi.fn(async () => {}) }),
+    ).toThrow(/enum_audit_events_mcp_server/)
+  })
+
+  /*
+  A host wiring a tool by hand supplies no writer, and should not have to
+  invent a server name to do it.
+  */
+  it('says nothing about audit names when no writer is passed', () => {
+    const collector = createMcpToolCollector()
+    collector.declare([descriptor('narrate')], { serverName: 'narration' })
+
+    expect(() => collector.add([tool('narrate')], { serverName: 'narration' })).not.toThrow()
+  })
 })

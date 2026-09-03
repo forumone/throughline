@@ -94,7 +94,7 @@ export const approvalsPlugin: CorePlugin<ApprovalsPluginOptions> =
         // Payload's own MCP plugin, and the only transport these tools have.
         // `onInit` is both the earliest they can exist and still early enough
         // that `mcpPlugin` reads the array populated.
-        options.mcpTools?.add(tools, { serverName: 'approvals', logger })
+        options.mcpTools?.add(tools, { serverName: 'approvals', logger, audit: auditWriter })
 
         registry.register({
           id: PLUGIN_ID,
