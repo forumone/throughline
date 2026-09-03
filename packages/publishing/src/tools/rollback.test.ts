@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createRollbackTool } from './rollback.js'
-import { anonymousContext, callTool, fakeContext, makeDeps } from './_test-helpers.js'
+import { callTool, fakeContext, makeDeps } from './_test-helpers.js'
 
 describe('rollback tool', () => {
   it('restores the named version, fires content/page.rolled_back, audits success', async () => {
