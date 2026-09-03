@@ -4,6 +4,7 @@ import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { sendEventSafely } from '../events.js'
 import { type PublishingPluginOptions, resolveCollection } from '../options.js'
+import { resolvePublishingActor } from './actor.js'
 import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface RollbackToolDeps {
@@ -24,7 +25,20 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
     requiredScope: 'publishing.execute',
     inputSchema,
     handler: async (input, ctx) => {
+      const actor = resolvePublishingActor(ctx)
+      if ('error' in actor) return actor
+
       const collection = resolveCollection(deps.options, input.collection)
+
+      /*
+      Both reads and the restore run as the caller with `overrideAccess: false`.
+
+      This tool had it worst of the five: the version lookup ran at the Local
+      API default, and `restoreVersion` was called with no user and no override
+      flag at all — so a rollback was a write to a published document that
+      consulted nothing. Audit 04 F-02.
+      */
+      const enforce = { user: actor.enforceAccessAs, overrideAccess: false } as const
 
       // Confirm the version belongs to this document before restoring.
       const versions = await deps.payload.findVersions({
@@ -33,6 +47,7 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
           and: [{ id: { equals: input.versionId } }, { parent: { equals: input.id } }],
         },
         limit: 1,
+        ...enforce,
       })
 
       if (!versions.docs[0]) {
@@ -55,6 +70,7 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
       await deps.payload.restoreVersion({
         collection: collection.slug,
         id: input.versionId,
+        ...enforce,
       })
 
       // The version is already restored; a failed emission must not undo

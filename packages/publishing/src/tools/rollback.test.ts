@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createRollbackTool } from './rollback.js'
-import { callTool, makeDeps } from './_test-helpers.js'
+import { anonymousContext, callTool, fakeContext, makeDeps } from './_test-helpers.js'
 
 describe('rollback tool', () => {
   it('restores the named version, fires content/page.rolled_back, audits success', async () => {
@@ -20,9 +20,17 @@ describe('rollback tool', () => {
     expect(result.restored).toBe(true)
     expect(result.toVersionId).toBe('v_old')
 
+    /*
+    `user` and `overrideAccess: false` are the assertion, not noise. This call
+    used to be `{ collection, id }` — no user, no override flag — so a rollback
+    wrote to a published document with nothing consulted, and this test said so
+    was fine. Audit 04 F-02.
+    */
     expect(deps.spies.payloadRestoreVersion).toHaveBeenCalledWith({
       collection: 'pages',
       id: 'v_old',
+      user: fakeContext.user,
+      overrideAccess: false,
     })
 
     const eventArgs = deps.spies.inngestSend.mock.calls[0]?.[0] as { name: string; data: Record<string, unknown> }

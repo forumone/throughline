@@ -4,6 +4,7 @@ import { type AuditWriter, withMeta } from '@forumone/throughline-core'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import type { PublishingPluginOptions } from '../options.js'
 import { createPublishingService, type PublishingService } from '../service.js'
+import { resolvePublishingActor } from './actor.js'
 import { PUBLISHING_TOOLS } from './descriptors.js'
 
 export interface PublishToolDeps {
@@ -32,12 +33,16 @@ export function createPublishTool(deps: PublishToolDeps): McpToolDefinition {
     */
     requiredScope: 'publishing.execute',
     inputSchema,
-    handler: async (input, ctx) =>
-      service.publish({
+    handler: async (input, ctx) => {
+      const actor = resolvePublishingActor(ctx)
+      if ('error' in actor) return actor
+
+      return service.publish({
         collection: input.collection,
         id: input.id,
-        actor: { user: ctx.user, apiKeyName: ctx.apiKeyName, channel: 'mcp' },
+        actor,
         ...(input._meta ? { meta: input._meta } : {}),
-      }),
+      })
+    },
   }
 }

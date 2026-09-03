@@ -14,8 +14,21 @@ export interface PipelineActor {
   /**
    * When set, Payload reads and writes inside the pipeline run as this user
    * with `overrideAccess: false`, so the collection's own access control
-   * applies. The admin path sets it to the logged-in editor; the MCP path
-   * leaves it unset because the API key is its own trust boundary.
+   * applies. **Both channels set it**, and anything that does not is running
+   * unauthorized writes.
+   *
+   * This used to end "the MCP path leaves it unset because the API key is its
+   * own trust boundary." It is not one. `plugin-mcp` generates a per-key
+   * checkbox for every tool and **all 27 default to `true`**
+   * (`createApiKeysCollection.js:4-15`); the `requiredScope` each tool
+   * declares is read by nothing anywhere in the tree; and the key document
+   * itself carries no `roles` field, so every role check denies while
+   * Payload's `defaultAccess` — `Boolean(user)` — allows. A key was therefore
+   * a bearer credential that could publish, unpublish, roll back or schedule
+   * any document in any collection with nothing consulted. Audit 04 F-02.
+   *
+   * `tools/actor.ts` is what sets it now, and refuses when there is no
+   * identity to set it to.
    */
   enforceAccessAs?: TypedUser | undefined
 }
