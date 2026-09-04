@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-audit",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Read-only MCP query tools over the Throughline audit log. Pairs with core's auditPlugin (which writes records).",
   "type": "module",
   "main": "./dist/index.js",
