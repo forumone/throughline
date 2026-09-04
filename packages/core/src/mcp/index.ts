@@ -21,3 +21,5 @@ export type {
 } from './collector.js'
 
 export { deniedEnvelope } from './envelope.js'
+
+export { auditServerFor, mcpServerRefusal } from './audit-server.js'

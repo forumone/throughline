@@ -1,6 +1,6 @@
 import type { CorePlugin, McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import { createNamedLogger, defaultLogger } from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import { getEmailClient as readEmailClient } from '@forumone/throughline-email'
 import type { InngestFunction } from 'inngest'
 import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
@@ -148,6 +148,7 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
         registry.requireCapability('audit-log', PLUGIN_ID)
         registry.requireCapability('email', PLUGIN_ID)
 
+        const auditWriter = getAuditWriter(payload)
         const tools = [
           createListAllowedDestinationsTool({ options: resolved.options }),
           createValidateFormTool({ options: resolved.options }),
@@ -160,7 +161,7 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
         // Payload's own MCP plugin, and the only transport these tools have.
         // `onInit` is both the earliest they can exist and still early enough
         // that `mcpPlugin` reads the array populated.
-        resolved.options.mcpTools?.add(tools, { serverName: 'forms', logger })
+        resolved.options.mcpTools?.add(tools, { serverName: 'forms', logger, audit: auditWriter })
 
         const fanOutDeps = { inngest: resolved.options.inngest, payload, resolved }
         const getEmailClient = () => readEmailClient(payload)

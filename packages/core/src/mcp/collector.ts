@@ -1,4 +1,5 @@
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import { auditServerFor, mcpServerRefusal } from './audit-server.js'
 import { toPayloadMcpTools, type PayloadMcpTool, type ToPayloadMcpToolOptions } from './payload-mcp.js'
 
 /*
@@ -152,7 +153,26 @@ export function createMcpToolCollector(
     add(incoming, addOptions = {}) {
       const { serverName = 'an unnamed server', ...toolOptions } = addOptions
 
-      for (const tool of toPayloadMcpTools(incoming, { ...options, ...toolOptions })) {
+      /*
+      Which `mcpServer` this server's `system.error` rows carry, resolved once
+      per server at `onInit` rather than per request — and refused rather than
+      guessed, because the collector's names and the audit enum's names are two
+      lists that already disagree about one entry. See `audit-server.ts`.
+
+      Only when a writer was actually passed. A host wiring tools by hand
+      supplies no `audit`, and it should not have to invent a server name to do
+      that.
+      */
+      const auditServer = auditServerFor(serverName)
+      if (toolOptions.audit && !auditServer) {
+        throw new Error(mcpServerRefusal(serverName))
+      }
+
+      for (const tool of toPayloadMcpTools(incoming, {
+        ...options,
+        ...toolOptions,
+        ...(auditServer ? { auditServer } : {}),
+      })) {
         const slot = slots.get(tool.name)
         if (!slot) {
           throw new Error(

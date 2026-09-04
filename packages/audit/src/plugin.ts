@@ -1,6 +1,6 @@
 import type { CorePlugin, McpToolDefinition } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
-import { createNamedLogger, defaultLogger } from '@forumone/throughline-core'
+import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import {
   type AuditQueryPluginOptions,
   DEFAULT_AUDIT_COLLECTION_SLUG,
@@ -48,6 +48,14 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
         const registry = getPluginRegistry(payload)
         registry.requireCapability('audit-log', PLUGIN_ID)
 
+        /*
+        The audit server audits its own crashes. That reads circular and is
+        not: these five tools only read, so a `system.error` row from one of
+        them records that reading the log failed — which is precisely the
+        outage you would otherwise have no record of, because the place you
+        would look is the thing that broke.
+        */
+        const auditWriter = getAuditWriter(payload)
         const deps = { payload, collectionSlug }
         const tools = [
           createQueryAuditTool(deps),
@@ -60,7 +68,7 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
         // Payload's own MCP plugin, and the only transport these tools have.
         // `onInit` is both the earliest they can exist and still early enough
         // that `mcpPlugin` reads the array populated.
-        options.mcpTools?.add(tools, { serverName: 'audit', logger })
+        options.mcpTools?.add(tools, { serverName: 'audit', logger, audit: auditWriter })
 
         registry.register({
           id: PLUGIN_ID,
