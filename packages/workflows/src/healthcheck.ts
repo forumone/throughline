@@ -1,3 +1,4 @@
+import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
 import type { Payload } from 'payload'
 import type { HealthcheckDefinition, HealthcheckOptions, HealthcheckResult } from './types.js'
@@ -19,6 +20,18 @@ export function createHealthcheckFunction(options: HealthcheckOptions): InngestF
   return options.inngest.createFunction(
     {
       id: options.id ?? 'healthcheck',
+      /*
+      One at a time by default. Two probes running together tell you nothing a
+      single one does not, and `onFailure` below fires per run — so overlapping
+      runs would report the same outage twice.
+
+      `HealthcheckOptions.onFailure` is this package's own option and a
+      different thing from Inngest's: it is called once per run when a check
+      fails, so it reports the *first* bad run rather than waiting for retries
+      to exhaust. A probe has no retries. Both are available now, and they
+      answer different questions — see the note on `failureOptions`.
+      */
+      ...failureOptions(options, 1),
       triggers: [{ cron: schedule }],
     },
     async ({ step, logger }) => {

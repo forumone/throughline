@@ -1,3 +1,4 @@
+import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
 import type { ExecuteScheduledPublishesOptions } from './types.js'
 
@@ -33,6 +34,17 @@ export function createExecuteScheduledPublishesFunction(
   return options.inngest.createFunction(
     {
       id: options.id ?? 'execute-scheduled-publishes',
+      /*
+      One at a time by default, because this reads then acts: `find-due-<slug>`
+      collects the documents whose scheduled time has passed, and the publish
+      loop runs after. Two overlapping runs both see the same due document and
+      both publish it — which for a pipeline that gates on approvals means two
+      audit trails for one act, and an `approval.granted` consumed twice.
+
+      The cost of the cap is nil: the poll finds nothing on almost every tick,
+      and a run that does find something is the only one that needs to.
+      */
+      ...failureOptions(options, 1),
       triggers: [{ cron: schedule }],
     },
     async ({ step, logger }) => {

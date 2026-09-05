@@ -1,3 +1,4 @@
+import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
 import type { AuditEventEchoOptions } from './types.js'
 
@@ -30,6 +31,12 @@ export function createAuditEventEchoFunction(options: AuditEventEchoOptions): In
   return options.inngest.createFunction(
     {
       id: options.id ?? 'audit-event-echo',
+      /*
+      No default cap. One audit row is one event, and the echo only fans it out
+      to notification events — so runs are independent by construction and
+      serialising them would put a queue in front of every audited write.
+      */
+      ...failureOptions(options),
       triggers: [{ event: 'audit/event.recorded' }],
     },
     async ({ event, step, logger }) => {

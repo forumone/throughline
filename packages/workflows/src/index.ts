@@ -10,8 +10,12 @@ export {
   createManifestReachableCheck,
 } from './healthcheck.js'
 
+export { failureOptions } from './types.js'
+
 export type {
   BaseWorkflowOptions,
+  WorkflowFailureHandler,
+  FailureAwareOptions,
   RevalidateFn,
   RevalidatePathsInput,
   RevalidateOnPublishOptions,
