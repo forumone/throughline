@@ -7,9 +7,102 @@ import type { Payload } from 'payload'
  * means the client app is responsible for instantiating both and passing
  * them in.
  */
+/*
+What a workflow does when a run exhausts its retries, and how many may run at
+once.
+
+Audit 06 F-09, in the consumer: across that app and all seventeen packages here,
+`onFailure|idempotency|concurrency|singleton` matched no function config at all.
+So a failure exhausted its retries and stopped — no dead-letter row, no email,
+no page — and 12 H1 is the bill: `expire-stale-approvals` threw at 02:00 UTC
+every night for eighteen days, in every environment, and nobody noticed.
+
+These live on the base options rather than on each factory's own, so every
+workflow accepts them the same way and a host wires failure handling once. The
+handler is declared structurally instead of importing Inngest's own failure
+type, for the reason `PayloadMcpRequest` in core gives: it keeps the shape this
+package reads visible in this package, and `inngest` stays a peer named in as
+few type positions as possible.
+*/
+export type WorkflowFailureHandler = (args: {
+  /** The error that exhausted the retries. */
+  error: Error
+  /** Inngest's `function.failed` payload, which names the run. */
+  event: {
+    data?: {
+      function_id?: string
+      run_id?: string
+      event?: { name?: string }
+    }
+  }
+}) => Promise<void> | void
+
 export interface BaseWorkflowOptions {
   inngest: Inngest
   payload: Payload
+  /**
+   * Called once when a run has exhausted its retries.
+   *
+   * Named `onTerminalFailure` rather than `onFailure`, and the collision that
+   * forced it is worth keeping in view: `HealthcheckOptions.onFailure` already
+   * exists and is a different thing — it fires once per run with the list of
+   * checks that failed, on the *first* bad run, because a probe has no retries
+   * to exhaust. Both are useful and a function can take both. One name for two
+   * moments would have made every call site ambiguous about which it wired.
+   *
+   * Optional, and absent means the previous behaviour: the failure reaches
+   * whatever Inngest's dashboard shows and nothing else. A host that passes one
+   * gets the only signal that does not require somebody to go and look.
+   */
+  onTerminalFailure?: WorkflowFailureHandler
+  /**
+   * Maximum simultaneous runs of this function.
+   *
+   * Two of the crons here default to 1 because they read a set of due rows and
+   * then act on them, which is a lost-update race between overlapping runs —
+   * see each one's own note. Passing a value overrides that; passing one for a
+   * workflow with no default adds a cap where there was none.
+   */
+  concurrency?: number
+}
+
+/**
+ * The failure and concurrency half of a function config, built once.
+ *
+ * Spread into each `createFunction` config so the five workflows cannot
+ * disagree about the shape — the same reason `collect-component-tokens.ts` was
+ * extracted, where the writer and the checker being separate implementations
+ * left 61 of 74 contracts drifted.
+ *
+ * `defaultConcurrency` is the factory's own answer, used when the host passes
+ * none. Omitting both keys rather than passing `undefined` matters:
+ * `exactOptionalPropertyTypes` is on, and Inngest reads the presence of the key.
+ */
+export function failureOptions(
+  options: FailureAwareOptions,
+  defaultConcurrency?: number,
+): { onFailure?: WorkflowFailureHandler; concurrency?: number } {
+  const concurrency = options.concurrency ?? defaultConcurrency
+
+  return {
+    // `onFailure` is Inngest's key; `onTerminalFailure` is ours. The rename
+    // happens here, once, which is the other reason this is a function.
+    ...(options.onTerminalFailure ? { onFailure: options.onTerminalFailure } : {}),
+    ...(concurrency !== undefined ? { concurrency } : {}),
+  }
+}
+
+/**
+ * The two fields `failureOptions` reads, and nothing else.
+ *
+ * Narrower than `BaseWorkflowOptions` on purpose: `AuditEventEchoOptions` takes
+ * an `inngest` and no `payload`, so it is not a `BaseWorkflowOptions` and asking
+ * for one would have excluded it from failure handling for a reason that has
+ * nothing to do with failure handling.
+ */
+export interface FailureAwareOptions {
+  onTerminalFailure?: WorkflowFailureHandler
+  concurrency?: number
 }
 
 export interface RevalidatePathsInput {
@@ -139,7 +232,7 @@ export interface AuditEchoHandler {
   handle: (event: AuditEchoEvent) => Promise<void>
 }
 
-export interface AuditEventEchoOptions {
+export interface AuditEventEchoOptions extends FailureAwareOptions {
   inngest: Inngest
   /**
    * Additional handlers run after the built-in approval fan-out. Each

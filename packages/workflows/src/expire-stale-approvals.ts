@@ -1,3 +1,4 @@
+import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
 import { getAuditWriter } from '@forumone/throughline-core'
 import type { ExpireStaleApprovalsOptions } from './types.js'
@@ -29,6 +30,18 @@ export function createExpireStaleApprovalsFunction(
   return options.inngest.createFunction(
     {
       id: options.id ?? 'expire-stale-approvals',
+      /*
+      One at a time by default, for the same read-then-act reason as
+      `execute-scheduled-publishes`: `find-expired` collects pending approvals
+      past their expiry and the loop expires them. Two runs both find the same
+      approval, both write `status: 'expired'`, and both send the expiry email —
+      so the requester is told twice that their request lapsed.
+
+      This is also the function 12 H1 is about. It threw every night for
+      eighteen days over a wrong collection slug; a cap does nothing for that,
+      and the `onFailure` above is what would have said so.
+      */
+      ...failureOptions(options, 1),
       triggers: [{ cron: schedule }],
     },
     async ({ step, logger }) => {

@@ -1,3 +1,4 @@
+import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
 import type { RevalidateFn, RevalidateOnPublishOptions, RevalidatePathsInput } from './types.js'
 
@@ -26,6 +27,12 @@ export function createRevalidateOnPublishFunction(
     {
       id: options.id ?? 'revalidate-on-publish',
       retries: 5,
+      /*
+      No default cap. This is event-driven and idempotent — it drops cache tags
+      and revalidates paths, and doing that twice is the same as doing it once —
+      so two publishes landing together should not queue behind each other.
+      */
+      ...failureOptions(options),
       triggers: [
         { event: 'content/page.published' },
         { event: 'content/page.unpublished' },
