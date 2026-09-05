@@ -25,7 +25,7 @@
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
     "@types/node": "^24.13.2",
-    "@types/react": "19.2.14",
+    "@types/react": "19.2.18",
     "eslint": "^10.5.0",
     "payload": "3.83.0",
     "tsx": "^4.23.11",
