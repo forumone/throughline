@@ -129,6 +129,50 @@ export function linkField(
  * runtime-state field, or a slot, which is a component position rather than
  * content and is filled by the template.
  */
+/*
+An upload field edits a *reference*. Its pencil edits the *document*.
+
+Payload's upload field offers both, side by side and looking alike. The picker
+changes which library document this block points at: local to the block,
+carried by the draft, published when the page is. The edit button opens that
+document in a drawer where the file itself can be replaced: global, immediate,
+and invisible from here.
+
+Three facts compound, and none of them are visible at the field:
+
+  - a media document is shared by every block that picked it,
+  - an upload collection is conventionally unversioned, so replacing the file
+    is live the moment it is saved — there is no draft of it to hold back,
+  - a host storing blocks as JSON has no `_rels` row for an upload inside one,
+    so nothing can even compute what else points at the document.
+
+Together they turn "change the photograph on this page" into "change it on
+every page that picked this photograph, now, while the page you are looking at
+is still a draft". That is what happened downstream: five heroes had been
+seeded from one stock image, an editor replaced the file from one of them, and
+it changed all five — which then read as Save draft having published.
+
+So the generated field offers the reference and not the document. Changing the
+picture itself means going to the media library, which is a place that
+announces it is global.
+
+**`allowCreate` is deliberately untouched.** Uploading a new file is the safe
+answer to "I want a different picture here" and must stay one click, or this
+trades a shared-asset bug for editors editing the shared asset because adding
+one was tedious. What is removed is the single action whose blast radius
+cannot be seen from where it is offered.
+
+A host that wants the pencil back can put it back: `overrides` cannot express
+this today, and adding a knob for it is worth doing only once somebody wants
+one. Refusing by default is the right way round — the failure is silent and
+the recovery is manual.
+*/
+function referenceOnly(admin: { admin?: Record<string, unknown> }): {
+  admin: Record<string, unknown>
+} {
+  return { admin: { ...admin.admin, allowEdit: false } }
+}
+
 export function toPayloadField(
   field: ContentField,
   ctx: FieldContext,
@@ -208,7 +252,7 @@ export function toPayloadField(
         type: 'upload',
         relationTo: ctx.mediaCollection as CollectionSlug,
         ...required,
-        ...admin,
+        ...referenceOnly(admin),
       }
 
     case 'video':
@@ -228,7 +272,7 @@ export function toPayloadField(
           type: 'upload',
           relationTo: ctx.mediaCollection as CollectionSlug,
           ...required,
-          ...admin,
+          ...referenceOnly(admin),
         }
       }
       return {

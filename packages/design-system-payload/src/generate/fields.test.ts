@@ -236,6 +236,45 @@ describe('image and video', () => {
     expect(generated.type).toBe('upload')
     expect(generated.relationTo).toBe('media')
   })
+
+  /*
+  The picker changes this block's reference; the pencil changes the document
+  every block sharing it points at, unversioned and immediately. See the note
+  on `referenceOnly` for the three facts that make the second one silent.
+  */
+  it('offers the reference and not the document', () => {
+    const generated = generate({ type: 'image' })
+    expect((generated.admin as { allowEdit?: boolean }).allowEdit).toBe(false)
+  })
+
+  it('does the same for an uploaded clip', () => {
+    const generated = generate(
+      { type: 'video', name: 'clip' },
+      context({ overrides: { Example: { fields: { clip: { as: 'videoUpload' } } } } }),
+    )
+    expect((generated.admin as { allowEdit?: boolean }).allowEdit).toBe(false)
+  })
+
+  /*
+  `allowCreate` is the safe path and has to stay one click — see the note. A
+  test rather than a comment because the natural way to write `referenceOnly`
+  is to disable both, and nothing else here would catch it.
+  */
+  it('still lets an author upload a new file', () => {
+    const generated = generate({ type: 'image' })
+    expect((generated.admin as { allowCreate?: boolean }).allowCreate).not.toBe(false)
+  })
+
+  /*
+  `admin.description` is built from the contract's constraints and was the only
+  thing in `admin` before this. Spreading a fresh object over it would drop it
+  silently on every image field in the system.
+  */
+  it('keeps the description the contract asked for', () => {
+    const generated = generate({ type: 'image', constraints: 'A landscape photograph.' })
+    expect((generated.admin as { description?: string }).description).toMatch(/landscape/)
+    expect((generated.admin as { allowEdit?: boolean }).allowEdit).toBe(false)
+  })
 })
 
 describe('select', () => {
