@@ -130,49 +130,44 @@ export function linkField(
  * content and is filled by the template.
  */
 /*
-An upload field edits a *reference*. Its pencil edits the *document*.
+An upload field cannot be stopped from editing the document it points at.
 
-Payload's upload field offers both, side by side and looking alike. The picker
-changes which library document this block points at: local to the block,
-carried by the draft, published when the page is. The edit button opens that
-document in a drawer where the file itself can be replaced: global, immediate,
-and invisible from here.
+Worth writing down, because the fix looks obvious, was tried, shipped inert in
+0.4.3, and would be tried again.
 
-Three facts compound, and none of them are visible at the field:
+Payload's upload field offers two actions side by side and they look alike. The
+picker changes which library document this block points at: local to the block,
+carried by the draft, published when the page is. The edit pencil opens that
+document in a drawer whose file can be removed and replaced: global, immediate,
+and shared by every block that picked it. Downstream that turned "change the
+photograph on this page" into "change it on all five pages that picked this
+photograph, now, while the page you are looking at is still a draft".
 
-  - a media document is shared by every block that picked it,
-  - an upload collection is conventionally unversioned, so replacing the file
-    is live the moment it is saved — there is no draft of it to hold back,
-  - a host storing blocks as JSON has no `_rels` row for an upload inside one,
-    so nothing can even compute what else points at the document.
+`admin: { allowEdit: false }` does not prevent it, for three independent
+reasons, in payload 3.87.1:
 
-Together they turn "change the photograph on this page" into "change it on
-every page that picked this photograph, now, while the page you are looking at
-is still a draft". That is what happened downstream: five heroes had been
-seeded from one stock image, an editor replaced the file from one of them, and
-it changed all five — which then read as Save draft having published.
+  - it is not an option. `UploadAdmin` is `allowCreate` and `isSortable`;
+    `allowEdit` belongs to `RelationshipAdmin`, a different field type
+  - it would not survive the trip. `UploadAdminClient` is
+    `AdminClient & Pick<UploadAdmin, 'allowCreate' | 'isSortable'>`
+  - and the component does not read it. `@payloadcms/ui`'s
+    `fields/Upload/HasOne` renders `allowEdit: !readonly`, hardcoded. Compare
+    `allowCreate`, which *is* wired through `fields/Upload/index.js`
 
-So the generated field offers the reference and not the document. Changing the
-picture itself means going to the media library, which is a place that
-announces it is global.
+So the only way to lose the pencil is `readOnly`, which takes the picker with
+it. The asymmetry with `allowCreate` looks like an upstream oversight rather
+than a decision, and is filed as such — until it moves, this is a Payload
+behaviour a host has to design around rather than a generator setting.
 
-**`allowCreate` is deliberately untouched.** Uploading a new file is the safe
-answer to "I want a different picture here" and must stay one click, or this
-trades a shared-asset bug for editors editing the shared asset because adding
-one was tedious. What is removed is the single action whose blast radius
-cannot be seen from where it is offered.
-
-A host that wants the pencil back can put it back: `overrides` cannot express
-this today, and adding a knob for it is worth doing only once somebody wants
-one. Refusing by default is the right way round — the failure is silent and
-the recovery is manual.
+**How the inert version passed every gate**, which is the part worth keeping.
+It was written through a helper returning `{ admin: Record<string, unknown> }`,
+and that widening is exactly what suppresses the excess-property check: written
+inline, `tsc` rejects `allowEdit` on an upload's admin, and does so today. The
+tests then asserted `allowEdit` was present *on the generated config object* —
+one end of a string whose other end nothing reads. That is the same shape as a
+cache tag nobody listens to, and it is why the assertions in this file are
+about behaviour wherever behaviour is reachable.
 */
-function referenceOnly(admin: { admin?: Record<string, unknown> }): {
-  admin: Record<string, unknown>
-} {
-  return { admin: { ...admin.admin, allowEdit: false } }
-}
-
 export function toPayloadField(
   field: ContentField,
   ctx: FieldContext,
@@ -252,7 +247,7 @@ export function toPayloadField(
         type: 'upload',
         relationTo: ctx.mediaCollection as CollectionSlug,
         ...required,
-        ...referenceOnly(admin),
+        ...admin,
       }
 
     case 'video':
@@ -272,7 +267,7 @@ export function toPayloadField(
           type: 'upload',
           relationTo: ctx.mediaCollection as CollectionSlug,
           ...required,
-          ...referenceOnly(admin),
+          ...admin,
         }
       }
       return {
