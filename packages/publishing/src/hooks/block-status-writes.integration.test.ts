@@ -77,6 +77,21 @@ async function liveStatus(id: number | string): Promise<unknown> {
   return (await payload.findByID({ collection: 'pages', id }))._status
 }
 
+/**
+ * The live document's title — what a reader of the published site would get.
+ *
+ * `findByID` with no `draft` reads the published row, which is the row
+ * `if (!isSavingDraft)` leaves alone.
+ */
+async function liveTitle(id: number | string): Promise<unknown> {
+  return (await payload.findByID({ collection: 'pages', id })).title
+}
+
+/** The latest version's title — what an editor previewing the draft would get. */
+async function draftTitle(id: number | string): Promise<unknown> {
+  return (await payload.findByID({ collection: 'pages', id, draft: true })).title
+}
+
 const BLOCKED = /Direct writes to `_status` are not allowed/
 
 describe('the pipeline', () => {
@@ -103,6 +118,25 @@ describe('the pipeline', () => {
   })
 })
 
+/*
+The claim these make is the one editors actually ask about: **does saving a
+draft publish the page?**
+
+They used to answer it halfway. Each asserted `liveStatus` and stopped, which
+says the document is still flagged published and says nothing about what is
+*in* it — and "the live row was rewritten with the draft's content but kept its
+status" is a failure that passes a status check. The publish-side tests two
+describes down already read the live `title` for exactly that reason; these now
+do too.
+
+What makes the answer no is Payload's, not this hook's: `updateDocument` guards
+the main-table write with `if (!isSavingDraft)`, so a draft save writes a
+version row and nothing else. That is worth pinning here anyway. It is the
+behaviour every access rule in a consuming app is written against — a public
+read filtered to `_status: 'published'` is only safe because the published row
+holds published content — and a Payload upgrade that changed it would otherwise
+surface as drafts appearing on a live site rather than as a failing test.
+*/
 describe('draft saves', () => {
   it('saves a draft of a published document and leaves it live', async () => {
     const id = await makePage('published')
@@ -110,6 +144,10 @@ describe('draft saves', () => {
     await update(id, { draft: true, data: { title: 'Edited' } })
 
     expect(await liveStatus(id)).toBe('published')
+    expect(await liveTitle(id)).toBe('A page')
+    // And the draft really was stored, so this is isolation rather than a
+    // write that quietly did nothing.
+    expect(await draftTitle(id)).toBe('Edited')
   })
 
   it('saves repeatedly with a draft already pending', async () => {
@@ -119,11 +157,33 @@ describe('draft saves', () => {
     await update(id, { draft: true, data: { title: 'Second' } })
 
     expect(await liveStatus(id)).toBe('published')
+    expect(await liveTitle(id)).toBe('A page')
+    expect(await draftTitle(id)).toBe('Second')
+  })
+
+  /*
+  Autosave, which is the write that actually happens. A host with
+  `versions.drafts.autosave` on saves every couple of seconds while somebody
+  types, so this is the draft write by volume — and it carries `autosave: true`
+  alongside `draft: true`, a combination `isDraftWrite` does not look at and
+  therefore ought to be held to.
+  */
+  it('autosaves a published document without publishing it', async () => {
+    const id = await makePage('published')
+
+    await update(id, { autosave: true, draft: true, data: { title: 'Typed halfway' } })
+
+    expect(await liveStatus(id)).toBe('published')
+    expect(await liveTitle(id)).toBe('A page')
   })
 
   it('saves a draft of a never-published document', async () => {
     const id = await makePage('draft')
     await expect(update(id, { draft: true, data: { title: 'Edited' } })).resolves.toBeDefined()
+
+    // Still not live: the row exists, and `_status` is what a published-only
+    // read rule filters on.
+    expect(await liveStatus(id)).toBe('draft')
   })
 })
 
