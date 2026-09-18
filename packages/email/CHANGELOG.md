@@ -1,5 +1,12 @@
 # @forumone/throughline-email
 
+## 0.2.12
+
+### Patch Changes
+
+- Updated dependencies [d02772f]
+  - @forumone/throughline-core@0.9.1
+
 ## 0.2.11
 
 ### Patch Changes
