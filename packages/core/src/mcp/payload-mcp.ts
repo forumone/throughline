@@ -36,7 +36,7 @@ export interface PayloadMcpTool {
     args: Record<string, unknown>,
     req: PayloadMcpRequest,
     extra: unknown,
-  ) => Promise<{ content: Array<{ type: 'text'; text: string }> }>
+  ) => Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }>
 }
 
 /**
@@ -95,6 +95,42 @@ export interface ToPayloadMcpToolOptions {
  *   return their own objects, exactly as they do through this package's own
  *   handler, which does the same wrapping a layer up.
  */
+/*
+Whether a tool answered with a refusal, and so whether MCP's `isError` belongs
+on the result.
+
+Every server in the suite refuses the same way — `deniedEnvelope`, or a bare
+`{ error }` built in the tool — and returns it as an ordinary value rather than
+throwing, so a denial reads to the model as a denial rather than as a server
+fault. What none of them did was set `isError`, so a refusal arrived as a
+**successful** tool result carrying `{"error": …}`. An agent that checks the
+protocol's flag instead of parsing the body read every refusal as a success —
+including "Must be authenticated to use the publishing tools", which is the one
+every `Bearer` call gets, because `plugin-mcp` assigns no `req.user`.
+
+Found exercising `04` F-02 with a real MCP key, and recorded in the consuming
+repository's #614. It is a reporting defect rather than an access one: nothing
+was permitted that should not have been, and everything that was refused stayed
+refused.
+
+Here rather than in each tool for the reason the audit wrap below is here. This
+is the one place every tool in the suite passes through, so a tool written
+tomorrow is covered without its author knowing this file exists.
+
+**The test is a non-empty string `error`, not a sole `error` key.** A refusal
+that later grows a second field — a code, a retry hint — keeps its flag, which
+is the likelier shape to drift. It costs the inverse risk: a *success* payload
+carrying an `error` string would be flagged wrongly. Nothing in the suite does
+that today — the healthy shapes report through `ok`, `healthy`, `message` and
+`details` — and `payload-mcp.test.ts` pins it so a new one has to argue with a
+test rather than slip past.
+*/
+function isRefusal(result: unknown): boolean {
+  if (typeof result !== 'object' || result === null) return false
+  const error = (result as Record<string, unknown>)['error']
+  return typeof error === 'string' && error.trim() !== ''
+}
+
 export function toPayloadMcpTool(
   tool: McpToolDefinition,
   options: ToPayloadMcpToolOptions = {},
@@ -109,7 +145,10 @@ export function toPayloadMcpTool(
       const context = contextFrom(req, options)
       try {
         const result = await tool.handler(args, context)
-        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+          ...(isRefusal(result) ? { isError: true } : {}),
+        }
       } catch (error) {
         await recordToolFailure(tool.name, error, args, context, options)
         throw error

@@ -9,6 +9,12 @@
  * The role predicates stay with their servers. What counts as an audit reader is
  * not what counts as a forms author, and collapsing them would put one package's
  * policy in another's file.
+ *
+ * **`error` is reserved for a refusal.** `toPayloadMcpTool` reads it to set
+ * MCP's `isError` flag, so a *success* result must report failure some other
+ * way — the healthy shapes in this suite use `ok`, `healthy`, `message` and
+ * `details`. A success payload carrying an `error` string would reach the
+ * caller flagged as an error.
  */
 export function deniedEnvelope(reason: string): { error: string } {
   return { error: reason }

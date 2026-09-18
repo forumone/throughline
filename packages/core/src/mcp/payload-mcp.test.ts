@@ -85,6 +85,65 @@ describe('toPayloadMcpTool', () => {
   })
 
   /*
+  A refusal is a refusal at the protocol level too.
+
+  Every server here answers a denial with `{ error }` and returns it rather
+  than throwing, so the body has always said so. The flag did not: a refusal
+  arrived as a successful tool result, and an agent reading `isError` instead
+  of parsing the body saw a success. The publishing tools are where it was
+  found — `plugin-mcp` assigns no `req.user`, so every `Bearer` call is refused
+  and every one of those refusals read as success.
+  */
+  it('flags a refusal with isError', async () => {
+    const { tool } = publishTool(
+      vi.fn(async () => ({ error: 'Must be authenticated to use the publishing tools.' })),
+    )
+    const result = await toPayloadMcpTool(tool).handler({}, mcpRequest, undefined)
+
+    expect(result.isError).toBe(true)
+    // The body is unchanged: a client that reads the envelope still sees the
+    // sentence, which is what every existing consumer does.
+    expect(JSON.parse(String(result.content[0]?.text))).toEqual({
+      error: 'Must be authenticated to use the publishing tools.',
+    })
+  })
+
+  /*
+  Absent rather than `false`. `exactOptionalPropertyTypes` is on and the MCP
+  schema treats a missing flag as success, so spreading the key in only when it
+  is true keeps the success result byte-identical to what consumers already
+  parse.
+  */
+  it('leaves a successful result unflagged', async () => {
+    const { tool } = publishTool(vi.fn(async () => ({ published: true })))
+    const result = await toPayloadMcpTool(tool).handler({}, mcpRequest, undefined)
+
+    expect(result.isError).toBeUndefined()
+    expect('isError' in result).toBe(false)
+  })
+
+  /*
+  A non-empty string, not a sole `error` key: a refusal that grows a code or a
+  retry hint keeps its flag. The inverse — a success payload carrying an
+  `error` string — would be flagged wrongly, which is why the suite's healthy
+  shapes report through `ok`, `healthy`, `message` and `details` instead. This
+  is where that convention is enforced.
+  */
+  it.each([
+    ['a refusal carrying a second field', { error: 'Approval not found', code: 404 }, true],
+    ['an empty error string', { error: '' }, false],
+    ['a whitespace error string', { error: '   ' }, false],
+    ['a non-string error', { error: { message: 'nested' } }, false],
+    ['a healthcheck reporting failure through ok', { ok: false, message: 'down' }, false],
+    ['a null result', null, false],
+  ])('%s', async (_name, value, flagged) => {
+    const { tool } = publishTool(vi.fn(async () => value as never))
+    const result = await toPayloadMcpTool(tool).handler({}, mcpRequest, undefined)
+
+    expect(result.isError).toBe(flagged ? true : undefined)
+  })
+
+  /*
   `plugin-mcp` resolves a key to its linked user and does not carry the key
   document forward, so "which key" is not a question the request can answer. An
   audit row naming the strategy is honest; one asserting a name nothing checked
