@@ -1,5 +1,12 @@
 # @forumone/throughline-playground
 
+## 0.0.30
+
+### Patch Changes
+
+- Updated dependencies [1f3346f]
+  - @forumone/throughline-approvals@0.8.3
+
 ## 0.0.29
 
 ### Patch Changes
