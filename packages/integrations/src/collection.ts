@@ -90,7 +90,7 @@ export function createIntegrationsCollection(
         defaultValue: false,
         admin: {
           description:
-            'Disabled integrations are skipped by event delivery and excluded from `list_integrations` unless onlyEnabled=false.',
+            'Disabled integrations receive no events and are hidden from Claude by default.',
         },
       },
       {
@@ -126,7 +126,7 @@ export function createIntegrationsCollection(
         },
         admin: {
           description:
-            'Integration-specific configuration. The integration\'s configFields drive the admin UI; this JSON store carries the validated payload. Admin-only: it holds the credentials.',
+            'Integration-specific settings, including credentials. Admin-only.',
         },
       },
       {
