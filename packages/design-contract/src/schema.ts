@@ -83,6 +83,7 @@ export type ContentField = {
   maxLength?: number | undefined
   defaultValue?: boolean | undefined
   constraints?: string | undefined
+  advanced?: boolean | undefined
   of?: ContentField[] | undefined
 }
 
@@ -94,6 +95,7 @@ export type ContentFieldInput = {
   maxLength?: number | undefined
   defaultValue?: boolean | undefined
   constraints?: string | undefined
+  advanced?: boolean | undefined
   of?: ContentFieldInput[] | undefined
 }
 
@@ -126,6 +128,20 @@ const ContentFieldSchema: z.ZodType<ContentField, z.ZodTypeDef, ContentFieldInpu
     defaultValue: z.boolean().optional(),
     /** Human-readable constraint description the AI reasons about. */
     constraints: z.string().optional(),
+    /*
+    An optional field that most authors, and most compositions, should leave
+    empty: an override of a default the component already chooses well, or
+    screen-reader and status copy it already supplies. `VideoHero.pauseLabel`
+    is the shape of it — the control is already called "Pause background
+    video", and a field an author meets on every hero asking them to rename it
+    is noise between them and the heading.
+
+    A hint about attention, not about validity. The CMS draws such a field in a
+    collapsed section; an agent composing a page can skip it. It never makes a
+    field required or forbidden, and it is refused on a required field, which by
+    definition cannot be left alone.
+    */
+    advanced: z.boolean().optional(),
     /** For array or group fields, the nested field shape. */
     of: z.array(ContentFieldSchema).optional(),
   }).superRefine((field, ctx) => {
@@ -133,6 +149,13 @@ const ContentFieldSchema: z.ZodType<ContentField, z.ZodTypeDef, ContentFieldInpu
     // author expects to take effect and nothing ever will. Rejecting it is the
     // difference between a contract that fails validation and a field that
     // quietly ignores half of what it was told.
+    if (field.advanced && field.required) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['advanced'],
+        message: `"${field.name}" is required, so it cannot be advanced: an author has to fill it in.`,
+      })
+    }
     if (field.defaultValue !== undefined && field.type !== 'boolean') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

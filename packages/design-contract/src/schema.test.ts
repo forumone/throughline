@@ -115,6 +115,30 @@ describe('ComponentContractSchema', () => {
     }
   })
 
+  it('carries advanced through on an optional field', () => {
+    const contract = makeHeroContract({
+      content: {
+        fields: [{ name: 'pauseLabel', type: 'text', required: false, advanced: true }],
+      },
+    })
+    const result = ComponentContractSchema.safeParse(contract)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.content.fields[0]?.advanced).toBe(true)
+    }
+  })
+
+  // A required field cannot be left alone, so hiding it would hide an error.
+  it('rejects advanced on a required field', () => {
+    const contract = makeHeroContract({
+      content: {
+        fields: [{ name: 'headline', type: 'text', required: true, advanced: true }],
+      },
+    })
+    const result = ComponentContractSchema.safeParse(contract)
+    expect(result.success).toBe(false)
+  })
+
   it('leaves defaultValue undefined when a boolean field omits it', () => {
     const contract = makeHeroContract({
       content: { fields: [{ name: 'isCompact', type: 'boolean', required: false }] },
