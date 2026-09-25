@@ -1,5 +1,12 @@
 # @forumone/throughline-components
 
+## 0.5.7
+
+### Patch Changes
+
+- Updated dependencies [2bf29e6]
+  - @forumone/throughline-design-contract@0.6.0
+
 ## 0.5.6
 
 ### Patch Changes
