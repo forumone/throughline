@@ -29,7 +29,7 @@ export const configFields: Field[] = [
     required: true,
     admin: {
       description:
-        `Shared secret used to compute HMAC-SHA256 signatures (>=${MIN_SIGNING_SECRET_LENGTH} chars). The receiver verifies the x-throughline-signature header to confirm the request originated from this site.`,
+        `Shared secret for HMAC-SHA256 signatures, at least ${MIN_SIGNING_SECRET_LENGTH} characters. The receiver checks the x-throughline-signature header.`,
     },
   },
   {

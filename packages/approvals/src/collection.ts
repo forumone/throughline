@@ -29,7 +29,7 @@ export function createApprovalsCollection(
       useAsTitle: 'targetTitle',
       defaultColumns: ['targetTitle', 'status', 'requestedBy', 'requestedAt', 'expiresAt'],
       description:
-        'Approval workflow state. Read-mostly through the admin; writes happen via the Approvals Server tools and the action endpoint.',
+        'Approval workflow state. Mostly read-only here; changes come from approval actions.',
     },
     access: {
       read: ({ req }) => {
@@ -52,7 +52,7 @@ export function createApprovalsCollection(
         required: true,
         admin: {
           description:
-            'Hash of the document content at request time. An approval resolves only against a document that still hashes to this, so a save that changed nothing keeps it and a save that changed something invalidates it.',
+            'Hash of the document content at request time. Any content change invalidates the approval.',
         },
       },
       { name: 'previewUrl', type: 'text' },

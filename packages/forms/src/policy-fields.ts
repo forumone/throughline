@@ -51,7 +51,7 @@ export function addFormPolicyFields(
           defaultValue: options.requireConsentByDefault,
           admin: {
             description:
-              'When true, the form renders a required consent checkbox above submit. Server-side enforcement: submissions without `consent: true` are rejected at the endpoint.',
+              'Adds a required consent checkbox above the submit button. Submissions without consent are rejected.',
           },
         },
         {
@@ -69,7 +69,7 @@ export function addFormPolicyFields(
               defaultValue: true,
               admin: {
                 description:
-                  'When enabled, the rendered form includes a visually hidden field. Bots that fill every input get silently dropped.',
+                  'Adds a hidden field. Bots that fill it are silently dropped.',
               },
             },
             {
@@ -78,7 +78,7 @@ export function addFormPolicyFields(
               defaultValue: options.defaultRateLimit,
               admin: {
                 description:
-                  'Maximum submissions per submitter IP-hash per hour. Falls back to the plugin-wide default.',
+                  'Maximum submissions per submitter per hour. Falls back to the plugin-wide default.',
               },
             },
           ],
@@ -99,7 +99,7 @@ export function addFormPolicyFields(
               options: destinationOptions,
               admin: {
                 description:
-                  'Pre-approved destination from the allowlist. Adding a new option requires editing plugin config + redeploying.',
+                  'A pre-approved destination. New options need a plugin config change and a redeploy.',
               },
             },
             { name: 'enabled', type: 'checkbox', defaultValue: true },
