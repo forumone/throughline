@@ -1,5 +1,7 @@
 import type { CollectionSlug, Field } from 'payload'
 import { fieldOverride, type Overrides } from '../overrides'
+import { labelFor } from './labels'
+import { arrange } from './layout'
 
 /**
  * One field of a component's content model, as the manifest describes it.
@@ -25,6 +27,13 @@ export interface ContentField {
   /** `boolean` only — see the contract schema. */
   defaultValue?: boolean
   constraints?: string
+  /**
+   * An optional field most authors should leave alone: an override of a
+   * default the component already chooses well, or screen-reader and status
+   * copy it already supplies. Drawn in a collapsed "More options" section —
+   * see `./layout.ts`.
+   */
+  advanced?: boolean
   of?: ContentField[]
 }
 
@@ -77,6 +86,7 @@ export function linkField(
       {
         name: 'mode',
         type: 'radio',
+        label: 'Links to',
         defaultValue: 'internal',
         options: [
           { label: 'A page on this site', value: 'internal' },
@@ -88,6 +98,7 @@ export function linkField(
       {
         name: 'reference',
         type: 'relationship',
+        label: 'Page',
         // The package is generic over any Payload config, so it cannot know
         // this project's slugs; `CollectionSlug` is generated per app.
         relationTo: ctx.linkCollections as CollectionSlug[],
@@ -96,6 +107,7 @@ export function linkField(
       {
         name: 'url',
         type: 'text',
+        label: 'URL',
         admin: {
           condition: (_d, sibling) => sibling?.mode === 'external',
           description: 'Include the protocol — https://…',
@@ -104,6 +116,7 @@ export function linkField(
       {
         name: 'anchor',
         type: 'text',
+        label: 'Anchor',
         admin: {
           condition: (_d, sibling) => sibling?.mode === 'anchor',
           description: 'The id of the element to scroll to, without the #.',
@@ -112,6 +125,7 @@ export function linkField(
       {
         name: 'newTab',
         type: 'checkbox',
+        label: 'Open in a new tab',
         admin: {
           condition: (_d, sibling) => sibling?.mode === 'external',
           description:
@@ -173,6 +187,13 @@ export function toPayloadField(
   ctx: FieldContext,
   path: string = field.name,
 ): Field | null {
+  const built = buildField(field, ctx, path)
+  // Every generated field is labelled explicitly — see `./labels.ts` for why
+  // Payload's own title-cased fallback is not good enough.
+  return built ? ({ ...built, label: labelFor(field) } as Field) : null
+}
+
+function buildField(field: ContentField, ctx: FieldContext, path: string): Field | null {
   const override = fieldOverride(ctx.overrides, ctx.component, path)
   if (override?.omit) return null
 
@@ -499,9 +520,11 @@ function isEmpty(value: unknown): boolean {
 }
 
 function childFields(children: ContentField[], ctx: FieldContext, parentPath: string): Field[] {
-  const fields = children
-    .map(child => toPayloadField(child, ctx, `${parentPath}.${child.name}`))
-    .filter((f): f is Field => f !== null)
+  const fields = arrange(
+    children,
+    children.map(child => toPayloadField(child, ctx, `${parentPath}.${child.name}`)),
+    { disclose: false },
+  )
 
   if (fields.length === 0) {
     throw new Error(

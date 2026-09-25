@@ -2,6 +2,7 @@ import { groupOf } from '@forumone/throughline-design-contract'
 import type { Block } from 'payload'
 import type { Overrides } from '../overrides'
 import { toPayloadField, type ContentField, type FieldContext } from './fields'
+import { arrange } from './layout'
 
 /** The slice of a manifest component entry the generator reads. */
 export interface ManifestComponent {
@@ -82,9 +83,13 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
     resolveNamedOptions: options.resolveNamedOptions,
   }
 
-  const fields = component.content.fields
-    .map(field => toPayloadField(field, ctx))
-    .filter(field => field !== null)
+  // Arranged for an author to read — pairs grouped, settings behind a
+  // disclosure. Presentational only; see `./layout.ts`.
+  const fields = arrange(
+    component.content.fields,
+    component.content.fields.map(field => toPayloadField(field, ctx)),
+    { disclose: true },
+  )
 
   const preview = options.resolvePreview?.(component.name) ?? null
 
