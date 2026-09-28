@@ -385,6 +385,81 @@ describe('an array', () => {
   })
 })
 
+describe("an array's rows on screen", () => {
+  const stat = [
+    field({ type: 'text', name: 'value', required: true, maxLength: 12 }),
+    field({ type: 'text', name: 'label', required: true, maxLength: 60 }),
+  ]
+
+  const onlyChild = (generated: Field) =>
+    (generated as unknown as { fields: (Field & Record<string, unknown>)[] }).fields
+  const widths = (row: Field) =>
+    (row as unknown as { fields: { admin: { width: string } }[] }).fields.map(f => f.admin.width)
+  const rowLabel = (generated: Field) =>
+    (generated as unknown as { admin?: { components?: { RowLabel?: unknown } } }).admin?.components
+      ?.RowLabel
+
+  it('draws a row of short text fields on one line, sized by maxLength', () => {
+    const [row, ...rest] = onlyChild(generate({ type: 'array', name: 'stats', of: stat }))
+    expect(rest).toEqual([])
+    expect(row?.type).toBe('row')
+    expect(childNames(row as Field)).toEqual(['value', 'label'])
+    // 12 against 60 is 17%, floored to a quarter so the figure can still be typed.
+    expect(widths(row as Field)).toEqual(['25%', '75%'])
+  })
+
+  it('keeps each field as it was, required and described, inside the row', () => {
+    const described = [{ ...stat[0]!, constraints: "A short figure such as '96%'." }, stat[1]!]
+    const [row] = onlyChild(generate({ type: 'array', name: 'stats', of: described }))
+    const value = childNamed(row as Field, 'value')
+    expect(value.required).toBe(true)
+    expect(value.maxLength).toBe(12)
+    expect((value.admin as { description?: string }).description).toMatch(/96%/)
+  })
+
+  it('leaves a row stacked when any field is not a short single-line input', () => {
+    const cases: ContentField[][] = [
+      [stat[0]!, field({ type: 'text', name: 'body', maxLength: 400 })],
+      [stat[0]!, field({ type: 'text', name: 'body' })],
+      [stat[0]!, field({ type: 'image', name: 'image' })],
+      [stat[0]!],
+      ['a', 'b', 'c', 'd'].map(name => field({ type: 'text', name, maxLength: 20 })),
+    ]
+    for (const of of cases) {
+      expect(onlyChild(generate({ type: 'array', name: 'items', of })).map(f => f.type)).not.toContain(
+        'row',
+      )
+    }
+  })
+
+  it('names each row by its first two text fields, falling back to the singular label', () => {
+    expect(rowLabel(generate({ type: 'array', name: 'stats', of: stat }))).toEqual({
+      path: '@forumone/throughline-design-system-payload/client#RowSummary',
+      clientProps: { fields: ['value', 'label'], singular: 'Stat' },
+    })
+  })
+
+  it('does not name a row by a setting, an advanced field, or a call to action', () => {
+    const card = [
+      field({ type: 'select', name: 'variant' }),
+      field({ type: 'text', name: 'ctaLabel', maxLength: 40 }),
+      field({ type: 'link', name: 'ctaHref' }),
+      field({ type: 'text', name: 'srLabel', advanced: true, maxLength: 40 }),
+      field({ type: 'text', name: 'title', maxLength: 80 }),
+    ]
+    const ctx = context({
+      resolveSelectOptions: (_component, path) => (path.endsWith('.variant') ? ['light', 'dark'] : null),
+    })
+    const label = rowLabel(generate({ type: 'array', name: 'cards', of: card }, ctx))
+    expect(label).toMatchObject({ clientProps: { fields: ['title'] } })
+  })
+
+  it("keeps Payload's own row label when a row has no text to show", () => {
+    const images = [field({ type: 'image', name: 'image' })]
+    expect(rowLabel(generate({ type: 'array', name: 'images', of: images }))).toBeUndefined()
+  })
+})
+
 describe('a required group', () => {
   const children = [
     field({ type: 'text', name: 'src', required: true }),

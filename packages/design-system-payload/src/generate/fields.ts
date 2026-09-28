@@ -1,7 +1,8 @@
 import type { CollectionSlug, Field } from 'payload'
+import { formatLabels } from 'payload/shared'
 import { fieldOverride, type Overrides } from '../overrides'
 import { labelFor } from './labels'
-import { arrange } from './layout'
+import { arrange, oneLine, summaryFields } from './layout'
 
 /**
  * One field of a component's content model, as the manifest describes it.
@@ -53,6 +54,9 @@ export interface FieldContext {
 
 /** The design system's exported union of every glyph name. */
 const ICON_NAME_TYPE = 'IconName'
+
+/** The import-map path of the header a generated array row draws. */
+const ROW_SUMMARY = '@forumone/throughline-design-system-payload/client#RowSummary'
 
 /** Above this, a single-line input stops being the right control. */
 const TEXTAREA_THRESHOLD = 160
@@ -354,14 +358,31 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
       if (!field.of || field.of.length === 0) {
         throw new Error(`${ctx.component}.${path} is an array with no \`of\` describing its rows.`)
       }
+      // A row is drawn on one line and named by its contents where it can be
+      // — see the end of `./layout.ts`.
+      const generated = generateChildren(field.of, ctx, path)
+      const summary = summaryFields(field.of, generated)
+      const rowLabel =
+        summary.length > 0
+          ? {
+              components: {
+                RowLabel: {
+                  path: ROW_SUMMARY,
+                  clientProps: { fields: summary, singular: formatLabels(field.name).singular },
+                },
+              },
+            }
+          : {}
       return {
         name: field.name,
         type: 'array',
         // Payload has no "required array"; a minimum of one row is what the
         // contract means.
         ...(field.required ? { minRows: 1 } : {}),
-        ...admin,
-        fields: childFields(field.of, ctx, path),
+        ...(description || summary.length > 0
+          ? { admin: { ...(description ? { description } : {}), ...rowLabel } }
+          : {}),
+        fields: oneLine(childFields(field.of, ctx, path, generated)),
       }
     }
   }
@@ -519,12 +540,17 @@ function isEmpty(value: unknown): boolean {
   return false
 }
 
-function childFields(children: ContentField[], ctx: FieldContext, parentPath: string): Field[] {
-  const fields = arrange(
-    children,
-    children.map(child => toPayloadField(child, ctx, `${parentPath}.${child.name}`)),
-    { disclose: false },
-  )
+function generateChildren(children: ContentField[], ctx: FieldContext, parentPath: string): (Field | null)[] {
+  return children.map(child => toPayloadField(child, ctx, `${parentPath}.${child.name}`))
+}
+
+function childFields(
+  children: ContentField[],
+  ctx: FieldContext,
+  parentPath: string,
+  generated = generateChildren(children, ctx, parentPath),
+): Field[] {
+  const fields = arrange(children, generated, { disclose: false })
 
   if (fields.length === 0) {
     throw new Error(
