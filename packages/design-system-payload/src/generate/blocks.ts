@@ -3,6 +3,7 @@ import type { Block, Field } from 'payload'
 import type { Overrides } from '../overrides'
 import { toPayloadField, type ContentField, type FieldContext } from './fields'
 import { blockGuidance, humanize } from './guidance'
+import { groupLabel } from './labels'
 import { arrange, blockSummaryFields } from './layout'
 
 const BLOCK_SUMMARY = '@forumone/throughline-design-system-payload/client#BlockSummary'
@@ -36,13 +37,20 @@ export interface GenerateOptions {
   resolveSelectOptions: (component: string, path: string) => readonly string[] | null
   resolveNamedOptions: (typeName: string) => readonly string[] | null
   /**
+   * The host's labels for option values whose meaning is particular to its
+   * design system — `{ 'text-image': 'Text and image' }`. Consulted before the
+   * generic words in `./labels.ts`, which cover heading levels, HTML elements
+   * and anything that reads well split into words.
+   */
+  optionLabels?: Readonly<Record<string, string>>
+  /**
    * A thumbnail for the block picker, or null for none.
    *
    * Payload draws a generic placeholder when a block has no `imageURL`, so a
    * palette this size renders as dozens of identical grey mountains — worse
    * than nothing, because the uniformity implies the images carry information.
    */
-  resolvePreview?: (component: string) => { url: string; alt: string } | null
+  resolvePreview?: (component: string) => { url: string; alt?: string } | null
 }
 
 export interface GeneratedBlock {
@@ -84,21 +92,28 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
     linkCollections: options.linkCollections,
     resolveSelectOptions: options.resolveSelectOptions,
     resolveNamedOptions: options.resolveNamedOptions,
+    ...(options.optionLabels ? { optionLabels: options.optionLabels } : {}),
   }
 
   // Arranged for an author to read — pairs grouped, settings behind a
   // disclosure. Presentational only; see `./layout.ts`.
   const generated = component.content.fields.map(field => toPayloadField(field, ctx))
   const fields = arrange(component.content.fields, generated, { disclose: true })
-  const label = humanize(component.name)
 
   const preview = options.resolvePreview?.(component.name) ?? null
   const guidance = blockGuidance(component.intent, Object.keys(options.manifest.components))
+  // The picker's name for it. An override for the few names a mechanical split
+  // gets wrong — `AtAGlance` → "At AGlance" — or that mislead.
+  const label = options.overrides[component.name]?.label ?? humanize(component.name)
 
   return {
     slug: component.name,
     interfaceName: `${component.name}Block`,
-    ...(preview ? { imageURL: preview.url, imageAltText: preview.alt } : {}),
+    // The preview is described by the block's label, not its slug: a screen
+    // reader announced "A preview of the HighImpactCTA component".
+    ...(preview
+      ? { imageURL: preview.url, imageAltText: preview.alt ?? `A preview of the ${label} block` }
+      : {}),
     labels: {
       singular: label,
       plural: label,
@@ -129,7 +144,7 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
       // filters on it. `group` is where an author looks for it. Grouping on
       // `category` alone put over half the picker under "Section", which is the
       // flat list the grouping exists to avoid.
-      group: humanize(groupOf(component)),
+      group: groupLabel(groupOf(component)),
     },
     // A block with no authorable fields is still legitimate: some components
     // are entirely presentational. Payload needs a field array, not a non-empty

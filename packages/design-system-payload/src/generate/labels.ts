@@ -117,3 +117,129 @@ export function pairTitle(prefix: string): string {
   const translated = parts.map(word => WORDS[word] ?? word)
   return sentence(last === 'link' ? translated : [...translated, 'link'])
 }
+
+/*
+What an author reads in a dropdown.
+
+Generated options were bare strings, so Payload showed the value: an author
+chose between `text-image` and `two-image`, `h2` and `h3`, `aside` and `band`,
+and the field's description had to make up for it in code voice — "h2 | h3 |
+h4. Defaults to h3." So every option now carries a label, from, in order:
+
+1. the host's own vocabulary, for values whose meaning is particular to its
+   design system (`text-image` is "Text and image" only because of what that
+   component draws — `GenerateOptions.optionLabels`);
+2. `VALUES` below, for the values that mean the same thing in any design
+   system — a heading level, an HTML element, a form input type;
+3. the value's own words, sentence-cased the way field names are.
+
+A ratio is left as it is written. "16:9" is the word for it.
+*/
+
+/** Values that are code, and mean the same thing wherever they appear. */
+const VALUES: Record<string, string> = {
+  h1: 'Heading 1',
+  h2: 'Heading 2',
+  h3: 'Heading 3',
+  h4: 'Heading 4',
+  h5: 'Heading 5',
+  h6: 'Heading 6',
+  p: 'Paragraph',
+  div: 'Block',
+  li: 'List item',
+  span: 'Inline',
+  tel: 'Phone number',
+  textarea: 'Long text',
+  select: 'Dropdown',
+  radio: 'Radio buttons',
+}
+
+/** The label for one select option's value. */
+export function optionLabel(value: string, vocabulary: Readonly<Record<string, string>> = {}): string {
+  const own = vocabulary[value] ?? VALUES[value]
+  if (own) return own
+  if (/^\d+:\d+$/.test(value)) return value
+  return sentence(words(value).map(word => WORDS[word] ?? word))
+}
+
+/** A picker shelf's name, with the same acronyms field labels use: `cta` → `CTA`. */
+export function groupLabel(group: string): string {
+  const parts = words(group).map(word => WORDS[word] ?? word)
+  return parts.map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+}
+
+/** Words a sentence that only lists a select's values is made of, besides the values. */
+const LISTING_WORDS = new Set(['default', 'defaults', 'to', 'or', 'and', 'one', 'of', 'optional'])
+
+/**
+ * A select's description without the sentences that only restate its options.
+ *
+ * Contracts describe a select's values in prose — "h2 | h3 | h4. Defaults to
+ * h3. Match the page outline." — because the manifest carries no options and
+ * the prose is also what the components MCP server hands to a composing model,
+ * which does want the list. In the admin the options are labelled, so those
+ * sentences are noise and the guidance after them is kept.
+ *
+ * Except for one fact they carry. A generated select has no `defaultValue` —
+ * the component's own default applies to an unset prop — so the dropdown opens
+ * empty, and "Defaults to h3" is the only place an author learns what empty
+ * means. A dropped sentence that named a default is replaced by that fact in
+ * the options' own words: "Leave empty for Heading 3."
+ *
+ * `undefined` when nothing is left.
+ */
+export function selectDescription(
+  description: string | undefined,
+  values: readonly string[],
+  label: (value: string) => string = value => optionLabel(value),
+): string | undefined {
+  if (!description) return undefined
+  const byLength = [...values].sort((a, b) => b.length - a.length)
+  const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const valuePattern = (value: string) =>
+    new RegExp(`(?<![\\w-])${escape(value.toLowerCase())}(?![\\w-])`, 'g')
+
+  const listsOnly = (part: string) => {
+    let rest = ` ${part.toLowerCase()} `
+    for (const value of byLength) rest = rest.replace(valuePattern(value), ' ')
+    return rest
+      .replace(/['"“”‘’()|,.;:]/g, ' ')
+      .split(/\s+/)
+      .every(word => word === '' || LISTING_WORDS.has(word))
+  }
+
+  const namedDefault = (part: string): string | undefined => {
+    const lower = part.toLowerCase()
+    return byLength.find(value => {
+      const v = escape(value.toLowerCase())
+      return (
+        new RegExp(`defaults? to ['"“‘]?${v}(?![\\w-])`).test(lower) ||
+        new RegExp(`(?<![\\w-])${v}['"”’]? \\(default\\)`).test(lower)
+      )
+    })
+  }
+
+  // Sentences, not splitting after "e.g." or "i.e.", which end in a full stop
+  // and are followed by the example they introduce.
+  const parts = description.split(/(?<!\b(?:e\.g|i\.e)\.)(?<=[.;])\s+/)
+  let fallback: string | undefined
+  const kept = parts.filter(part => {
+    if (!listsOnly(part)) return true
+    fallback ??= namedDefault(part)
+    return false
+  })
+
+  const text = [
+    ...(fallback ? [`Leave empty for ${label(fallback)}.`] : []),
+    ...kept.map((part, i) =>
+      // A clause that followed a semicolon starts lowercase.
+      i === 0 || /[.!?]$/.test(kept[i - 1] ?? '') ? part.charAt(0).toUpperCase() + part.slice(1) : part,
+    ),
+  ]
+    .join(' ')
+    .trim()
+    // A kept clause whose second half was a dropped list ends on its semicolon.
+    .replace(/;$/, '.')
+
+  return text === '' ? undefined : text
+}
