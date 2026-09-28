@@ -1,7 +1,8 @@
 import { groupOf } from '@forumone/throughline-design-contract'
-import type { Block } from 'payload'
+import type { Block, Field } from 'payload'
 import type { Overrides } from '../overrides'
 import { toPayloadField, type ContentField, type FieldContext } from './fields'
+import { blockGuidance, humanize } from './guidance'
 import { arrange, blockSummaryFields } from './layout'
 
 const BLOCK_SUMMARY = '@forumone/throughline-design-system-payload/client#BlockSummary'
@@ -92,6 +93,7 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
   const label = humanize(component.name)
 
   const preview = options.resolvePreview?.(component.name) ?? null
+  const guidance = blockGuidance(component.intent, Object.keys(options.manifest.components))
 
   return {
     slug: component.name,
@@ -132,7 +134,20 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
     // A block with no authorable fields is still legitimate: some components
     // are entirely presentational. Payload needs a field array, not a non-empty
     // one.
-    fields,
+    //
+    // Headed by what the block is for — see `./guidance.ts`. A `ui` field, so
+    // it stores nothing and is absent from the generated types.
+    fields: guidance ? [guidanceField(guidance), ...fields] : fields,
+  }
+}
+
+const BLOCK_GUIDANCE = '@forumone/throughline-design-system-payload/client#BlockGuidance'
+
+function guidanceField(text: string): Field {
+  return {
+    name: 'blockGuidance',
+    type: 'ui',
+    admin: { components: { Field: { path: BLOCK_GUIDANCE, clientProps: { text } } } },
   }
 }
 
@@ -141,10 +156,4 @@ export function generateBlocks(options: GenerateOptions): GeneratedBlock[] {
     .filter(component => isBlockCandidate(component, options.overrides))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(component => ({ block: generateBlock(component, options), component }))
-}
-
-/** `CollageHero` → `Collage Hero`, `cta` → `Cta`. */
-function humanize(name: string): string {
-  const spaced = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
