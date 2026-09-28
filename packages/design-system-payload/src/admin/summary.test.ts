@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { rowSummary, SUMMARY_MAX } from './summary'
+import { rowSummary, SUMMARY_MAX, summaryText } from './summary'
+
+describe("a block header's text", () => {
+  it('is the named field as the author typed it, on one line', () => {
+    expect(summaryText({ heading: '  Why it\nmatters ' }, ['heading'])).toBe('Why it matters')
+  })
+
+  it('is empty rather than a counter, so the header falls back to its own placeholder', () => {
+    expect(summaryText({ heading: '' }, ['heading'])).toBe('')
+    expect(summaryText(undefined, ['heading'])).toBe('')
+    expect(summaryText({ heading: 'x' }, [])).toBe('')
+  })
+
+  it('stops at the same length a row header does', () => {
+    expect(summaryText({ heading: 'x'.repeat(200) }, ['heading'])).toHaveLength(SUMMARY_MAX)
+  })
+})
 
 describe('a row header', () => {
   const fields = ['value', 'label']

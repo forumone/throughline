@@ -6,5 +6,7 @@
  * Kept apart from the package root and `./generate`, which run inside
  * `payload.config.ts`, so the config never pulls in `@payloadcms/ui`.
  */
+export { BlockSummary } from './admin/BlockSummary'
+export type { BlockSummaryProps } from './admin/BlockSummary'
 export { RowSummary } from './admin/RowSummary'
 export type { RowSummaryProps } from './admin/RowSummary'

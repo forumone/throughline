@@ -217,3 +217,49 @@ describe('labels', () => {
     expect(pairTitle(prefix)).toBe(title)
   })
 })
+
+describe('a block header', () => {
+  type Label = { path: string; clientProps: { fields: string[]; singular: string; slug: string } }
+  // `options` answers every text field as a union, which would make each one a
+  // select; a header is only ever named by text.
+  const text = {
+    ...options,
+    resolveSelectOptions: (_: string, path: string) => (path === 'variant' ? ['a', 'b'] : null),
+  }
+  const label = (fields: ContentField[]) =>
+    generateBlock(component(fields), text).admin?.components?.Label as Label | undefined
+  const image = [f('src', 'image')]
+
+  it("is the package's own component, told the block's label and slug", () => {
+    expect(label(TEXT_HERO)).toEqual({
+      path: '@forumone/throughline-design-system-payload/client#BlockSummary',
+      clientProps: { fields: ['heading'], singular: 'Example', slug: 'Example' },
+    })
+  })
+
+  it('is named by its heading even when an eyebrow comes first', () => {
+    const hero = [f('eyebrow', 'text'), f('heading', 'text'), f('intro', 'text')]
+    expect(label(hero)?.clientProps.fields).toEqual(['heading'])
+    expect(label([f('eyebrow', 'text'), f('title', 'text')])?.clientProps.fields).toEqual([
+      'title',
+    ])
+  })
+
+  it('falls back to its first short text, which for a testimonial is the quote', () => {
+    expect(label([f('quote', 'text'), f('name', 'text')])?.clientProps.fields).toEqual(['quote'])
+  })
+
+  it('is not named by a setting, an advanced field or a button label', () => {
+    const block = [
+      f('variant', 'select'),
+      f('srHeading', 'text', { advanced: true }),
+      f('ctaLabel', 'text'),
+      f('ctaHref', 'link'),
+    ]
+    expect(label(block)?.clientProps.fields).toEqual([])
+  })
+
+  it('is still drawn for a block with nothing to name it by, so every header matches', () => {
+    expect(label([f('slides', 'array', { of: image })])?.clientProps.fields).toEqual([])
+  })
+})

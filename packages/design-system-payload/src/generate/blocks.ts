@@ -2,7 +2,9 @@ import { groupOf } from '@forumone/throughline-design-contract'
 import type { Block } from 'payload'
 import type { Overrides } from '../overrides'
 import { toPayloadField, type ContentField, type FieldContext } from './fields'
-import { arrange } from './layout'
+import { arrange, blockSummaryFields } from './layout'
+
+const BLOCK_SUMMARY = '@forumone/throughline-design-system-payload/client#BlockSummary'
 
 /** The slice of a manifest component entry the generator reads. */
 export interface ManifestComponent {
@@ -85,11 +87,9 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
 
   // Arranged for an author to read — pairs grouped, settings behind a
   // disclosure. Presentational only; see `./layout.ts`.
-  const fields = arrange(
-    component.content.fields,
-    component.content.fields.map(field => toPayloadField(field, ctx)),
-    { disclose: true },
-  )
+  const generated = component.content.fields.map(field => toPayloadField(field, ctx))
+  const fields = arrange(component.content.fields, generated, { disclose: true })
+  const label = humanize(component.name)
 
   const preview = options.resolvePreview?.(component.name) ?? null
 
@@ -98,10 +98,23 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
     interfaceName: `${component.name}Block`,
     ...(preview ? { imageURL: preview.url, imageAltText: preview.alt } : {}),
     labels: {
-      singular: humanize(component.name),
-      plural: humanize(component.name),
+      singular: label,
+      plural: label,
     },
     admin: {
+      // A collapsed block says what it holds, not only what type it is — see
+      // `../admin/BlockSummary.tsx`. Every block gets it, including one with
+      // no text to show, so every header on a page is drawn by the same code.
+      components: {
+        Label: {
+          path: BLOCK_SUMMARY,
+          clientProps: {
+            fields: blockSummaryFields(component.content.fields, generated),
+            singular: label,
+            slug: component.name,
+          },
+        },
+      },
       // Which shelf of the picker this block sits on.
       //
       // `groupOf` is the contract's resolver: a component's `group` when it
