@@ -68,7 +68,7 @@ export async function requestManualSync(
   deps: RequestManualSyncDeps,
   args: RequestManualSyncArgs,
 ): Promise<RequestManualSyncResult> {
-  let doc: Record<string, unknown> | null = null
+  let doc: Record<string, unknown> | null
   try {
     doc = (await deps.payload.findByID({
       collection: deps.collectionSlug,

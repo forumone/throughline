@@ -37,7 +37,7 @@ export function createUpdateFormDestinationsTool(
         if (!check.ok) return deniedEnvelope(check.reason ?? 'Destination not on the allowlist.')
       }
 
-      let existing: Record<string, unknown> | null = null
+      let existing: Record<string, unknown> | null
       try {
         existing = (await deps.payload.findByID({
           collection: deps.resolved.formsCollectionSlug,
