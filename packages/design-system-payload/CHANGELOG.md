@@ -1,5 +1,59 @@
 # @forumone/throughline-design-system-payload
 
+## 0.7.0
+
+### Minor Changes
+
+- f89cbf2: A collapsed block says what it holds, not only what type it is.
+
+  Payload's block header is a number, a pill naming the block type, and the
+  optional block name, which nobody types — so a page opened as "01 Collage Hero
+  Untitled, 02 Logos Untitled, 03 Statement Section Untitled…". A generated
+  block's header now follows the pill with the block's `heading` or `title` as
+  it is being typed, or its first short text field when it has neither ("About
+  Forum One", a testimonial's quote). A block with no text of its own still reads
+  "Untitled", and a block name somebody did type still wins and is still
+  editable.
+
+  A name can no longer be added to a block that has none: shown as the input's
+  placeholder, the summary made the input cover the header, so a click meant to
+  open the block started editing a name instead.
+
+  Drawing only: stored data and generated types are unchanged. The header is a
+  client component at `@forumone/throughline-design-system-payload/client#BlockSummary`,
+  so a host regenerates its import map.
+
+- e561655: An opened block says what it is for.
+
+  Every contract's `intent` starts with a sentence written for an author — "Use
+  once per page as the strongest possible prompt, normally just above the
+  footer." — and none of it reached the admin, where the picker shows a
+  thumbnail and a name. A generated block now opens with that first sentence,
+  with any component it names written the way the picker labels it ("Image
+  Hero", not `ImageHero`).
+
+  It is a `ui` field (`blockGuidance`), so it stores nothing and generated types
+  are unchanged. The line is drawn by
+  `@forumone/throughline-design-system-payload/client#BlockGuidance`, so a host
+  regenerates its import map. A contract with no `intent` gets no line.
+
+- 18461c9: A generated select's options, and the picker's names, read as words.
+  - Every select option carries a label: `h2` is "Heading 2", `p` is
+    "Paragraph", `bar-chart` is "Bar chart", `Linkedin` is "LinkedIn". A host
+    passes `optionLabels` for values whose meaning is particular to its design
+    system (`{ 'text-image': 'Text and image' }`). Stored values are unchanged.
+  - A select's description drops the sentences that only listed its options —
+    "h2 | h3 | h4. Defaults to h3." — and keeps the advice after them. Because a
+    generated select has no default of its own, a dropped sentence that named
+    the component's default becomes "Leave empty for Heading 3." The contracts
+    are untouched; the MCP server still hands the full prose to a composing
+    model.
+  - A picker shelf spells its acronym: "CTA", not "Cta".
+  - `ComponentOverride.label` names a block whose component name splits badly
+    (`AtAGlance` → "At AGlance"). The slug is unchanged.
+  - A block preview's alt text is "A preview of the High Impact CTA block"
+    unless the host supplies one; `resolvePreview`'s `alt` is now optional.
+
 ## 0.6.0
 
 ### Minor Changes
