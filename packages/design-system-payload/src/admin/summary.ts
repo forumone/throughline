@@ -29,18 +29,28 @@ export function rowSummary(
   singular: string,
   rowIndex: number | undefined,
 ): string {
+  const text = summaryText(data, fields)
+  if (text === '') {
+    const number = rowIndex === undefined ? '' : ` ${String(rowIndex + 1).padStart(2, '0')}`
+    return `${singular}${number}`
+  }
+  return text
+}
+
+/**
+ * The named fields' text, joined on one line and cut to a header's length —
+ * or `''` when none of them holds any.
+ *
+ * `rowSummary` falls back to a counter; a block header already has one, and
+ * falls back to Payload's "Untitled" instead. See `./BlockSummary.tsx`.
+ */
+export function summaryText(data: unknown, fields: readonly string[]): string {
   const row = (data ?? {}) as Record<string, unknown>
-  const parts = fields
+  const text = fields
     .map(name => row[name])
     .filter((value): value is string => typeof value === 'string')
     .map(value => value.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
-
-  if (parts.length === 0) {
-    const number = rowIndex === undefined ? '' : ` ${String(rowIndex + 1).padStart(2, '0')}`
-    return `${singular}${number}`
-  }
-
-  const text = parts.join(SEPARATOR)
+    .join(SEPARATOR)
   return text.length > SUMMARY_MAX ? `${text.slice(0, SUMMARY_MAX - 1).trimEnd()}…` : text
 }

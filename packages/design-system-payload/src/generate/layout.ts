@@ -254,7 +254,11 @@ const SUMMARY_FIELDS = 2
  * it — so an omitted field, or a text field an override turned into a select,
  * is judged by what it became rather than by what the contract says.
  */
-export function summaryFields(contract: ContentField[], generated: (Field | null)[]): string[] {
+export function summaryFields(
+  contract: ContentField[],
+  generated: (Field | null)[],
+  limit: number = SUMMARY_FIELDS,
+): string[] {
   const paired = new Set(
     findPairs(contract, generated).flatMap(pair => [
       pair.label,
@@ -271,6 +275,28 @@ export function summaryFields(contract: ContentField[], generated: (Field | null
         (built?.type === 'text' || built?.type === 'textarea')
       )
     })
-    .slice(0, SUMMARY_FIELDS)
+    .slice(0, limit)
     .map(field => field.name)
+}
+
+/** What a block's heading is called when it has one. */
+const NAME_FIELDS = new Set(['heading', 'title'])
+
+/**
+ * Which one field names a block in its collapsed header, by contract name.
+ *
+ * One rather than `summaryFields`' two: a block's header already carries its
+ * number and the pill naming its type, and a heading is the name a reader
+ * would give it. So the block's `heading` or `title` when it has one — an
+ * eyebrow comes first in a hero's contract and says less — and otherwise its
+ * first short text field, which for a statement or a testimonial is the text
+ * itself. `[]` for a block with no text of its own.
+ */
+export function blockSummaryFields(
+  contract: ContentField[],
+  generated: (Field | null)[],
+): string[] {
+  const eligible = summaryFields(contract, generated, contract.length)
+  const named = eligible.find(name => NAME_FIELDS.has(name))
+  return named ? [named] : eligible.slice(0, 1)
 }
