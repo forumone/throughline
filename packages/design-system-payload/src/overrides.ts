@@ -58,6 +58,12 @@ export interface ComponentOverride {
    * author.
    */
   notABlock?: true
+  /**
+   * The block's name in the picker, when splitting the component name reads
+   * wrong: `AtAGlance` humanizes to "At AGlance". The slug is unchanged — it
+   * is the manifest name, byte for byte, whatever the label says.
+   */
+  label?: string
   /** Keyed by field path — `heading`, `items.title`, `image.src`. */
   fields?: Record<string, FieldOverride>
 }

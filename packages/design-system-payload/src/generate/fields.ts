@@ -1,7 +1,7 @@
 import type { CollectionSlug, Field } from 'payload'
 import { formatLabels } from 'payload/shared'
 import { fieldOverride, type Overrides } from '../overrides'
-import { labelFor } from './labels'
+import { labelFor, optionLabel, selectDescription } from './labels'
 import { arrange, oneLine, summaryFields } from './layout'
 
 /**
@@ -50,6 +50,8 @@ export interface FieldContext {
   resolveSelectOptions: (component: string, path: string) => readonly string[] | null
   /** Resolves a named exported union — used for the global icon set. */
   resolveNamedOptions: (typeName: string) => readonly string[] | null
+  /** The host's words for option values particular to its design system — see `optionLabel`. */
+  optionLabels?: Readonly<Record<string, string>>
 }
 
 /** The design system's exported union of every glyph name. */
@@ -63,6 +65,29 @@ const TEXTAREA_THRESHOLD = 160
 
 function describe(field: ContentField): string | undefined {
   return field.constraints
+}
+
+/**
+ * A select, with every option labelled and its description rid of the
+ * sentences that only listed the options — see `optionLabel` and
+ * `selectDescription` in `./labels.ts`. Every generated select comes through
+ * here, whichever branch resolved its values.
+ */
+function selectField(
+  field: ContentField,
+  values: readonly string[],
+  ctx: FieldContext,
+  required: { required?: boolean },
+): Field {
+  const label = (value: string) => optionLabel(value, ctx.optionLabels)
+  const description = selectDescription(describe(field), values, label)
+  return {
+    name: field.name,
+    type: 'select',
+    options: values.map(value => ({ label: label(value), value })),
+    ...required,
+    ...(description ? { admin: { description } } : {}),
+  }
 }
 
 /**
@@ -216,7 +241,7 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
           `and neither could the design system's ${ICON_NAME_TYPE}.`,
       )
     }
-    return { name: field.name, type: 'select', options: [...options], ...required, ...admin }
+    return selectField(field, options, ctx, required)
   }
 
   switch (field.type) {
@@ -231,7 +256,7 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
       */
       const asUnion = ctx.resolveSelectOptions(ctx.component, path)
       if (asUnion) {
-        return { name: field.name, type: 'select', options: [...asUnion], ...required, ...admin }
+        return selectField(field, asUnion, ctx, required)
       }
       // A 600-character answer in a single-line input is a usability bug, not
       // a styling preference. `text` and `textarea` are separate field types in
@@ -316,7 +341,7 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
             `type, or in an \`options\` override when it has none.`,
         )
       }
-      return { name: field.name, type: 'select', options: [...options], ...required, ...admin }
+      return selectField(field, options, ctx, required)
     }
 
     case 'group': {

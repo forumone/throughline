@@ -67,6 +67,12 @@ type ValidateFn = (
   options?: { siblingData?: unknown },
 ) => true | string | Promise<true | string>
 
+/** A select's stored values, whatever its options' labels say. */
+const values = (generated: Field): string[] =>
+  ((generated as unknown as { options: ({ value: string } | string)[] }).options ?? []).map(
+    option => (typeof option === 'string' ? option : option.value),
+  )
+
 const validateOf = (generated: Field): ValidateFn =>
   (generated as unknown as { validate: ValidateFn }).validate
 
@@ -155,7 +161,7 @@ describe('text', () => {
       context({ resolveSelectOptions: () => ['arrow', 'download'] }),
     )
     expect(generated.type).toBe('select')
-    expect(generated.options).toEqual(['arrow', 'download'])
+    expect(values(generated)).toEqual(['arrow', 'download'])
   })
 
   it('prefers the union over the length rule, however long the cap', () => {
@@ -260,7 +266,7 @@ describe('select', () => {
       { type: 'select' },
       context({ resolveSelectOptions: () => ['card', 'panel'] }),
     )
-    expect(generated.options).toEqual(['card', 'panel'])
+    expect(values(generated)).toEqual(['card', 'panel'])
   })
 
   it('lets an override supply options the host cannot resolve', () => {
@@ -268,7 +274,7 @@ describe('select', () => {
       { type: 'select', name: 'tone' },
       context({ overrides: { Example: { fields: { tone: { options: ['light', 'dark'] } } } } }),
     )
-    expect(generated.options).toEqual(['light', 'dark'])
+    expect(values(generated)).toEqual(['light', 'dark'])
   })
 
   /*
@@ -297,7 +303,7 @@ describe('an icon field', () => {
         resolveNamedOptions: () => ['global'],
       }),
     )
-    expect(generated.options).toEqual(['star'])
+    expect(values(generated)).toEqual(['star'])
   })
 
   it('falls back to the component’s own union, then to the global icon set', () => {
@@ -309,7 +315,7 @@ describe('an icon field', () => {
         resolveNamedOptions: () => ['global'],
       }),
     )
-    expect(viaUnion.options).toEqual(['resolved'])
+    expect(values(viaUnion)).toEqual(['resolved'])
 
     const viaGlobal = generate(
       { type: 'text', name: 'icon' },
@@ -318,7 +324,7 @@ describe('an icon field', () => {
         resolveNamedOptions: () => ['global'],
       }),
     )
-    expect(viaGlobal.options).toEqual(['global'])
+    expect(values(viaGlobal)).toEqual(['global'])
   })
 
   it('throws when no glyph set can be found anywhere', () => {
