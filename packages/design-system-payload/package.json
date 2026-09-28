@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./generate": "./src/generate/index.ts",
-    "./render": "./src/render/index.ts"
+    "./render": "./src/render/index.ts",
+    "./client": "./src/client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -15,6 +16,7 @@
     "test": "vitest run"
   },
   "peerDependencies": {
+    "@payloadcms/ui": "^3.0.0",
     "payload": "^3.0.0",
     "react": "^18.0.0 || ^19.0.0"
   },
@@ -24,8 +26,9 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
+    "@payloadcms/ui": "^3.83.0",
     "@types/node": "^24.13.2",
-    "@types/react": "19.2.14",
+    "@types/react": "^19.2.0",
     "eslint": "^10.5.0",
     "payload": "3.83.0",
     "tsx": "^4.23.11",

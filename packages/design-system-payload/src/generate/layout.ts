@@ -171,3 +171,106 @@ export function arrange(
     } as Field,
   ]
 }
+
+/*
+Two more rules, for the rows of an array rather than the top of a block.
+
+**A row of a few short strings is one line.** A stat is a figure and a label,
+a fact is a label and a value, and generated literally each row was two
+full-width inputs stacked under each other — a 12-character box as wide as the
+editor, then its partner below it. When every field of a row is a single-line
+text input and there are only two or three of them, they share one line, each
+as wide as its `maxLength` is long against the others', and never narrower
+than it can be read in. A row holding anything else is left stacked: an image
+or a link beside a text box is a layout to design, not one to derive.
+
+**A row is named by what it says.** See `../admin/summary.ts`. The header
+reads the row's first one or two plain-text fields — not a setting, not an
+`advanced` field, and not the label of a call to action, which says "Read more"
+in every row it appears in.
+
+Both are drawing only. A `row` stores its children flat, exactly as the
+unnamed groups above do, and a row label is a component in the import map.
+*/
+
+/** How many short fields one line holds before it is easier read stacked. */
+const ONE_LINE_MAX_FIELDS = 3
+
+/**
+ * An array row's fields, on one line when they are all short single-line text.
+ *
+ * Widths are each field's share of the row's combined `maxLength`, floored so
+ * a 12-character figure beside a 60-character label is still a box somebody
+ * can type into.
+ */
+export function oneLine(fields: Field[]): Field[] {
+  if (fields.length < 2 || fields.length > ONE_LINE_MAX_FIELDS) return fields
+
+  const lengths: number[] = []
+  for (const field of fields) {
+    if (field.type !== 'text' || typeof field.maxLength !== 'number') return fields
+    lengths.push(field.maxLength)
+  }
+
+  // A field whose share falls under the floor is held at it, and the rest of
+  // the line is shared among the others in proportion — repeated, because
+  // raising one can push a third under.
+  const floor = 1 / (fields.length + 2)
+  const held = new Set<number>()
+  let shares: number[] = []
+  for (let settled = false; !settled; ) {
+    const free = lengths.reduce((sum, length, i) => (held.has(i) ? sum : sum + length), 0)
+    const room = 1 - held.size * floor
+    shares = lengths.map((length, i) => (held.has(i) ? floor : (length / free) * room))
+    const under = shares.findIndex((share, i) => !held.has(i) && share < floor)
+    if (under === -1) settled = true
+    else held.add(under)
+  }
+  const widths = shares.map(share => Math.round(share * 100))
+  // Rounding can leave the line a point over or under; the last field absorbs it.
+  widths[widths.length - 1]! += 100 - widths.reduce((sum, width) => sum + width, 0)
+
+  return [
+    {
+      type: 'row',
+      fields: fields.map(
+        (field, i) =>
+          ({
+            ...field,
+            admin: { ...('admin' in field ? field.admin : {}), width: `${widths[i]}%` },
+          }) as Field,
+      ),
+    },
+  ]
+}
+
+/** The most fields a row header joins. More reads as a sentence, not a name. */
+const SUMMARY_FIELDS = 2
+
+/**
+ * Which of an array row's fields name it in its header, by contract name.
+ *
+ * `generated[i]` is the Payload field for `contract[i]`, as `arrange` takes
+ * it — so an omitted field, or a text field an override turned into a select,
+ * is judged by what it became rather than by what the contract says.
+ */
+export function summaryFields(contract: ContentField[], generated: (Field | null)[]): string[] {
+  const paired = new Set(
+    findPairs(contract, generated).flatMap(pair => [
+      pair.label,
+      pair.link,
+      ...(pair.icon === undefined ? [] : [pair.icon]),
+    ]),
+  )
+  return contract
+    .filter((field, i) => {
+      const built = generated[i]
+      return (
+        !paired.has(i) &&
+        !field.advanced &&
+        (built?.type === 'text' || built?.type === 'textarea')
+      )
+    })
+    .slice(0, SUMMARY_FIELDS)
+    .map(field => field.name)
+}
