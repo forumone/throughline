@@ -270,6 +270,44 @@ describe('publishing outside the pipeline', () => {
   })
 })
 
+describe('reverting to published', () => {
+  /**
+   * What Payload's Status component sends for "Revert to published": a read
+   * of the live document at depth 0, written straight back with no draft
+   * flag.
+   */
+  async function revert(id: number | string, edit: Record<string, unknown> = {}) {
+    const live = await payload.findByID({ collection: 'pages', id, depth: 0 })
+    return update(id, { data: { ...live, ...edit } })
+  }
+
+  it('discards a pending draft and leaves the live document as it was', async () => {
+    const id = await makePage('published')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(revert(id)).resolves.toBeDefined()
+    expect(await liveStatus(id)).toBe('published')
+    expect(await liveTitle(id)).toBe('A page')
+    expect(await draftTitle(id)).toBe('A page')
+  })
+
+  it('is blocked when the write changes the content it claims to restate', async () => {
+    const id = await makePage('published')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(revert(id, { title: 'Something else' })).rejects.toThrow(BLOCKED)
+    expect(await liveTitle(id)).toBe('A page')
+  })
+
+  it('is blocked on a document that was never published', async () => {
+    const id = await makePage('draft')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(revert(id, { _status: 'published' })).rejects.toThrow(BLOCKED)
+    expect(await liveStatus(id)).toBe('draft')
+  })
+})
+
 describe('rollback', () => {
   it('restores a version, as the MCP tool does', async () => {
     const id = await makePage('draft')
