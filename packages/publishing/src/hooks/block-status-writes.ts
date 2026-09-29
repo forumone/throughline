@@ -42,6 +42,14 @@ import { isDraftWrite } from './draft-writes.js'
  * "Revert to published", which reads the live document and writes it back
  * unchanged to discard the draft — the public sees nothing new, so there is
  * nothing for the pipeline to check.
+ *
+ * Moving a document to the trash is the same question asked a different way.
+ * On a collection with `trash: true` it is an update that sets `deletedAt`,
+ * and every read then leaves the document out — so trashing a live document
+ * takes it off the site. `_status` stays `published` throughout, so without
+ * its own check it passed as an ordinary edit, and the page came down with no
+ * policy check, no `unpublished` event and nothing to drop the cached copy.
+ * It is refused while the document is live: unpublish, then trash.
  */
 export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
   return async ({ collection, data, originalDoc, operation, context, req }) => {
@@ -52,6 +60,15 @@ export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
     const nextStatus = (data as Record<string, unknown>)['_status']
     const previousStatus = (originalDoc as Record<string, unknown> | undefined)?.['_status']
     const id = (originalDoc as { id?: unknown } | undefined)?.id
+
+    if (movesToTrash(data, originalDoc)) {
+      const liveStatus = await resolveLiveStatus(req, collection?.slug, id, previousStatus)
+      if (liveStatus !== undefined && liveStatus !== 'published') return data
+      throw new APIError(
+        'This document is published. Unpublish it first, then move it to the trash.',
+        400,
+      )
+    }
 
     // A draft save writes a version and leaves the live document alone.
     //
@@ -110,6 +127,11 @@ async function resolveLiveStatus(
       id: id as number | string,
       depth: 0,
       overrideAccess: true,
+      // A trashed document is still the live row, and restoring one is a
+      // write about it. Without this every read leaves it out, the lookup
+      // throws, and "Restore as draft" was refused. Ignored where the
+      // collection has no trash.
+      trash: true,
       // Share the request so this reads inside the open transaction.
       req,
     })
@@ -198,6 +220,17 @@ function sameContent(a: unknown, b: unknown): boolean {
  */
 function carriesStatus(data: unknown): boolean {
   return typeof data === 'object' && data !== null && '_status' in data
+}
+
+/**
+ * Whether this write puts the document in the trash: `deletedAt` set now and
+ * not before. Restoring clears it, and is judged by the status rules above
+ * like any other write.
+ */
+function movesToTrash(data: unknown, originalDoc: unknown): boolean {
+  const next = (data as Record<string, unknown> | null | undefined)?.['deletedAt']
+  const previous = (originalDoc as Record<string, unknown> | null | undefined)?.['deletedAt']
+  return next != null && previous == null
 }
 
 function isBypassed(context: unknown): boolean {
