@@ -43,7 +43,7 @@ export function createSubmitEndpoint(resolved: ResolvedFormsConfig): Endpoint {
       }
 
       const payload = req.payload as Payload
-      let form: Record<string, unknown> | null = null
+      let form: Record<string, unknown> | null
       try {
         form = (await payload.findByID({
           collection: resolved.formsCollectionSlug,

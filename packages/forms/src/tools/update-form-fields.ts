@@ -37,7 +37,7 @@ export function createUpdateFormFieldsTool(
       const fieldCheck = validateFieldSet(input.fields)
       if (!fieldCheck.ok) return deniedEnvelope(fieldCheck.reason!)
 
-      let existing: Record<string, unknown> | null = null
+      let existing: Record<string, unknown> | null
       try {
         existing = (await deps.payload.findByID({
           collection: deps.resolved.formsCollectionSlug,

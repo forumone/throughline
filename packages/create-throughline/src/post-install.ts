@@ -55,7 +55,7 @@ export function printNextSteps(answers: Answers): void {
   lines.push(formatStep(step++, 'Paste those keys into .env.local'))
   lines.push(
     formatStep(
-      step++,
+      step,
       'Wire Claude (or your MCP client) to your MCP endpoints — see the generated README.md',
     ),
   )

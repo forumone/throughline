@@ -26,7 +26,7 @@ export function createGetIntegrationStatusTool(
         return deniedEnvelope('Only admins and editors can view integration status.')
       }
 
-      let doc: Record<string, unknown> | null = null
+      let doc: Record<string, unknown> | null
       try {
         doc = (await deps.payload.findByID({
           collection: deps.collectionSlug,
