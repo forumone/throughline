@@ -389,13 +389,33 @@ describe('the trash', () => {
   })
 
   // "Restore as published" is a publish, and a publish goes through the pipeline.
-  it('refuses to restore a trashed document straight to published', async () => {
+  // The restore dialog's own checkbox, so the refusal is worded for an editor.
+  it('refuses to restore a trashed document straight to published, and says what to do', async () => {
     const id = await makePage('draft')
     await trash(id)
 
     await expect(
       update(id, { trash: true, data: { deletedAt: null, _status: 'published' } }),
-    ).rejects.toThrow(BLOCKED)
+    ).rejects.toThrow(/Restore it as a draft, then publish it/)
     expect(await isTrashed(id)).toBe(true)
+  })
+
+  // A document published at trash time can only get there around the pipeline
+  // (the check above refuses the admin's route). Its restore changes nothing
+  // live, so the rule for an ordinary edit of a live document still applies.
+  it('lets a restore that changes nothing live through', async () => {
+    const id = await makePage('published')
+    await update(id, {
+      data: { deletedAt: new Date().toISOString() },
+      context: BYPASS,
+    })
+
+    await update(id, { trash: true, data: { deletedAt: null, _status: 'published' } })
+    expect(await isTrashed(id)).toBe(false)
+  })
+
+  it('keeps the generic refusal for a direct publish that is not a restore', async () => {
+    const id = await makePage('draft')
+    await expect(update(id, { data: { _status: 'published' } })).rejects.toThrow(BLOCKED)
   })
 })
