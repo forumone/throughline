@@ -43,6 +43,29 @@ export interface BlockSummaryProps {
  * Returned as a fragment so they stay direct children of Payload's
  * `blocks-field__block-header`, which spaces them.
  */
+/*
+One line, whatever the heading.
+
+Payload's header is a flex row whose items stretch to the tallest, so a
+heading that wrapped to three lines made the block pill three lines tall and
+the collapsed page a column of uneven boxes — the list this header exists to
+make scannable. So nothing here stretches, and the summary is a single line
+that ends in an ellipsis where it runs out of room. The row opens on a click
+anywhere on it, which shows the whole heading.
+*/
+const CENTRED = { alignSelf: 'center' } as const
+
+const SUMMARY = {
+  ...CENTRED,
+  color: 'var(--theme-elevation-500)',
+  pointerEvents: 'none',
+  flex: '1 1 auto',
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+} as const
+
 export function BlockSummary({ fields, singular, slug }: BlockSummaryProps) {
   const { data, path, rowNumber } = useRowLabel<Record<string, unknown>>()
   const { t } = useTranslation()
@@ -53,16 +76,19 @@ export function BlockSummary({ fields, singular, slug }: BlockSummaryProps) {
 
   return (
     <>
-      <span className="blocks-field__block-number">
+      <span className="blocks-field__block-number" style={CENTRED}>
         {String((rowNumber ?? 0) + 1).padStart(2, '0')}
       </span>
-      <Pill
-        className={`blocks-field__block-pill blocks-field__block-pill-${slug}`}
-        pillStyle="white"
-        size="small"
-      >
-        {singular}
-      </Pill>
+      {/* `Pill` takes no style; the wrapper is what keeps it from stretching. */}
+      <span style={{ ...CENTRED, display: 'flex', flexShrink: 0 }}>
+        <Pill
+          className={`blocks-field__block-pill blocks-field__block-pill-${slug}`}
+          pillStyle="white"
+          size="small"
+        >
+          {singular}
+        </Pill>
+      </span>
       {name ? (
         // `data-value` is what sizes the input — see Payload's SectionTitle.
         <div className="section-title" data-value={name}>
@@ -82,7 +108,7 @@ export function BlockSummary({ fields, singular, slug }: BlockSummaryProps) {
           />
         </div>
       ) : (
-        <span className="row-label" style={{ color: 'var(--theme-elevation-500)', pointerEvents: 'none' }}>
+        <span className="row-label" style={SUMMARY}>
           {summary}
         </span>
       )}
