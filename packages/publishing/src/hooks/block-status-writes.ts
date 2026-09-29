@@ -36,6 +36,20 @@ import { isDraftWrite } from './draft-writes.js'
  * live — including promoting a pending draft, which leaves `_status` on
  * `published` throughout and so cannot be caught by comparing statuses
  * alone.
+ *
+ * One non-draft `published` write over a pending draft is harmless: one
+ * whose content is exactly what is already live. That is Payload's own
+ * "Revert to published", which reads the live document and writes it back
+ * unchanged to discard the draft — the public sees nothing new, so there is
+ * nothing for the pipeline to check.
+ *
+ * Moving a document to the trash is the same question asked a different way.
+ * On a collection with `trash: true` it is an update that sets `deletedAt`,
+ * and every read then leaves the document out — so trashing a live document
+ * takes it off the site. `_status` stays `published` throughout, so without
+ * its own check it passed as an ordinary edit, and the page came down with no
+ * policy check, no `unpublished` event and nothing to drop the cached copy.
+ * It is refused while the document is live: unpublish, then trash.
  */
 export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
   return async ({ collection, data, originalDoc, operation, context, req }) => {
@@ -46,6 +60,15 @@ export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
     const nextStatus = (data as Record<string, unknown>)['_status']
     const previousStatus = (originalDoc as Record<string, unknown> | undefined)?.['_status']
     const id = (originalDoc as { id?: unknown } | undefined)?.id
+
+    if (movesToTrash(data, originalDoc)) {
+      const liveStatus = await resolveLiveStatus(req, collection?.slug, id, previousStatus)
+      if (liveStatus !== undefined && liveStatus !== 'published') return data
+      throw new APIError(
+        'This document is published. Unpublish it first, then move it to the trash.',
+        400,
+      )
+    }
 
     // A draft save writes a version and leaves the live document alone.
     //
@@ -63,6 +86,7 @@ export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
       // draft is pending, this is the publish and it belongs in the
       // pipeline — even though the live status does not change.
       if (previousStatus === 'published') return data
+      if (await restatesLiveContent(req, collection?.slug, id, data)) return data
     } else {
       // This takes the live document down. Harmless only if nothing is
       // live: a document that was never published, or is already down.
@@ -103,6 +127,11 @@ async function resolveLiveStatus(
       id: id as number | string,
       depth: 0,
       overrideAccess: true,
+      // A trashed document is still the live row, and restoring one is a
+      // write about it. Without this every read leaves it out, the lookup
+      // throws, and "Restore as draft" was refused. Ignored where the
+      // collection has no trash.
+      trash: true,
       // Share the request so this reads inside the open transaction.
       req,
     })
@@ -114,12 +143,94 @@ async function resolveLiveStatus(
 }
 
 /**
+ * Fields that differ between two writes of the same content: the row's
+ * identity, its timestamps, and the status this hook is already judging.
+ */
+const NOT_CONTENT = new Set(['id', 'createdAt', 'updatedAt', '_status'])
+
+/**
+ * Whether `data` is the live document's content, unchanged — so writing it
+ * would leave the public site exactly as it is.
+ *
+ * Compared as JSON so a `Date` and its ISO string agree, ignoring key order,
+ * and with a missing key equal to `null`, which is how Payload stores an
+ * empty field. Anything
+ * it cannot read counts as a change, and the caller blocks.
+ */
+async function restatesLiveContent(
+  req: PayloadRequest | undefined,
+  collectionSlug: string | undefined,
+  id: unknown,
+  data: unknown,
+): Promise<boolean> {
+  if (!req?.payload || !collectionSlug || id === undefined || id === null) return false
+
+  let live: unknown
+  try {
+    live = await req.payload.findByID({
+      collection: collectionSlug,
+      id: id as number | string,
+      depth: 0,
+      draft: false,
+      overrideAccess: true,
+      req,
+    })
+  } catch {
+    return false
+  }
+  if (!live || typeof live !== 'object') return false
+  if ((live as Record<string, unknown>)['_status'] !== 'published') return false
+
+  const next = asJSON(data)
+  const current = asJSON(live)
+  const keys = new Set([...Object.keys(next), ...Object.keys(current)])
+  for (const key of keys) {
+    if (NOT_CONTENT.has(key)) continue
+    if (!sameContent(next[key], current[key])) return false
+  }
+  return true
+}
+
+function asJSON(value: unknown): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>
+}
+
+/** Deep equality over JSON values, ignoring object key order. */
+function sameContent(a: unknown, b: unknown): boolean {
+  a = a ?? null
+  b = b ?? null
+  if (a === b) return true
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false
+  if (Array.isArray(a) !== Array.isArray(b)) return false
+  if (Array.isArray(a)) {
+    const other = b as unknown[]
+    return a.length === other.length && a.every((item, i) => sameContent(item, other[i]))
+  }
+  const left = a as Record<string, unknown>
+  const right = b as Record<string, unknown>
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)])
+  for (const key of keys) if (!sameContent(left[key], right[key])) return false
+  return true
+}
+
+/**
  * Whether `_status` is present at all. Payload merges the stored document
  * into `data`, so this is true for nearly every update — it only filters
  * out collections without drafts.
  */
 function carriesStatus(data: unknown): boolean {
   return typeof data === 'object' && data !== null && '_status' in data
+}
+
+/**
+ * Whether this write puts the document in the trash: `deletedAt` set now and
+ * not before. Restoring clears it, and is judged by the status rules above
+ * like any other write.
+ */
+function movesToTrash(data: unknown, originalDoc: unknown): boolean {
+  const next = (data as Record<string, unknown> | null | undefined)?.['deletedAt']
+  const previous = (originalDoc as Record<string, unknown> | null | undefined)?.['deletedAt']
+  return next != null && previous == null
 }
 
 function isBypassed(context: unknown): boolean {

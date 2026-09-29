@@ -28,6 +28,8 @@ function update(options: {
   latestVersion: 'draft' | 'published'
   /** `_status` of the live row, when it differs from the latest version. */
   live?: 'draft' | 'published'
+  /** The live row's title, when a test needs its content. */
+  liveTitle?: string
   /** An explicit status from the caller, before Payload's own injection. */
   requested?: 'draft' | 'published'
   context?: Record<string, unknown>
@@ -38,7 +40,11 @@ function update(options: {
   const req = {
     context: {} as Record<string, unknown>,
     payload: {
-      findByID: vi.fn(async () => ({ id, _status: options.live ?? options.latestVersion })),
+      findByID: vi.fn(async () => ({
+        id,
+        _status: options.live ?? options.latestVersion,
+        ...(options.liveTitle === undefined ? {} : { title: options.liveTitle }),
+      })),
     },
   }
 
@@ -211,6 +217,38 @@ describe('what reaches the public', () => {
     // status comparison — but it is what puts the pending draft live.
     it('blocks promoting a pending draft outside the pipeline', async () => {
       await blocked({ latestVersion: 'draft', live: 'published', requested: 'published' })
+    })
+
+    it('blocks promoting a pending draft whose content differs from the live row', async () => {
+      await blocked({
+        latestVersion: 'draft',
+        live: 'published',
+        liveTitle: 'The live title',
+        requested: 'published',
+      })
+    })
+  })
+
+  describe('reverting to published — the live content, written back', () => {
+    // Payload's "Revert to published" reads the live document and writes it
+    // back with no draft flag. It discards the draft and changes nothing a
+    // reader sees.
+    it('allows a non-draft write that restates the live content', async () => {
+      await allowed({
+        latestVersion: 'draft',
+        live: 'published',
+        liveTitle: 'A title',
+        requested: 'published',
+      })
+    })
+
+    it('blocks the same write when nothing is live', async () => {
+      await blocked({
+        latestVersion: 'draft',
+        live: 'draft',
+        liveTitle: 'A title',
+        requested: 'published',
+      })
     })
   })
 

@@ -45,6 +45,7 @@ beforeAll(async () => {
         slug: 'pages',
         fields: [{ name: 'title', type: 'text' }],
         versions: { drafts: true },
+        trash: true,
         hooks: {
           beforeOperation: [createRecordDraftWritesHook()],
           beforeChange: [createBlockStatusWritesHook()],
@@ -270,6 +271,44 @@ describe('publishing outside the pipeline', () => {
   })
 })
 
+describe('reverting to published', () => {
+  /**
+   * What Payload's Status component sends for "Revert to published": a read
+   * of the live document at depth 0, written straight back with no draft
+   * flag.
+   */
+  async function revert(id: number | string, edit: Record<string, unknown> = {}) {
+    const live = await payload.findByID({ collection: 'pages', id, depth: 0 })
+    return update(id, { data: { ...live, ...edit } })
+  }
+
+  it('discards a pending draft and leaves the live document as it was', async () => {
+    const id = await makePage('published')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(revert(id)).resolves.toBeDefined()
+    expect(await liveStatus(id)).toBe('published')
+    expect(await liveTitle(id)).toBe('A page')
+    expect(await draftTitle(id)).toBe('A page')
+  })
+
+  it('is blocked when the write changes the content it claims to restate', async () => {
+    const id = await makePage('published')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(revert(id, { title: 'Something else' })).rejects.toThrow(BLOCKED)
+    expect(await liveTitle(id)).toBe('A page')
+  })
+
+  it('is blocked on a document that was never published', async () => {
+    const id = await makePage('draft')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(revert(id, { _status: 'published' })).rejects.toThrow(BLOCKED)
+    expect(await liveStatus(id)).toBe('draft')
+  })
+})
+
 describe('rollback', () => {
   it('restores a version, as the MCP tool does', async () => {
     const id = await makePage('draft')
@@ -287,5 +326,76 @@ describe('rollback', () => {
         overrideAccess: true,
       }),
     ).resolves.toBeDefined()
+  })
+})
+
+/*
+The trash, as the admin drives it: moving a document there is a `PATCH` of
+`{ deletedAt }` with no `draft` flag, and restoring one sends `deletedAt: null`
+with `_status` set by the "restore as published" checkbox. Every read then
+leaves a trashed document out, so trashing a live page takes it off the site —
+which is why it is judged here at all.
+*/
+describe('the trash', () => {
+  const trash = (id: number | string) => update(id, { data: { deletedAt: new Date().toISOString() } })
+
+  async function isTrashed(id: number | string): Promise<boolean> {
+    const doc = await payload.findByID({ collection: 'pages', id, trash: true })
+    return doc.deletedAt != null
+  }
+
+  it('refuses to trash a published document', async () => {
+    const id = await makePage('published')
+
+    await expect(trash(id)).rejects.toThrow(/Unpublish it first/)
+
+    expect(await isTrashed(id)).toBe(false)
+    expect(await liveStatus(id)).toBe('published')
+  })
+
+  it('refuses to trash a published document with a draft pending', async () => {
+    const id = await makePage('published')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(trash(id)).rejects.toThrow(/Unpublish it first/)
+    expect(await isTrashed(id)).toBe(false)
+  })
+
+  it('trashes a document that was never published', async () => {
+    const id = await makePage('draft')
+
+    await trash(id)
+
+    expect(await isTrashed(id)).toBe(true)
+  })
+
+  it('trashes a document once it has been unpublished', async () => {
+    const id = await makePage('published')
+    await update(id, { data: { _status: 'draft' }, context: BYPASS })
+
+    await trash(id)
+
+    expect(await isTrashed(id)).toBe(true)
+  })
+
+  it('restores a trashed document as a draft', async () => {
+    const id = await makePage('draft')
+    await trash(id)
+
+    await update(id, { trash: true, data: { deletedAt: null, _status: 'draft' } })
+
+    expect(await isTrashed(id)).toBe(false)
+    expect(await liveStatus(id)).toBe('draft')
+  })
+
+  // "Restore as published" is a publish, and a publish goes through the pipeline.
+  it('refuses to restore a trashed document straight to published', async () => {
+    const id = await makePage('draft')
+    await trash(id)
+
+    await expect(
+      update(id, { trash: true, data: { deletedAt: null, _status: 'published' } }),
+    ).rejects.toThrow(BLOCKED)
+    expect(await isTrashed(id)).toBe(true)
   })
 })
