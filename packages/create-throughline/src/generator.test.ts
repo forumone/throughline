@@ -161,6 +161,7 @@ describe('generate (with reference DS)', () => {
     )
     expect(route).toContain('createRevalidateOnPublishFunction')
     expect(route).toContain('createExecuteScheduledPublishesFunction')
+    expect(route).toContain('createPublishAtScheduledTimeFunction')
     expect(route).toContain('createExpireStaleApprovalsFunction')
     expect(route).toContain('createAuditEventEchoFunction')
     expect(route).toContain('createHealthcheckFunction')

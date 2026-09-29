@@ -2,9 +2,10 @@ import type { CollectionConfig } from 'payload'
 import type { CorePlugin } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
 import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
-import { type PublishingPluginOptions, validateOptions } from './options.js'
+import { type PublishingPluginOptions, resolveCollection, validateOptions } from './options.js'
 import { createBlockStatusWritesHook } from './hooks/block-status-writes.js'
 import { createRecordDraftWritesHook } from './hooks/draft-writes.js'
+import { createSendScheduledEventHook } from './hooks/schedule-events.js'
 import { createAdminEndpoints } from './endpoints/admin.js'
 import { attachPublishingService, createPublishingService } from './service.js'
 import {
@@ -51,9 +52,25 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
             ...(collection.hooks?.beforeChange ?? []),
             createBlockStatusWritesHook(),
           ],
+          // A new scheduled time wakes the run that publishes at it.
+          afterChange: [
+            ...(collection.hooks?.afterChange ?? []),
+            createSendScheduledEventHook({
+              inngest: options.inngest,
+              scheduledPublishField: resolveCollection(options, collection.slug)
+                .scheduledPublishField,
+            }),
+          ],
         },
         ...(adminComponents
-          ? { admin: withAdminControls(collection, routePrefix) }
+          ? {
+              admin: withAdminControls(collection, routePrefix),
+              fields: withScheduleControl(
+                collection.fields,
+                resolveCollection(options, collection.slug).scheduledPublishField,
+                routePrefix,
+              ),
+            }
           : {}),
       } satisfies CollectionConfig
     })
@@ -98,7 +115,7 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
         const tools = [
           createPublishTool({ payload, options, auditWriter, service }),
           createUnpublishTool({ payload, options, auditWriter, service }),
-          createSchedulePublishTool({ payload, options, auditWriter }),
+          createSchedulePublishTool({ options, service }),
           createGetPublishStatusTool({ payload, options, service }),
           createRollbackTool({ payload, options, auditWriter }),
         ]
@@ -175,4 +192,37 @@ function withAdminControls(
       },
     },
   }
+}
+
+/**
+ * Renders the collection's scheduled-publish field as the plugin's Schedule
+ * control, so scheduling runs the pipeline's checks when the time is picked.
+ *
+ * Only a top-level `date` field with that name, and only when the host has not
+ * set a component of its own. A collection with no such field is left alone —
+ * declaring the field is the host's way of opting a collection in.
+ */
+function withScheduleControl(
+  fields: CollectionConfig['fields'],
+  fieldName: string,
+  routePrefix: string,
+): CollectionConfig['fields'] {
+  return fields.map((field) => {
+    if (!('name' in field) || field.name !== fieldName || field.type !== 'date') return field
+    if (field.admin?.components?.Field !== undefined) return field
+    return {
+      ...field,
+      admin: {
+        ...(field.admin ?? {}),
+        components: {
+          ...(field.admin?.components ?? {}),
+          Field: {
+            path: CLIENT_ENTRY,
+            exportName: 'SchedulePublishField',
+            clientProps: { routePrefix },
+          },
+        },
+      },
+    }
+  })
 }

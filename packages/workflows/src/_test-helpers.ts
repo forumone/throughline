@@ -10,9 +10,11 @@ interface CreatedFunction {
 type HandlerFn = (ctx: HandlerCtx) => Promise<unknown>
 
 export interface HandlerCtx {
-  event: { name: string; data: unknown }
+  event: { name: string; data: unknown; ts?: number }
   step: {
     run: <T>(name: string, fn: () => Promise<T>) => Promise<T>
+    sleepUntil: (name: string, until: Date) => Promise<void>
+    sendEvent: (name: string, event: { name: string; data: unknown }) => Promise<void>
   }
   logger: { info: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void; debug: (...args: unknown[]) => void }
 }
@@ -26,15 +28,18 @@ export interface FakeInngest {
   inngest: Inngest
   functions: CreatedFunction[]
   sends: Array<{ name: string; data: unknown }>
+  /** Every `step.sleepUntil`, in order. The fake does not actually wait. */
+  sleeps: Array<{ name: string; until: Date }>
   invoke: (
     fnId: string,
-    event: { name: string; data: unknown },
+    event: { name: string; data: unknown; ts?: number },
   ) => Promise<unknown>
 }
 
 export function createFakeInngest(): FakeInngest {
   const functions: CreatedFunction[] = []
   const sends: Array<{ name: string; data: unknown }> = []
+  const sleeps: Array<{ name: string; until: Date }> = []
 
   const inngest = {
     createFunction: (
@@ -54,12 +59,21 @@ export function createFakeInngest(): FakeInngest {
     inngest,
     functions,
     sends,
+    sleeps,
     invoke: async (fnId, event) => {
       const fn = functions.find((f) => f.id === fnId)
       if (!fn) throw new Error(`Function "${fnId}" not registered`)
       const ctx: HandlerCtx = {
         event,
-        step: { run: async (_name, run) => run() },
+        step: {
+          run: async (_name, run) => run(),
+          sleepUntil: async (name, until) => {
+            sleeps.push({ name, until })
+          },
+          sendEvent: async (_name, sent) => {
+            sends.push(sent)
+          },
+        },
         logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
       }
       return fn.handler(ctx)
@@ -72,6 +86,13 @@ interface FindArgs {
   where?: { and?: Array<Record<string, Record<string, unknown>>> }
   limit?: number
   sort?: string
+  draft?: boolean
+}
+
+interface FindByIdArgs {
+  collection: string
+  id: string
+  draft?: boolean
 }
 
 interface UpdateArgs {
@@ -83,6 +104,7 @@ interface UpdateArgs {
 export interface FakePayloadHandle {
   payload: Payload
   finds: FindArgs[]
+  findByIds: FindByIdArgs[]
   updates: UpdateArgs[]
   setDocs: (docs: Array<Record<string, unknown>>) => void
 }
@@ -90,6 +112,7 @@ export interface FakePayloadHandle {
 export function createFakePayload(initialDocs: Array<Record<string, unknown>> = []): FakePayloadHandle {
   let docs = [...initialDocs]
   const finds: FindArgs[] = []
+  const findByIds: FindByIdArgs[] = []
   const updates: UpdateArgs[] = []
 
   const payload = {
@@ -111,6 +134,11 @@ export function createFakePayload(initialDocs: Array<Record<string, unknown>> = 
         pagingCounter: 1,
       }
     },
+    // `disableErrors` semantics: a missing document is `null`, not a throw.
+    findByID: async (args: FindByIdArgs) => {
+      findByIds.push(args)
+      return docs.find((d) => String(d['id']) === args.id) ?? null
+    },
     update: async (args: UpdateArgs) => {
       updates.push(args)
       docs = docs.map((doc) =>
@@ -123,6 +151,7 @@ export function createFakePayload(initialDocs: Array<Record<string, unknown>> = 
   return {
     payload,
     finds,
+    findByIds,
     updates,
     setDocs: (next) => {
       docs = next

@@ -311,6 +311,100 @@ describe('createPublishingService', () => {
     expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
   })
 
+  /*
+  The latest version of a live page with a draft saved on top says `draft`, and
+  unpublish used to believe it: the page could not be taken down until somebody
+  discarded their draft. Found by the scheduled-publish end-to-end run, where a
+  scheduled revision of a live post is exactly that state.
+  */
+  it('unpublishes a live document that has a newer draft on top', async () => {
+    const latest = { ...publishableDoc, _status: 'draft' }
+    const live = { ...publishableDoc, _status: 'published' }
+    const deps = makeDeps({
+      payloadFindByID: vi.fn(async (args: { draft?: boolean }) => (args.draft ? latest : live)),
+    })
+
+    const result = await createPublishingService(deps).unpublish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+
+    expect(result.unpublished).toBe(true)
+    expect(deps.spies.payloadUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ _status: 'draft' }) }),
+    )
+  })
+
+  it('still refuses a document that has never been live', async () => {
+    const deps = makeDeps({
+      payloadFindByID: vi.fn(async () => ({ ...publishableDoc, _status: 'draft' })),
+    })
+    const result = await createPublishingService(deps).unpublish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+    expect(result).toEqual({ unpublished: false, reason: 'Document is not currently published' })
+  })
+
+  it('clears the schedule when it unpublishes, so the page cannot put itself back up', async () => {
+    const deps = makeDeps({
+      document: {
+        ...publishableDoc,
+        _status: 'published',
+        scheduledPublishAt: '2026-04-22T11:00:00.000Z',
+      },
+    })
+    await createPublishingService(deps).unpublish({
+      collection: 'pages',
+      id: '1',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+    expect(deps.spies.payloadUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { _status: 'draft', scheduledPublishAt: null } }),
+    )
+  })
+
+  it('cancels a schedule with a draft write, and audits it', async () => {
+    const deps = makeDeps({
+      document: { ...publishableDoc, scheduledPublishAt: '2026-10-03T13:00:00.000Z' },
+    })
+    const result = await createPublishingService(deps).unschedule({
+      collection: 'pages',
+      id: '1',
+      actor: { user: toAuthenticatedUser(editor), enforceAccessAs: editor, channel: 'admin' },
+    })
+
+    expect(result).toEqual({ unscheduled: true })
+    expect(deps.spies.payloadUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        draft: true,
+        data: { scheduledPublishAt: null },
+        user: editor,
+        overrideAccess: false,
+      }),
+    )
+    expect(deps.auditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'publishing.schedule',
+        mcpTool: 'admin:unschedule_publish',
+        changesSummary: expect.stringContaining('Cancelled'),
+      }),
+    )
+  })
+
+  it('says so when there is nothing to cancel, and writes nothing', async () => {
+    const deps = makeDeps({ document: publishableDoc })
+    const result = await createPublishingService(deps).unschedule({
+      collection: 'pages',
+      id: '1',
+      actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
+    })
+    expect(result).toEqual({ unscheduled: false, reason: 'Nothing is scheduled' })
+    expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
+  })
+
   it('reports publishability without writing anything', async () => {
     const deps = makeDeps({ document: publishableDoc })
     const service = createPublishingService(deps)
