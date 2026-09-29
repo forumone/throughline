@@ -6,8 +6,9 @@ Policy-gated publishing server for Throughline. The trust boundary that decides 
 
 - **A publish pipeline** — `exist` → `composition` → `accessibility` → `required-fields` → `embargo` → `approval` → `execute`. The first step to object stops the publish and reports which one, why, and what to do about it.
 - **A trust boundary** — a `beforeChange` hook on every configured collection that rejects direct writes to `_status`. The pipeline is the only sanctioned way to publish.
-- **Admin controls** — Publish and Unpublish buttons that run the pipeline as the logged-in editor. Installed automatically; no host-side code.
-- **A server-side API** — `publishDocument` / `unpublishDocument` / `getPublishStatus` for host code that needs to publish outside the admin.
+- **Admin controls** — Publish and Unpublish buttons that run the pipeline as the logged-in editor, and a Schedule control. Installed automatically; no host-side code.
+- **Scheduled publishing** — declare a `date` field named `scheduledPublishAt` (or your `scheduledPublishField`) on a collection and the plugin renders it as a Schedule control, runs the pipeline's checks when a time is picked, and sends `content/page.scheduled` whenever the time changes. Pair it with `createPublishAtScheduledTimeFunction` from `@forumone/throughline-workflows`, which publishes at that time. A publish or unpublish clears the field.
+- **A server-side API** — `publishDocument` / `unpublishDocument` / `scheduleDocument` / `unscheduleDocument` / `getPublishStatus` for host code that needs to publish outside the admin.
 - **Five MCP tools** — `publish`, `unpublish`, `schedule_publish`, `get_publish_status`, `rollback` — handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody.
 
 ## Installation

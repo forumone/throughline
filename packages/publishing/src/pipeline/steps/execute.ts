@@ -65,6 +65,13 @@ export const executeStep: PipelineStep = async (ctx) => {
       data: {
         _status: 'published',
         ...(wasFirstPublish ? { [ctx.collection.publishedAtField]: now } : {}),
+        // A schedule is spent once the document is live, whoever published it.
+        // Left behind, it outlives the publish: unpublish the page later and it
+        // is a draft with a past date — which the scheduled-publish backstop
+        // exists to find, and would put back up.
+        ...(ctx.document[ctx.collection.scheduledPublishField] != null
+          ? { [ctx.collection.scheduledPublishField]: null }
+          : {}),
       },
       ...(ctx.actor.enforceAccessAs
         ? { user: ctx.actor.enforceAccessAs, overrideAccess: false }

@@ -13,6 +13,9 @@ export interface PublishingIssue {
 export interface PublishingResponse {
   published?: boolean
   unpublished?: boolean
+  scheduled?: boolean
+  scheduledFor?: string
+  unscheduled?: boolean
   publishedAt?: string
   failedAt?: string
   reason?: string
@@ -28,9 +31,11 @@ export interface CallPublishingEndpointArgs {
   serverURL: string
   apiRoute: string
   routePrefix: string
-  action: 'publish' | 'unpublish'
+  action: 'publish' | 'unpublish' | 'schedule' | 'unschedule'
   collection: string
   id: number | string
+  /** `schedule` only: ISO 8601. */
+  publishAt?: string
 }
 
 export type PublishingCallResult =
@@ -53,7 +58,11 @@ export async function callPublishingEndpoint(
       method: 'POST',
       credentials: 'include',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ collection: args.collection, id: args.id }),
+      body: JSON.stringify({
+        collection: args.collection,
+        id: args.id,
+        ...(args.publishAt ? { publishAt: args.publishAt } : {}),
+      }),
     })
   } catch {
     return { ok: false, message: 'Could not reach the publishing server.' }
