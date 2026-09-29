@@ -26,7 +26,9 @@ export {
   getPublishStatus,
   getPublishingService,
   publishDocument,
+  scheduleDocument,
   unpublishDocument,
+  unscheduleDocument,
 } from './service.js'
 
 export type {
@@ -36,7 +38,10 @@ export type {
   PublishStatusOutcome,
   PublishingActor,
   PublishingService,
+  ScheduleOutcome,
+  ScheduleRequest,
   UnpublishOutcome,
+  UnscheduleOutcome,
 } from './service.js'
 
 /**

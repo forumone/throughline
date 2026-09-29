@@ -2,6 +2,7 @@
 
 export { createRevalidateOnPublishFunction } from './revalidate-on-publish.js'
 export { createExecuteScheduledPublishesFunction } from './execute-scheduled-publishes.js'
+export { createPublishAtScheduledTimeFunction } from './publish-at-scheduled-time.js'
 export { createExpireStaleApprovalsFunction } from './expire-stale-approvals.js'
 export { createAuditEventEchoFunction } from './audit-event-echo.js'
 export {
@@ -21,6 +22,9 @@ export type {
   RevalidateOnPublishOptions,
   ScheduledCollectionConfig,
   ExecuteScheduledPublishesOptions,
+  PublishAtScheduledTimeOptions,
+  ScheduledPublishRequest,
+  ScheduledPublishResult,
   ExpireStaleApprovalsOptions,
   AuditEchoEvent,
   AuditEchoHandler,

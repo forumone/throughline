@@ -14,8 +14,12 @@ interface DueDoc {
 /**
  * Cron-driven scheduled publish executor. Every tick (default: every 5
  * minutes) the function looks for documents in any of the configured
- * collections whose `_status` is still `draft` and whose
+ * collections whose latest version is still a draft and whose
  * `scheduledPublishAt` has passed, and calls `options.publish` for each.
+ *
+ * `createPublishAtScheduledTimeFunction` does the same job on time and without
+ * polling. Run alongside it, this is the backstop — set `overdueByMs` and a
+ * slow schedule, and it only ever finds a document whose event went missing.
  *
  * `publish` must go through the publishing pipeline — see the option's own
  * documentation for the wiring. That is what makes a scheduled publish get the
@@ -48,7 +52,7 @@ export function createExecuteScheduledPublishesFunction(
       triggers: [{ cron: schedule }],
     },
     async ({ step, logger }) => {
-      const nowIso = new Date().toISOString()
+      const dueBy = new Date(Date.now() - (options.overdueByMs ?? 0)).toISOString()
       let publishedCount = 0
       let blockedCount = 0
 
@@ -63,9 +67,19 @@ export function createExecuteScheduledPublishesFunction(
               and: [
                 { [statusField]: { equals: 'draft' } },
                 { [scheduledField]: { exists: true } },
-                { [scheduledField]: { less_than_equal: nowIso } },
+                { [scheduledField]: { less_than_equal: dueBy } },
               ],
             },
+            /*
+            The latest version, not the main row. A schedule is set by a draft
+            save, and Payload writes a draft save to the versions table alone —
+            so without this the poll read a column that the admin never wrote,
+            and only a schedule set over MCP, by a non-draft update, was ever
+            found. It is also what lets a revision of a live document be
+            scheduled: its latest version is a draft even while the main row
+            says `published`.
+            */
+            draft: true,
             limit: 100,
           })
           return (result.docs as Array<Record<string, unknown>>).map((doc) => ({

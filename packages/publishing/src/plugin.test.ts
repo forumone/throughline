@@ -31,6 +31,50 @@ function editComponents(config: Config, slug: string) {
   return collection?.admin?.components?.edit
 }
 
+const Scheduled: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    { name: 'title', type: 'text' },
+    { name: 'scheduledPublishAt', type: 'date', admin: { position: 'sidebar' } },
+  ],
+  versions: { drafts: true },
+}
+
+function scheduleField(config: Config) {
+  const fields = config.collections?.find((c) => c.slug === 'pages')?.fields ?? []
+  return fields.find((f) => 'name' in f && f.name === 'scheduledPublishAt') as
+    | { admin?: { position?: string; components?: { Field?: unknown } } }
+    | undefined
+}
+
+describe('publishingPlugin schedule control', () => {
+  it('renders the scheduled-publish field as the Schedule control', () => {
+    const field = scheduleField(build({ routePrefix: '/content-ops' }, [Scheduled, Users]))
+    expect(field?.admin?.components?.Field).toEqual({
+      path: '@forumone/throughline-publishing/client',
+      exportName: 'SchedulePublishField',
+      clientProps: { routePrefix: '/content-ops' },
+    })
+    // The host's own admin settings survive.
+    expect(field?.admin?.position).toBe('sidebar')
+  })
+
+  it('leaves a host component in place', () => {
+    const own = { ...Scheduled, fields: [{ name: 'scheduledPublishAt', type: 'date', admin: { components: { Field: '/own#Field' } } }] } as CollectionConfig
+    expect(scheduleField(build({}, [own, Users]))?.admin?.components?.Field).toBe('/own#Field')
+  })
+
+  it('adds nothing to a collection that does not declare the field', () => {
+    const fields = build().collections?.find((c) => c.slug === 'pages')?.fields
+    expect(fields).toEqual(Pages.fields)
+  })
+
+  it('adds nothing when the admin controls are turned off', () => {
+    const field = scheduleField(build({ adminComponents: false }, [Scheduled, Users]))
+    expect(field?.admin?.components).toBeUndefined()
+  })
+})
+
 describe('publishingPlugin admin controls', () => {
   // Acceptance: a stock admin can publish with no host-side code.
   it('installs its own Publish and Unpublish controls on publishable collections', () => {
@@ -141,6 +185,13 @@ describe('publishingPlugin trust boundary', () => {
     expect(collection?.hooks?.beforeOperation).toHaveLength(1)
   })
 
+  // Without it a schedule is a date nothing wakes up for — which is what every
+  // schedule set from the admin was before this hook existed.
+  it('installs the scheduled-publish wake-up on publishable collections', () => {
+    const collection = build().collections?.find((c) => c.slug === 'pages')
+    expect(collection?.hooks?.afterChange).toHaveLength(1)
+  })
+
   it('keeps host hooks on both arrays', () => {
     const config = build({}, [
       {
@@ -148,6 +199,7 @@ describe('publishingPlugin trust boundary', () => {
         hooks: {
           beforeOperation: [({ args }) => args],
           beforeChange: [({ data }) => data],
+          afterChange: [({ doc }) => doc],
         },
       },
       Users,
@@ -155,12 +207,14 @@ describe('publishingPlugin trust boundary', () => {
     const collection = config.collections?.find((c) => c.slug === 'pages')
     expect(collection?.hooks?.beforeOperation).toHaveLength(2)
     expect(collection?.hooks?.beforeChange).toHaveLength(2)
+    expect(collection?.hooks?.afterChange).toHaveLength(2)
   })
 
   it('leaves collections it does not govern without either hook', () => {
     const collection = build().collections?.find((c) => c.slug === 'users')
     expect(collection?.hooks?.beforeOperation).toBeUndefined()
     expect(collection?.hooks?.beforeChange).toBeUndefined()
+    expect(collection?.hooks?.afterChange).toBeUndefined()
   })
 
   it('returns the config untouched when disabled', () => {

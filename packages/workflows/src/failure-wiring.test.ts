@@ -3,6 +3,7 @@ import { createAuditEventEchoFunction } from './audit-event-echo.js'
 import { createExecuteScheduledPublishesFunction } from './execute-scheduled-publishes.js'
 import { createExpireStaleApprovalsFunction } from './expire-stale-approvals.js'
 import { createHealthcheckFunction } from './healthcheck.js'
+import { createPublishAtScheduledTimeFunction } from './publish-at-scheduled-time.js'
 import { createRevalidateOnPublishFunction } from './revalidate-on-publish.js'
 import { createFakeInngest, createFakePayload } from './_test-helpers.js'
 
@@ -32,6 +33,11 @@ function build() {
     collections: [{ slug: 'pages' }],
     publish: async () => ({ published: true }),
   })
+  createPublishAtScheduledTimeFunction({
+    ...base,
+    collections: [{ slug: 'pages' }],
+    publish: async () => ({ published: true }),
+  })
   createExpireStaleApprovalsFunction({ ...base, collectionSlug: 'approval-requests' })
   createAuditEventEchoFunction({ inngest: fake.inngest, onTerminalFailure: handler })
   createHealthcheckFunction({ ...base, checks: [] })
@@ -42,13 +48,14 @@ function build() {
 const ALL = [
   'revalidate-on-publish',
   'execute-scheduled-publishes',
+  'publish-at-scheduled-time',
   'expire-stale-approvals',
   'audit-event-echo',
   'healthcheck',
 ]
 
 describe('every workflow factory', () => {
-  it('registers all five, so none is silently unwired below', () => {
+  it('registers all six, so none is silently unwired below', () => {
     expect(build().map(fn => fn.id).sort()).toEqual([...ALL].sort())
   })
 
