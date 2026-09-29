@@ -94,6 +94,17 @@ export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
       if (liveStatus !== undefined && liveStatus !== 'published') return data
     }
 
+    // Payload's restore dialog offers "restore as published". Refusing it is
+    // right — it is a publish — but the generic message below is written for
+    // a developer, and this is the one refusal an editor reaches from the
+    // admin's own controls. Same decision, words they can act on.
+    if (nextStatus === 'published' && restoresFromTrash(data, originalDoc)) {
+      throw new APIError(
+        'Restore it as a draft, then publish it. Publishing is what runs the checks a live page needs.',
+        400,
+      )
+    }
+
     throw new APIError(
       'Direct writes to `_status` are not allowed. Use the publishing server (publish / unpublish / rollback) so the policy pipeline runs.',
       400,
@@ -231,6 +242,13 @@ function movesToTrash(data: unknown, originalDoc: unknown): boolean {
   const next = (data as Record<string, unknown> | null | undefined)?.['deletedAt']
   const previous = (originalDoc as Record<string, unknown> | null | undefined)?.['deletedAt']
   return next != null && previous == null
+}
+
+/** Whether this write takes the document out of the trash: `deletedAt` cleared. */
+function restoresFromTrash(data: unknown, originalDoc: unknown): boolean {
+  const next = (data as Record<string, unknown> | null | undefined)?.['deletedAt']
+  const previous = (originalDoc as Record<string, unknown> | null | undefined)?.['deletedAt']
+  return next == null && previous != null
 }
 
 function isBypassed(context: unknown): boolean {
