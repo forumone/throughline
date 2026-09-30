@@ -1,5 +1,12 @@
 # @forumone/create-throughline
 
+## 0.3.1
+
+### Patch Changes
+
+- eec328e: A scaffolded site depends on the current release of every Throughline package. The ranges were typed into the templates as `^0.2.0`, which admits patches only for a 0.x version, so a new site installed the earliest releases. They are now read from the workspace when the scaffolder is built, and baked into `dist/versions.json`.
+- 70223ef: The scaffolded `payload.config.ts` signs approval links with `generateActionToken` and points them at `/api/approvals/action`, the route `approvalsPlugin` serves. It used to build an unsigned query string against `/api/approvals/decision`, which nothing serves, so every button in an approval email 404'd.
+
 ## 0.3.0
 
 ### Minor Changes
