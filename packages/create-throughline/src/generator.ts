@@ -3,6 +3,7 @@ import { cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderTemplate } from './utils/templates.js'
+import { loadPackageVersions } from './utils/versions.js'
 import type { Answers } from './prompts.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -38,7 +39,8 @@ export async function generate(answers: Answers, options: GenerateOptions = {}):
   const designSystemName = answers.packageScope
     ? `@${answers.packageScope}/design-system`
     : `${answers.projectName}-design-system`
-  const data = { ...answers, designSystemName } as unknown as Record<string, unknown>
+  const versions = await loadPackageVersions(templatesDir)
+  const data = { ...answers, designSystemName, ...versions } as unknown as Record<string, unknown>
 
   onProgress('Creating project structure')
   await mkdir(answers.targetDir, { recursive: true })
