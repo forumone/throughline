@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { generate } from './generator.js'
 import type { Answers } from './prompts.js'
@@ -106,6 +107,18 @@ describe('generate (with reference DS)', () => {
     expect(config).toContain("from '@acme/design-system/manifest'")
     expect(config).toContain('designSystemManifest')
     expect(config).not.toContain('your-design-system.example.com')
+  })
+
+  it('signs approval links and points them at the route approvalsPlugin serves', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
+    // `buildActionUrl` from approvals targets `/api/approvals/action`, the
+    // endpoint the plugin registers. The template once built an unsigned
+    // query string against `/api/approvals/decision`, which nothing serves.
+    expect(config).toContain('generateActionToken(')
+    expect(config).toContain('buildActionUrl(process.env.NEXT_PUBLIC_SERVER_URL!, token)')
+    expect(config).toContain("from '@forumone/throughline-approvals'")
+    expect(config).not.toContain('/api/approvals/decision')
   })
 
   it('creates a top-level design-system Storybook authoring package', async () => {
@@ -291,7 +304,6 @@ describe('workspace gates', () => {
         }
         expect(root.devDependencies['tsx']).toBeDefined()
 
-        const ts = await import('typescript')
         for (const [script, file] of Object.entries(GATES)) {
           expect(root.scripts[script]).toBe(`tsx ${file}`)
           const source = await readFile(join(target, file), 'utf-8')
