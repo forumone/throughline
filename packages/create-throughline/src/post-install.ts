@@ -47,16 +47,12 @@ export function printNextSteps(answers: Answers): void {
     ),
   )
   lines.push(
-    formatStep(
-      step++,
-      'In the admin, go to API Keys and create one key per MCP server',
-    ),
+    formatStep(step++, 'In the admin, create one key under MCP → Payload MCP API Keys'),
   )
-  lines.push(formatStep(step++, 'Paste those keys into .env.local'))
   lines.push(
     formatStep(
       step,
-      'Wire Claude (or your MCP client) to your MCP endpoints — see the generated README.md',
+      'Give that key to Claude (or your MCP client) for /api/mcp — see the generated README.md',
     ),
   )
 

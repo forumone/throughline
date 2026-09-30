@@ -1,3 +1,4 @@
+import type { InngestFunction } from 'inngest'
 import { serve } from 'inngest/next'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
@@ -42,7 +43,13 @@ async function publishScheduled({ collection, id, reasoning }: ScheduledPublishR
 
 const scheduledCollections = [{ slug: 'pages' }]
 
-const integrationRegistry = getIntegrationRegistry(payload)
+/*
+Typed with this app's own `InngestFunction.Any`. The registry is generic in what
+`createFunctions` returns and defaults to `unknown`, because the platform never
+touches those functions — and one `unknown` element leaves `serve()` unable to
+type the whole array below.
+*/
+const integrationRegistry = getIntegrationRegistry<InngestFunction.Any>(payload)
 const integrationContext = getIntegrationContext(payload)
 const integrationFunctions =
   integrationRegistry && integrationContext
