@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { generate } from './generator.js'
+import { readWorkspaceVersions } from './utils/versions.js'
 import type { Answers } from './prompts.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -88,6 +89,27 @@ describe('generate (with reference DS)', () => {
       await readFile(join(target, 'apps/web/package.json'), 'utf-8'),
     ) as { name: string }
     expect(webJson.name).toBe('demo-web')
+  })
+
+  it('pins every Throughline package to its current workspace version', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const current = await readWorkspaceVersions(resolve(__dirname, '..', '..'))
+    const ranges: Array<[string, string]> = []
+    for (const file of ['apps/web/package.json', 'design-system/package.json']) {
+      const json = JSON.parse(await readFile(join(target, file), 'utf-8')) as {
+        dependencies?: Record<string, string>
+      }
+      for (const [name, range] of Object.entries(json.dependencies ?? {})) {
+        if (name.startsWith('@forumone/throughline-')) ranges.push([name, range])
+      }
+    }
+    // Ten in apps/web (nine plugins + design-contract), one in the design system.
+    expect(ranges).toHaveLength(11)
+    // A hand-typed range left them at ^0.2.0 — patches only, for a 0.x version —
+    // while the packages reached 0.9. Every range must be read, not typed.
+    for (const [name, range] of ranges) {
+      expect(range, name).toBe(`^${current[name]}`)
+    }
   })
 
   it('wires the design-system workspace dependency into apps/web', async () => {
