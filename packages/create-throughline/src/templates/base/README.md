@@ -37,10 +37,15 @@ openssl rand -base64 48
 pnpm --dir apps/web migrate:create initial
 pnpm --dir apps/web migrate
 
-# 6. Start the dev server
+# 6. Generate the Payload types and admin import map, and commit both along
+#    with the migration. CI fails until they match the config.
+pnpm --dir apps/web generate:types
+pnpm --dir apps/web generate:importmap
+
+# 7. Start the dev server
 pnpm dev
 
-# 7. Visit http://localhost:3000/admin and create your first user.
+# 8. Visit http://localhost:3000/admin and create your first user.
 ```
 
 ## After admin signup
@@ -83,6 +88,28 @@ development too. From `apps/web`:
 - `pnpm check:migrations` — every migration has a snapshot, no snapshot is orphaned, and no drop follows a `CASCADE` that already carried it out. Also runs from the root.
 
 Scripts that write to a database can call `requireTarget` from `apps/web/scripts/lib/target.ts`, which prints the database, host and variable it is about to write through, and demands `--confirm` before overwriting anything.
+
+## Generated files
+
+`apps/web/src/payload-types.ts` and `apps/web/src/app/(payload)/admin/importMap.js`
+are generated from `payload.config.ts` and **committed**. Regenerate both after
+any change to the config, a collection or a plugin version, and commit the
+result — CI regenerates them and fails on a difference:
+
+```bash
+pnpm --dir apps/web generate:types
+pnpm --dir apps/web generate:importmap
+```
+
+A stale import map is a 500 on any admin screen that renders a component the
+map has never heard of.
+
+## CI
+
+`.github/workflows/ci.yml` runs two tiers. `fast` runs on every pull request
+and needs no database: install from the lockfile, typecheck, lint, the gates
+below, manifest validation, the generated-files check and tests. `verify` runs
+on pushes to main: it migrates a fresh Postgres and runs a production build.
 
 ## Workspace gates
 
