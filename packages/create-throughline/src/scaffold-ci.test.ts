@@ -71,6 +71,22 @@ for (const useReferenceDs of [true, false]) {
       expect(missing).toEqual([])
     })
 
+    it("lets every variable CI sets through turbo's strict env to next build", async () => {
+      // turbo strips any variable a task does not declare, so an undeclared
+      // DATABASE_URI reaches `next build` as undefined and page data fails.
+      const turbo = JSON.parse(await readFile(join(target, 'turbo.json'), 'utf-8')) as {
+        tasks: { build: { env: string[] } }
+      }
+      const declared = turbo.tasks.build.env
+      const covers = (name: string) =>
+        declared.some((entry) =>
+          entry.endsWith('*') ? name.startsWith(entry.slice(0, -1)) : entry === name,
+        )
+      const ciEnv = [...workflow.matchAll(/^ {2}([A-Z][A-Z0-9_]+): /gm)].map((m) => m[1]!)
+      expect(ciEnv.length).toBeGreaterThan(5)
+      expect(ciEnv.filter((name) => !covers(name))).toEqual([])
+    })
+
     it('validates the design system without building the app', () => {
       // turbo's `validate` depends on `build`, and unscoped it built apps/web
       // too — `next build` needs a database, which `fast` does not have.
