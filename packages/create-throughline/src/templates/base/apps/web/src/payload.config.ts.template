@@ -16,6 +16,7 @@ import { auditQueryPlugin } from '@forumone/throughline-audit'
 import { integrationsPlugin } from '@forumone/throughline-integrations'
 import { emailPlugin } from '@forumone/throughline-email'
 import { formsPlugin } from '@forumone/throughline-forms'
+import { databaseConnectionString } from './lib/database'
 {{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-contract'
 import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
 {{/if}}
@@ -89,7 +90,17 @@ export default buildConfig({
   admin: { user: 'users' },
   editor: lexicalEditor(),
   db: postgresAdapter({
-    pool: { connectionString: process.env.DATABASE_URI! },
+    // See lib/database.ts: which variable wins, and why a migration refuses
+    // Neon's pooled endpoint.
+    pool: { connectionString: databaseConnectionString() },
+    migrationDir: path.resolve(__dirname, 'migrations'),
+    // Never push schema: migrations are the only way this database changes.
+    // The adapter pushes whenever NODE_ENV !== 'production', which is true of
+    // every script and dev server. One pointed at a shared database silently
+    // syncs its schema and records a `dev` migration, and the next
+    // `payload migrate` in CI then stops to ask about it — with no terminal to
+    // answer — and skips the migration it was meant to apply.
+    push: false,
   }),
   collections: [Users, Pages, createApiKeysCollection()],
   secret: process.env.PAYLOAD_SECRET!,

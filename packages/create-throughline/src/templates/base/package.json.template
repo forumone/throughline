@@ -14,6 +14,7 @@
     "check:instances": "tsx scripts/check-single-instance.ts",
     "check:tested": "tsx scripts/check-tested-packages.ts",
     "check:audit": "tsx scripts/check-audit.ts",
+    "check:migrations": "pnpm --dir apps/web run check:migrations",
     "format": "prettier --write ."
   },
   "devDependencies": {
