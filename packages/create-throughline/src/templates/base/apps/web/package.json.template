@@ -9,7 +9,12 @@
     "start": "next start",
     "clean": "rm -rf .next .turbo",
     "typecheck": "tsc --noEmit",
-    "payload": "payload"
+    "payload": "payload",
+    "migrate": "PAYLOAD_MIGRATING=1 payload migrate",
+    "migrate:create": "payload migrate:create",
+    "migrate:status": "payload migrate:status",
+    "migrate:snapshot": "tsx scripts/write-migration-snapshot.ts",
+    "check:migrations": "tsx scripts/check-migrations.ts"
   },
   "dependencies": {
     "@forumone/throughline-approvals": "^0.2.0",
@@ -38,6 +43,7 @@
     "@types/node": "^20.17.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.0"
   }
 }

@@ -39,6 +39,11 @@ export function printNextSteps(answers: Answers): void {
   lines.push(`       ${pc.dim('openssl rand -base64 48  # APPROVAL_TOKEN_SECRET')}`)
   lines.push(`       ${pc.dim('openssl rand -base64 48  # FORMS_IP_HASH_SECRET')}`)
 
+  // `push: false`: the schema exists only once a migration has created it.
+  lines.push(formatStep(step++, 'Create and apply the first migration:'))
+  lines.push(`       ${pc.dim('pnpm --dir apps/web migrate:create initial')}`)
+  lines.push(`       ${pc.dim('pnpm --dir apps/web migrate')}`)
+
   lines.push(formatStep(step++, `${pc.bold('pnpm dev')} to run locally`))
   lines.push(
     formatStep(
