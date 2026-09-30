@@ -12,7 +12,11 @@ import {
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
-import { approvalsPlugin } from '@forumone/throughline-approvals'
+import {
+  approvalsPlugin,
+  buildActionUrl,
+  generateActionToken,
+} from '@forumone/throughline-approvals'
 import { auditQueryPlugin } from '@forumone/throughline-audit'
 import { integrationsPlugin } from '@forumone/throughline-integrations'
 import { emailPlugin } from '@forumone/throughline-email'
@@ -165,9 +169,18 @@ export default buildConfig({
       // TODO: replace with your real user lookups
       resolveApprover: async (_userId) => null,
       resolveRequester: async (_userId) => null,
-      // TODO: sign these URLs (HMAC) so an approval decision can't be forged.
-      buildActionUrl: async ({ approvalId, action, approverId }) =>
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/approvals/decision?approval=${approvalId}&action=${action}&approver=${approverId}`,
+      // Signed, and pointed at the route approvalsPlugin serves
+      // (`/api/approvals/action`). The token binds one approval, one action
+      // and one approver, so a link cannot be edited into a different decision.
+      buildActionUrl: async ({ approvalId, action, approverId }) => {
+        const secret = process.env.APPROVAL_TOKEN_SECRET
+        if (!secret) throw new Error('APPROVAL_TOKEN_SECRET is required to sign approval links.')
+        const token = await generateActionToken(
+          { approvalId, action, approverId, issuedAt: Date.now() },
+          secret,
+        )
+        return buildActionUrl(process.env.NEXT_PUBLIC_SERVER_URL!, token)
+      },
       tokens: { brandName: '{{projectName}}' },
     }),
 
