@@ -44,6 +44,11 @@ export function printNextSteps(answers: Answers): void {
   lines.push(`       ${pc.dim('pnpm --dir apps/web migrate:create initial')}`)
   lines.push(`       ${pc.dim('pnpm --dir apps/web migrate')}`)
 
+  // Committed and checked by CI, so the first push is green only with them.
+  lines.push(formatStep(step++, 'Generate the Payload types and import map, and commit them:'))
+  lines.push(`       ${pc.dim('pnpm --dir apps/web generate:types')}`)
+  lines.push(`       ${pc.dim('pnpm --dir apps/web generate:importmap')}`)
+
   lines.push(formatStep(step++, `${pc.bold('pnpm dev')} to run locally`))
   lines.push(
     formatStep(
