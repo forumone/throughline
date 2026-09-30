@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { generate } from './generator.js'
 import type { Answers } from './prompts.js'
@@ -303,7 +304,6 @@ describe('workspace gates', () => {
         }
         expect(root.devDependencies['tsx']).toBeDefined()
 
-        const ts = await import('typescript')
         for (const [script, file] of Object.entries(GATES)) {
           expect(root.scripts[script]).toBe(`tsx ${file}`)
           const source = await readFile(join(target, file), 'utf-8')
