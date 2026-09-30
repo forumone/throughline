@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { generate } from './generator.js'
 import { readWorkspaceVersions } from './utils/versions.js'
@@ -128,6 +129,15 @@ describe('generate (with reference DS)', () => {
     expect(config).toContain("from '@acme/design-system/manifest'")
     expect(config).toContain('designSystemManifest')
     expect(config).not.toContain('your-design-system.example.com')
+  })
+
+  it("names the manifest from the project's design system, not the reference one", async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const script = await readFile(join(target, 'design-system/scripts/build-manifest.ts'), 'utf-8')
+    // The vendored script once hard-coded `@forumone/throughline-reference-ds`,
+    // so every scaffolded project published a manifest claiming to be it.
+    expect(script).not.toContain("'@forumone/throughline-reference-ds'")
+    expect(script).toContain('designSystem: await readPackage()')
   })
 
   it('signs approval links and points them at the route approvalsPlugin serves', async () => {
@@ -292,4 +302,65 @@ describe('vendored design-system template safety', () => {
     }
     expect(offenders).toEqual([])
   })
+})
+
+describe('workspace gates', () => {
+  let workDir: string
+
+  beforeEach(async () => {
+    workDir = await mkdtemp(join(tmpdir(), 'create-throughline-gates-'))
+  })
+
+  afterEach(async () => {
+    await rm(workDir, { recursive: true, force: true })
+  })
+
+  const GATES = {
+    'check:instances': 'scripts/check-single-instance.ts',
+    'check:tested': 'scripts/check-tested-packages.ts',
+    'check:audit': 'scripts/check-audit.ts',
+  }
+
+  for (const useReferenceDs of [true, false]) {
+    describe(useReferenceDs ? 'with reference DS' : 'without reference DS', () => {
+      it('ships each gate script, wired to a root script, and parseable once rendered', async () => {
+        const target = join(workDir, 'demo')
+        await generate(makeAnswers(target, { useReferenceDs }), {
+          templatesDir: TEMPLATES_DIR,
+          skipSideEffects: true,
+        })
+        const root = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8')) as {
+          scripts: Record<string, string>
+          devDependencies: Record<string, string>
+        }
+        expect(root.devDependencies['tsx']).toBeDefined()
+
+        for (const [script, file] of Object.entries(GATES)) {
+          expect(root.scripts[script]).toBe(`tsx ${file}`)
+          const source = await readFile(join(target, file), 'utf-8')
+          const { diagnostics = [] } = ts.transpileModule(source, {
+            reportDiagnostics: true,
+            fileName: file,
+          })
+          const messages = diagnostics.map((d) =>
+            ts.flattenDiagnosticMessageText(d.messageText, '\n'),
+          )
+          expect(messages, file).toEqual([])
+        }
+      })
+
+      it('starts check:tested with exactly the scaffolded packages that have no tests yet', async () => {
+        const target = join(workDir, 'demo')
+        await generate(makeAnswers(target, { useReferenceDs }), {
+          templatesDir: TEMPLATES_DIR,
+          skipSideEffects: true,
+        })
+        const source = await readFile(join(target, GATES['check:tested']), 'utf-8')
+        expect(source).toContain("'apps/web':")
+        // The reference DS ships tests; the placeholder has source and none.
+        if (useReferenceDs) expect(source).not.toContain("'design-system':")
+        else expect(source).toContain("'design-system':")
+      })
+    })
+  }
 })

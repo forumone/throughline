@@ -7,14 +7,19 @@
     "dev": "{{#if useReferenceDs}}pnpm --filter \"./design-system\" build && {{/if}}turbo run dev",
     "storybook": "turbo run storybook",
     "build-storybook": "turbo run build-storybook",
-    "validate": "turbo run validate",
+    "validate": "turbo run validate --filter=./design-system",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "check:instances": "tsx scripts/check-single-instance.ts",
+    "check:tested": "tsx scripts/check-tested-packages.ts",
+    "check:audit": "tsx scripts/check-audit.ts",
+    "check:migrations": "pnpm --dir apps/web run check:migrations",
     "format": "prettier --write ."
   },
   "devDependencies": {
     "prettier": "^3.4.0",
+    "tsx": "^4.21.0",
     "turbo": "^2.3.0",
     "typescript": "^5.6.0"
   },
