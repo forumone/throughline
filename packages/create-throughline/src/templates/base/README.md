@@ -66,6 +66,12 @@ pnpm dev
 - `pnpm lint` — ESLint
 - `pnpm test` — run all package tests
 
+Workspace gates, each explained at the top of its script in `scripts/`:
+
+- `pnpm check:instances` — `payload`, `@payloadcms/ui`, `react` and `react-dom` each resolve to exactly one copy. Two byte-identical copies are two React contexts, and a runtime failure nothing else can see.
+- `pnpm check:tested` — every workspace package that ships code has at least one test. Not a coverage number. `apps/web` starts on its exception list; delete the entry with your first test.
+- `pnpm check:audit` — high and critical production advisories against an allowlist that carries a reason for each entry, and that fails when an entry stops applying.
+
 ## Project layout
 
 ```
