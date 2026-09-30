@@ -131,6 +131,15 @@ describe('generate (with reference DS)', () => {
     expect(config).not.toContain('your-design-system.example.com')
   })
 
+  it("names the manifest from the project's design system, not the reference one", async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const script = await readFile(join(target, 'design-system/scripts/build-manifest.ts'), 'utf-8')
+    // The vendored script once hard-coded `@forumone/throughline-reference-ds`,
+    // so every scaffolded project published a manifest claiming to be it.
+    expect(script).not.toContain("'@forumone/throughline-reference-ds'")
+    expect(script).toContain('designSystem: await readPackage()')
+  })
+
   it('signs approval links and points them at the route approvalsPlugin serves', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
