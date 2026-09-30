@@ -71,6 +71,12 @@ for (const useReferenceDs of [true, false]) {
       expect(missing).toEqual([])
     })
 
+    it('validates the design system without building the app', () => {
+      // turbo's `validate` depends on `build`, and unscoped it built apps/web
+      // too — `next build` needs a database, which `fast` does not have.
+      expect(rootScripts['validate']).toBe('turbo run validate --filter=./design-system')
+    })
+
     it('runs only apps/web scripts that exist', async () => {
       const script = await readFile(join(target, '.github/scripts/check-generated.sh'), 'utf-8')
       const referenced = [

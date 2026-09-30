@@ -7,7 +7,7 @@
     "dev": "{{#if useReferenceDs}}pnpm --filter \"./design-system\" build && {{/if}}turbo run dev",
     "storybook": "turbo run storybook",
     "build-storybook": "turbo run build-storybook",
-    "validate": "turbo run validate",
+    "validate": "turbo run validate --filter=./design-system",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
