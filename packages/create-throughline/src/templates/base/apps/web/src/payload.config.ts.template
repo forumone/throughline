@@ -35,8 +35,13 @@ something nobody fills.
 */
 const mcpTools = createMcpToolCollector()
 
-const isAdmin: Access = ({ req }) =>
-  Array.isArray(req.user?.roles) && (req.user.roles as unknown[]).includes('admin')
+// A person in `users` with the admin role. `req.user` can also be an MCP key
+// document, which has no roles and is never an admin, so the collection is
+// checked first — once payload-types.ts exists, TypeScript insists on it.
+const isAdmin: Access = ({ req: { user } }) =>
+  user?.collection === 'users' &&
+  Array.isArray(user.roles) &&
+  (user.roles as unknown[]).includes('admin')
 
 // Users collection — extend with your own fields and SSO/auth provider.
 const Users: CollectionConfig = {
