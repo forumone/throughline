@@ -9,7 +9,14 @@
     "start": "next start",
     "clean": "rm -rf .next .turbo",
     "typecheck": "tsc --noEmit",
-    "payload": "payload"
+    "payload": "payload",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap",
+    "migrate": "PAYLOAD_MIGRATING=1 payload migrate",
+    "migrate:create": "payload migrate:create",
+    "migrate:status": "payload migrate:status",
+    "migrate:snapshot": "tsx scripts/write-migration-snapshot.ts",
+    "check:migrations": "tsx scripts/check-migrations.ts"
   },
   "dependencies": {
     "@forumone/throughline-approvals": "^{{version_approvals}}",
@@ -25,7 +32,8 @@
     "{{designSystemName}}": "workspace:*",
     {{/if}}"@payloadcms/db-postgres": "^3.83.0",
     "@payloadcms/next": "^3.83.0",
-    "@payloadcms/plugin-form-builder": "3.83.0",
+    "@payloadcms/plugin-form-builder": "^3.83.0",
+    "@payloadcms/plugin-mcp": "^3.83.0",
     "@payloadcms/richtext-lexical": "^3.83.0",
     "graphql": "^16.8.1",
     "inngest": "^4.2.0",
@@ -38,6 +46,7 @@
     "@types/node": "^20.17.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.0"
   }
 }

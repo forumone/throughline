@@ -1,0 +1,131 @@
+name: CI
+
+# Two tiers.
+#
+#   fast    every pull request and every push to main. No database: every gate
+#           here needs the config to parse, not to connect.
+#   verify  pushes to main, and on demand. A Postgres service, the migrations,
+#           and a production build — `next build` boots Payload to collect page
+#           data, so it needs a migrated database.
+#
+# A green `fast` is what a pull request is reviewed on; `verify` is what says
+# main still builds and migrates. Add a path filter to run `verify` on pull
+# requests that touch the config, the migrations or the dependencies, once this
+# project has enough of all three to make it worth the minutes.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# What payload.config.ts and the plugins check at load, as placeholders. The
+# config parses the connection string and never connects in `fast`; secrets only
+# have to be long enough to pass the plugins' own checks. Never a real value.
+env:
+  DATABASE_URI: postgres://ci:ci@localhost:5432/ci
+  PAYLOAD_SECRET: ci-placeholder-not-a-secret-000000000000
+  APPROVAL_TOKEN_SECRET: ci-placeholder-not-a-secret-000000000000
+  FORMS_IP_HASH_SECRET: ci-placeholder-not-a-secret-000000000000
+  RESEND_API_KEY: re_ci_placeholder
+  EMAIL_FROM_ADDRESS: ci@example.com
+  NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # First, because a lockfile missing an entry passes every other gate
+      # locally and fails here.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check singletons resolve once
+        run: pnpm check:instances
+
+      - name: Check every package that ships code has tests
+        run: pnpm check:tested
+
+      - name: Check the migration chain
+        run: pnpm check:migrations
+
+      # Builds the design system's manifest and lints it against the contract:
+      # an unknown token, a composition rule naming a missing component, an
+      # example pointing at a story that does not exist.
+      - name: Validate the design-system manifest
+        run: pnpm validate
+
+      - name: Check generated Payload artifacts are current
+        run: bash .github/scripts/check-generated.sh
+
+      - name: Test
+        run: pnpm test
+
+      # Non-blocking: a new advisory is news, not necessarily a defect, and
+      # blocking every open pull request the morning a CVE is published is how
+      # a gate gets removed rather than fixed. Read it.
+      - name: Audit production dependencies
+        run: pnpm check:audit
+        continue-on-error: true
+
+  verify:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # A fresh database, migrated exactly as a deploy would migrate it. A
+      # migration that does not apply cleanly from empty fails here rather than
+      # on the first environment somebody creates.
+      - name: Migrate
+        run: pnpm --dir apps/web migrate
+
+      - name: Build
+        run: pnpm build
