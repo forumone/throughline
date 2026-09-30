@@ -32,6 +32,24 @@ async function collectStoryIds(): Promise<Set<string> | undefined> {
   return ids
 }
 
+/*
+Lint rules this design system treats as failures, though the shared linter
+reports them as warnings.
+
+`design-contract` sets both to `warning` because it serves every project, and a
+project migrating an existing design system onto the contract should not be
+blocked by prose. A design system written against the contract from the start is
+never mid-migration, so it starts strict. Relax a rule here, deliberately, if
+yours is.
+
+Both are promoted because of who reads them. `intent` and `antiExamples` are the
+two fields the composing agent reasons about hardest: `intent` is how it chooses
+between components that could both fit, and `antiExamples` is how it rules one
+out. A component with neither still renders, and still gets composed into the
+wrong place, silently.
+*/
+const REQUIRED_RULES = new Set(['antiExamples.empty', 'intent.brevity'])
+
 async function main() {
   const raw = await readJson<unknown>(manifestPath)
   const loaded = loadManifest(raw)
@@ -39,7 +57,14 @@ async function main() {
   const availableStoryIds = await collectStoryIds()
   const lintOptions = availableStoryIds ? { availableStoryIds } : {}
 
-  const issues = lintManifest(loaded.raw, lintOptions)
+  /*
+  Severity is rewritten, not just re-bucketed: `formatLintIssues` groups by the
+  field itself, so a promoted rule left as a warning would print under
+  "Warnings" immediately before the command exits 1.
+  */
+  const issues = lintManifest(loaded.raw, lintOptions).map((issue) =>
+    REQUIRED_RULES.has(issue.rule) ? { ...issue, severity: 'error' as const } : issue,
+  )
   const errors = issues.filter((i) => i.severity === 'error')
   const warnings = issues.filter((i) => i.severity === 'warning')
 
