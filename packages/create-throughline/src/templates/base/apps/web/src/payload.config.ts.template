@@ -1,14 +1,15 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildConfig } from 'payload'
-import type { CollectionConfig } from 'payload'
+import type { Access, CollectionConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import {
   auditPlugin,
-  createApiKeysCollection,
   createInngestClient,
+  createMcpToolCollector,
 } from '@forumone/throughline-core'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
 import {
@@ -28,6 +29,23 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const inngest = createInngestClient({ id: '{{projectName}}' })
+
+/*
+Where every Throughline server puts its tools for `mcpPlugin`, which serves them
+all on one `/api/mcp`. Each plugin declares its tools as the config is built and
+binds the handlers at `onInit`; `mcpPlugin` reads this array at both moments.
+Hand over `mcpTools.tools` itself — a spread or `.slice()` would hand over
+something nobody fills.
+*/
+const mcpTools = createMcpToolCollector()
+
+// A person in `users` with the admin role. `req.user` can also be an MCP key
+// document, which has no roles and is never an admin, so the collection is
+// checked first — once payload-types.ts exists, TypeScript insists on it.
+const isAdmin: Access = ({ req: { user } }) =>
+  user?.collection === 'users' &&
+  Array.isArray(user.roles) &&
+  (user.roles as unknown[]).includes('admin')
 
 // Users collection — extend with your own fields and SSO/auth provider.
 const Users: CollectionConfig = {
@@ -95,14 +113,18 @@ export default buildConfig({
   db: postgresAdapter({
     pool: { connectionString: process.env.DATABASE_URI! },
   }),
-  collections: [Users, Pages, createApiKeysCollection()],
+  // MCP keys live in `payload-mcp-api-keys`, which `mcpPlugin` below brings.
+  collections: [Users, Pages],
   secret: process.env.PAYLOAD_SECRET!,
   typescript: {
     outputFile: path.resolve(__dirname, 'payload-types.ts'),
   },
   plugins: [
-    // Order matters: audit first (so other plugins can write to it),
-    // then content plugins, then notification/forms/integrations.
+    // Order matters twice. `auditPlugin` first: every other Throughline plugin
+    // requires the audit log at init. And every tool-bearing plugin before
+    // `mcpPlugin`, which reads the declared tools when the config is built — a
+    // plugin registered after it gets no per-key checkbox, and its tools are
+    // denied to every key with no error anywhere.
     auditPlugin({ inngest }),
 
     componentsPlugin({
@@ -110,6 +132,7 @@ export default buildConfig({
       {{else}}// TODO: point at your design system manifest
       manifest: { type: 'url', url: 'https://your-design-system.example.com/manifest.json' },
       {{/if}}matching: { strategy: 'tfidf' },
+      mcpTools,
     }),
 
     publishingPlugin({
@@ -119,6 +142,7 @@ export default buildConfig({
       approvalResolver: {
         getActiveApproval: async () => null, // TODO: wire to approvals plugin
       },
+      mcpTools,
     }),
 
     approvalsPlugin({
@@ -135,9 +159,10 @@ export default buildConfig({
           return []
         },
       },
+      mcpTools,
     }),
 
-    auditQueryPlugin({}),
+    auditQueryPlugin({ mcpTools }),
 
     emailPlugin({
       inngest,
@@ -162,18 +187,39 @@ export default buildConfig({
     formsPlugin({
       inngest,
       ipHashSecret: process.env.FORMS_IP_HASH_SECRET!,
-      // TODO: list every place a form is allowed to send to. The plugin
-      // refuses to deliver to destinations that aren't in this list.
+      // TODO: list every place a form is allowed to send to, and delete the
+      // placeholder. The plugin refuses to start with an empty list — the
+      // allowlist is the security perimeter — and refuses to deliver anywhere
+      // not on it. example.com is reserved and accepts no mail, so the
+      // placeholder routes nothing anywhere while it stands.
       allowedDestinations: [
-        // {
-        //   type: 'email',
-        //   value: 'team@example.com',
-        //   label: 'Main inbox',
-        //   description: 'General contact form destination',
-        // },
+        {
+          type: 'email',
+          value: 'forms@example.com',
+          label: 'Placeholder',
+          description: 'Replace before launch: example.com accepts no mail.',
+        },
       ],
+      mcpTools,
     }),
 
-    integrationsPlugin({ inngest }),
+    integrationsPlugin({ inngest, mcpTools }),
+
+    // Last of the tool-bearing chain. An MCP key is a credential: the plugin
+    // ships its collection with no access rules — "anybody signed in" — so it
+    // is narrowed to admins here.
+    mcpPlugin({
+      mcp: { tools: mcpTools.tools },
+      overrideApiKeyCollection: (collection) => ({
+        ...collection,
+        access: {
+          ...collection.access,
+          read: isAdmin,
+          create: isAdmin,
+          update: isAdmin,
+          delete: isAdmin,
+        },
+      }),
+    }),
   ],
 })
