@@ -39,6 +39,16 @@ export function printNextSteps(answers: Answers): void {
   lines.push(`       ${pc.dim('openssl rand -base64 48  # APPROVAL_TOKEN_SECRET')}`)
   lines.push(`       ${pc.dim('openssl rand -base64 48  # FORMS_IP_HASH_SECRET')}`)
 
+  // `push: false`: the schema exists only once a migration has created it.
+  lines.push(formatStep(step++, 'Create and apply the first migration:'))
+  lines.push(`       ${pc.dim('pnpm --dir apps/web migrate:create initial')}`)
+  lines.push(`       ${pc.dim('pnpm --dir apps/web migrate')}`)
+
+  // Committed and checked by CI, so the first push is green only with them.
+  lines.push(formatStep(step++, 'Generate the Payload types and import map, and commit them:'))
+  lines.push(`       ${pc.dim('pnpm --dir apps/web generate:types')}`)
+  lines.push(`       ${pc.dim('pnpm --dir apps/web generate:importmap')}`)
+
   lines.push(formatStep(step++, `${pc.bold('pnpm dev')} to run locally`))
   lines.push(
     formatStep(
@@ -47,16 +57,12 @@ export function printNextSteps(answers: Answers): void {
     ),
   )
   lines.push(
-    formatStep(
-      step++,
-      'In the admin, go to API Keys and create one key per MCP server',
-    ),
+    formatStep(step++, 'In the admin, create one key under MCP → Payload MCP API Keys'),
   )
-  lines.push(formatStep(step++, 'Paste those keys into .env.local'))
   lines.push(
     formatStep(
       step,
-      'Wire Claude (or your MCP client) to your MCP endpoints — see the generated README.md',
+      'Give that key to Claude (or your MCP client) for /api/mcp — see the generated README.md',
     ),
   )
 

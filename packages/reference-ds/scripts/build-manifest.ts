@@ -10,42 +10,77 @@ import { getTokenList } from '../src/tokens/index.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(__dirname, '..')
-const componentsDir = resolve(packageRoot, 'src/components')
 const outputDir = resolve(packageRoot, 'dist')
 const outputFile = resolve(outputDir, 'manifest.json')
 
-async function readPackageVersion(): Promise<string> {
+/**
+ * Every directory, relative to the package, whose subdirectories are
+ * components. A design system that splits components across layers (atoms and
+ * molecules, or a Gesso-style `02-layouts` / `03-components`) lists each one.
+ */
+const CONTRACT_LAYERS = ['src/components']
+
+/**
+ * The manifest names the design system from its own `package.json`. This file
+ * is vendored into every scaffolded project, and a hard-coded name made each of
+ * them publish a manifest claiming to be the reference design system.
+ */
+async function readPackage(): Promise<{ name: string; version: string; description?: string }> {
   const raw = await readFile(resolve(packageRoot, 'package.json'), 'utf8')
-  const parsed = JSON.parse(raw) as { version?: string }
-  return parsed.version ?? '0.0.0'
+  const parsed = JSON.parse(raw) as { name?: string; version?: string; description?: string }
+  if (!parsed.name) throw new Error('package.json has no "name"; the manifest needs one.')
+  return {
+    name: parsed.name,
+    version: parsed.version ?? '0.0.0',
+    ...(parsed.description ? { description: parsed.description } : {}),
+  }
 }
 
 async function collectContracts(): Promise<Record<string, ComponentContract>> {
   const components: Record<string, ComponentContract> = {}
 
-  let entries: string[]
-  try {
-    entries = await readdir(componentsDir)
-  } catch {
-    return components
-  }
-
-  for (const name of entries) {
-    const dir = resolve(componentsDir, name)
-    const dirStat = await stat(dir).catch(() => null)
-    if (!dirStat?.isDirectory()) continue
-
-    const contractPath = join(dir, `${name}.contract.ts`)
-    const contractStat = await stat(contractPath).catch(() => null)
-    if (!contractStat?.isFile()) continue
-
-    const module = (await import(pathToFileURL(contractPath).href)) as {
-      contract?: ComponentContract
+  for (const layer of CONTRACT_LAYERS) {
+    let entries: string[]
+    try {
+      entries = await readdir(resolve(packageRoot, layer))
+    } catch {
+      continue
     }
-    if (!module.contract) {
-      throw new Error(`${name}.contract.ts does not export "contract"`)
+
+    for (const name of entries.sort()) {
+      // Underscore-prefixed directories are private implementation details.
+      if (name.startsWith('_') || name.startsWith('.')) continue
+
+      const dir = resolve(packageRoot, layer, name)
+      const dirStat = await stat(dir).catch(() => null)
+      if (!dirStat?.isDirectory()) continue
+
+      /*
+      A component with no contract is refused, not skipped. Skipped, it is
+      absent from the manifest — and every other gate reads the manifest or the
+      contract, so nothing would notice that the CMS cannot offer it.
+      */
+      const contractPath = join(dir, `${name}.contract.ts`)
+      const contractStat = await stat(contractPath).catch(() => null)
+      if (!contractStat?.isFile()) {
+        throw new Error(
+          `${layer}/${name} has no ${name}.contract.ts, so the CMS cannot offer it. ` +
+            `Write one beside the component. If the directory is not a component, ` +
+            `prefix it with an underscore.`,
+        )
+      }
+
+      const module = (await import(pathToFileURL(contractPath).href)) as {
+        contract?: ComponentContract
+      }
+      if (!module.contract) {
+        throw new Error(`${name}.contract.ts does not export "contract"`)
+      }
+      if (components[name]) {
+        throw new Error(`Duplicate component contract for "${name}"`)
+      }
+      components[name] = module.contract
     }
-    components[name] = module.contract
   }
 
   return components
@@ -56,12 +91,7 @@ async function main() {
 
   const manifest = {
     contractVersion: CONTRACT_VERSION,
-    designSystem: {
-      name: '@forumone/throughline-reference-ds',
-      version: await readPackageVersion(),
-      description:
-        'A brand-neutral reference design system demonstrating contract compliance for Throughline.',
-    },
+    designSystem: await readPackage(),
     tokens: getTokenList(),
     components,
     build: {

@@ -32,10 +32,20 @@ openssl rand -base64 48
 #    - RESEND_API_KEY               — from Resend dashboard
 #    - INNGEST_EVENT_KEY/SIGNING    — from Inngest (optional in local dev)
 
-# 5. Start the dev server
+# 5. Create and apply the first migration. The config sets `push: false`, so
+#    migrations are the only way the schema changes, from the first table on.
+pnpm --dir apps/web migrate:create initial
+pnpm --dir apps/web migrate
+
+# 6. Generate the Payload types and admin import map, and commit both along
+#    with the migration. CI fails until they match the config.
+pnpm --dir apps/web generate:types
+pnpm --dir apps/web generate:importmap
+
+# 7. Start the dev server
 pnpm dev
 
-# 6. Visit http://localhost:3000/admin and create your first user.
+# 8. Visit http://localhost:3000/admin and create your first user.
 ```
 
 ## After admin signup
@@ -65,6 +75,49 @@ pnpm dev
 - `pnpm typecheck` — TypeScript check across the monorepo
 - `pnpm lint` — ESLint
 - `pnpm test` — run all package tests
+
+## Migrations
+
+The schema changes only through `apps/web/src/migrations` — `push` is off, in
+development too. From `apps/web`:
+
+- `pnpm migrate:create <name>` — generate a migration from the config. It diffs against the `.json` snapshot beside the newest migration, not against the database, and needs no database.
+- `pnpm migrate` — apply pending migrations. Connects through `MIGRATION_DATABASE_URL` when it is set.
+- `pnpm migrate:status` — what has been applied.
+- `pnpm migrate:snapshot` — after **hand-writing** a migration, write its snapshot, or the generator falls a step behind and re-proposes changes that already shipped.
+- `pnpm check:migrations` — every migration has a snapshot, no snapshot is orphaned, and no drop follows a `CASCADE` that already carried it out. Also runs from the root.
+
+Scripts that write to a database can call `requireTarget` from `apps/web/scripts/lib/target.ts`, which prints the database, host and variable it is about to write through, and demands `--confirm` before overwriting anything.
+
+## Generated files
+
+`apps/web/src/payload-types.ts` and `apps/web/src/app/(payload)/admin/importMap.js`
+are generated from `payload.config.ts` and **committed**. Regenerate both after
+any change to the config, a collection or a plugin version, and commit the
+result — CI regenerates them and fails on a difference:
+
+```bash
+pnpm --dir apps/web generate:types
+pnpm --dir apps/web generate:importmap
+```
+
+A stale import map is a 500 on any admin screen that renders a component the
+map has never heard of.
+
+## CI
+
+`.github/workflows/ci.yml` runs two tiers. `fast` runs on every pull request
+and needs no database: install from the lockfile, typecheck, lint, the gates
+below, manifest validation, the generated-files check and tests. `verify` runs
+on pushes to main: it migrates a fresh Postgres and runs a production build.
+
+## Workspace gates
+
+Each is explained at the top of its script in `scripts/`:
+
+- `pnpm check:instances` — `payload`, `@payloadcms/ui`, `react` and `react-dom` each resolve to exactly one copy. Two byte-identical copies are two React contexts, and a runtime failure nothing else can see.
+- `pnpm check:tested` — every workspace package that ships code has at least one test. Not a coverage number. `apps/web` starts on its exception list; delete the entry with your first test.
+- `pnpm check:audit` — high and critical production advisories against an allowlist that carries a reason for each entry, and that fails when an entry stops applying.
 
 ## Project layout
 

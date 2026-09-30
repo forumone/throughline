@@ -5,7 +5,22 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["NODE_ENV"]
+      "env": [
+        "NODE_ENV",
+        "DATABASE_URI",
+        "DATABASE_URL",
+        "DATABASE_URL_UNPOOLED",
+        "POSTGRES_URL",
+        "POSTGRES_URL_NON_POOLING",
+        "PAYLOAD_SECRET",
+        "APPROVAL_TOKEN_SECRET",
+        "FORMS_IP_HASH_SECRET",
+        "RESEND_API_KEY",
+        "EMAIL_*",
+        "INNGEST_*",
+        "BLOB_READ_WRITE_TOKEN",
+        "NEXT_PUBLIC_*"
+      ]
     },
     "build-storybook": {
       "dependsOn": ["^build"],

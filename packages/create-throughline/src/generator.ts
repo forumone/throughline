@@ -146,9 +146,13 @@ function isBinary(filename: string): boolean {
 /**
  * npm strips files literally named `.gitignore` from a published tarball, so
  * we author them as `gitignore` in templates and restore the dot on output.
+ * `.github` goes the same way: a dot-directory in a tarball is at the mercy of
+ * whichever ignore rules the publishing npm applies, and the scaffold's CI is
+ * not something to lose silently.
  */
 const DOTFILE_RENAMES: Record<string, string> = {
   gitignore: '.gitignore',
+  github: '.github',
 }
 
 function applyDotfileRename(name: string): string {
