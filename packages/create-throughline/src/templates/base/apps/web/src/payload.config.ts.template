@@ -169,15 +169,18 @@ export default buildConfig({
     formsPlugin({
       inngest,
       ipHashSecret: process.env.FORMS_IP_HASH_SECRET!,
-      // TODO: list every place a form is allowed to send to. The plugin
-      // refuses to deliver to destinations that aren't in this list.
+      // TODO: list every place a form is allowed to send to, and delete the
+      // placeholder. The plugin refuses to start with an empty list — the
+      // allowlist is the security perimeter — and refuses to deliver anywhere
+      // not on it. example.com is reserved and accepts no mail, so the
+      // placeholder routes nothing anywhere while it stands.
       allowedDestinations: [
-        // {
-        //   type: 'email',
-        //   value: 'team@example.com',
-        //   label: 'Main inbox',
-        //   description: 'General contact form destination',
-        // },
+        {
+          type: 'email',
+          value: 'forms@example.com',
+          label: 'Placeholder',
+          description: 'Replace before launch: example.com accepts no mail.',
+        },
       ],
       mcpTools,
     }),
