@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 import { afterEach, beforeAll, afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { generate } from './generator.js'
 import type { Answers } from './prompts.js'
@@ -68,7 +69,6 @@ describe('scaffolded migration tooling', () => {
   })
 
   it('ships scripts that transpile cleanly once rendered', async () => {
-    const ts = await import('typescript')
     for (const file of [
       'apps/web/scripts/check-migrations.ts',
       'apps/web/scripts/write-migration-snapshot.ts',
