@@ -5,7 +5,11 @@ import { getPublishingService, toAuthenticatedUser } from '../service.js'
 const BodySchema = z.object({
   collection: z.string().min(1),
   id: z.union([z.string().min(1), z.number()]),
+  /** `schedule` only. */
+  publishAt: z.string().datetime({ offset: true }).optional(),
 })
+
+type Action = 'publish' | 'unpublish' | 'schedule' | 'unschedule'
 
 export interface CreateAdminEndpointsDeps {
   /** Route prefix the plugin is mounted under, e.g. `/publishing`. */
@@ -36,13 +40,23 @@ export function createAdminEndpoints(deps: CreateAdminEndpointsDeps): Endpoint[]
       method: 'post',
       handler: (req) => handle(req, deps, 'unpublish'),
     },
+    {
+      path: `${deps.routePrefix}/schedule`,
+      method: 'post',
+      handler: (req) => handle(req, deps, 'schedule'),
+    },
+    {
+      path: `${deps.routePrefix}/unschedule`,
+      method: 'post',
+      handler: (req) => handle(req, deps, 'unschedule'),
+    },
   ]
 }
 
 async function handle(
   req: PayloadRequest,
   deps: CreateAdminEndpointsDeps,
-  action: 'publish' | 'unpublish',
+  action: Action,
 ): Promise<Response> {
   if (!req.user) {
     return json({ error: 'You must be logged in to publish.' }, 401)
@@ -60,8 +74,12 @@ async function handle(
     return json({ error: 'Expected a JSON body with `collection` and `id`.' }, 400)
   }
 
-  const { collection } = parsed.data
+  const { collection, publishAt } = parsed.data
   const id = String(parsed.data.id)
+
+  if (action === 'schedule' && !publishAt) {
+    return json({ error: 'Expected `publishAt`, an ISO 8601 time, to schedule.' }, 400)
+  }
 
   if (!deps.publishableSlugs.has(collection)) {
     return json(
@@ -93,7 +111,11 @@ async function handle(
     const result =
       action === 'publish'
         ? await service.publish(request)
-        : await service.unpublish(request)
+        : action === 'unpublish'
+          ? await service.unpublish(request)
+          : action === 'schedule'
+            ? await service.schedule({ ...request, publishAt: publishAt! })
+            : await service.unschedule(request)
     // A pipeline block is a real answer, not a transport failure: 200 with
     // the diagnostic so the admin can render `failedAt` / `reason` /
     // `issues` / `suggestion` rather than a generic error.

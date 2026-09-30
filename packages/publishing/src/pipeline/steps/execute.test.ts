@@ -37,6 +37,41 @@ describe('executeStep', () => {
   date. The guard was already computed here for the event payload; it was
   simply not applied to the write.
   */
+  /*
+  A schedule outlived the publish it caused. Unpublish that page later and it
+  was a draft with a past date — exactly what the scheduled-publish backstop
+  looks for — so it put itself back up within the day.
+  */
+  it('clears a scheduled time, which the publish has now spent', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: { slug: 'my-page', scheduledPublishAt: '2026-04-22T11:00:00.000Z' },
+      documentId: 'p1',
+    })
+
+    await executeStep(ctx)
+
+    const data = (update.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data
+    expect(data['scheduledPublishAt']).toBeNull()
+  })
+
+  it('writes no schedule field for a document that had none', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send: vi.fn(async () => ({})) } as unknown as Inngest,
+      document: { slug: 'my-page' },
+      documentId: 'p1',
+    })
+
+    await executeStep(ctx)
+
+    const data = (update.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data
+    expect('scheduledPublishAt' in data).toBe(false)
+  })
+
   it('leaves publishedAt alone when the document already has one', async () => {
     const update = vi.fn(async () => ({ id: 'p1' }))
     const send = vi.fn(async () => ({}))

@@ -45,11 +45,18 @@ function endpoints() {
 
 const publish = () => endpoints()[0]!
 const unpublish = () => endpoints()[1]!
+const schedule = () => endpoints()[2]!
+const unschedule = () => endpoints()[3]!
 
 describe('createAdminEndpoints', () => {
-  it('mounts publish and unpublish under the route prefix', () => {
+  it('mounts publish, unpublish, schedule and unschedule under the route prefix', () => {
     const paths = endpoints().map((e) => `${e.method} ${e.path}`)
-    expect(paths).toEqual(['post /publishing/publish', 'post /publishing/unpublish'])
+    expect(paths).toEqual([
+      'post /publishing/publish',
+      'post /publishing/unpublish',
+      'post /publishing/schedule',
+      'post /publishing/unschedule',
+    ])
   })
 
   it('rejects an unauthenticated request', async () => {
@@ -189,6 +196,64 @@ describe('createAdminEndpoints', () => {
 
     expect(res.status).toBe(200)
     expect(unpublishSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ actor: expect.objectContaining({ channel: 'admin' }) }),
+    )
+  })
+
+  it('schedules as the logged-in user, passing the time through', async () => {
+    const scheduleSpy = vi.fn(async () => ({ scheduled: true }))
+    const res = await schedule().handler(
+      makeRequest({
+        body: { collection: 'pages', id: '1', publishAt: '2026-10-03T13:00:00.000Z' },
+        service: { schedule: scheduleSpy as unknown as PublishingService['schedule'] },
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    expect(scheduleSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        publishAt: '2026-10-03T13:00:00.000Z',
+        actor: expect.objectContaining({ enforceAccessAs: user, channel: 'admin' }),
+      }),
+    )
+  })
+
+  it.each([
+    ['no time at all', undefined],
+    ['a time that is not ISO 8601', 'next Tuesday'],
+  ])('refuses to schedule with %s', async (_label, publishAt) => {
+    const scheduleSpy = vi.fn()
+    const res = await schedule().handler(
+      makeRequest({
+        body: { collection: 'pages', id: '1', publishAt },
+        service: { schedule: scheduleSpy as unknown as PublishingService['schedule'] },
+      }),
+    )
+    expect(res.status).toBe(400)
+    expect(scheduleSpy).not.toHaveBeenCalled()
+  })
+
+  it('accepts a time with a zone offset, which is what a browser sends', async () => {
+    const scheduleSpy = vi.fn(async () => ({ scheduled: true }))
+    const res = await schedule().handler(
+      makeRequest({
+        body: { collection: 'pages', id: '1', publishAt: '2026-10-03T09:00:00-04:00' },
+        service: { schedule: scheduleSpy as unknown as PublishingService['schedule'] },
+      }),
+    )
+    expect(res.status).toBe(200)
+  })
+
+  it('cancels a schedule through the same guard rails', async () => {
+    const unscheduleSpy = vi.fn(async () => ({ unscheduled: true }))
+    const res = await unschedule().handler(
+      makeRequest({
+        body: { collection: 'pages', id: '1' },
+        service: { unschedule: unscheduleSpy as unknown as PublishingService['unschedule'] },
+      }),
+    )
+    expect(res.status).toBe(200)
+    expect(unscheduleSpy).toHaveBeenCalledWith(
       expect.objectContaining({ actor: expect.objectContaining({ channel: 'admin' }) }),
     )
   })

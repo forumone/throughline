@@ -147,4 +147,60 @@ describe('createExecuteScheduledPublishesFunction', () => {
 
     expect(payloadHandle.updates).toEqual([])
   })
+
+  /*
+  A schedule is written by a draft save, which Payload keeps in the versions
+  table and never copies to the main row. Reading the main row, the poll only
+  ever found schedules set over MCP by a non-draft update.
+  */
+  it('reads the latest version, where a draft save puts the schedule', async () => {
+    const fakeInngest = createFakeInngest()
+    const payloadHandle = createFakePayload()
+
+    createExecuteScheduledPublishesFunction({
+      inngest: fakeInngest.inngest,
+      payload: payloadHandle.payload,
+      collections: [{ slug: 'pages' }, { slug: 'posts' }],
+      publish: async () => ({ published: true }),
+    })
+
+    await fakeInngest.invoke('execute-scheduled-publishes', {
+      name: 'inngest/function.invoked',
+      data: {},
+    })
+
+    expect(payloadHandle.finds.map((f) => [f.collection, f.draft])).toEqual([
+      ['pages', true],
+      ['posts', true],
+    ])
+  })
+
+  /*
+  Run as a backstop beside the sleeper, the two would otherwise reach a document
+  that has just come due in the same moment.
+  */
+  it('leaves a document alone until it is overdue by the grace period', async () => {
+    const fakeInngest = createFakeInngest()
+    const payloadHandle = createFakePayload([
+      { id: 'p1', _status: 'draft', title: 'Two hours late', scheduledPublishAt: '2026-04-22T10:00:00.000Z' },
+      { id: 'p2', _status: 'draft', title: 'Just due', scheduledPublishAt: '2026-04-22T11:55:00.000Z' },
+    ])
+    const publish = vi.fn(async () => ({ published: true }))
+
+    createExecuteScheduledPublishesFunction({
+      inngest: fakeInngest.inngest,
+      payload: payloadHandle.payload,
+      collections: [{ slug: 'pages' }],
+      publish,
+      overdueByMs: 60 * 60 * 1000,
+    })
+
+    await fakeInngest.invoke('execute-scheduled-publishes', {
+      name: 'inngest/function.invoked',
+      data: {},
+    })
+
+    expect(publish).toHaveBeenCalledTimes(1)
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }))
+  })
 })

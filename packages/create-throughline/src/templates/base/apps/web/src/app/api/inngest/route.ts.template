@@ -8,7 +8,9 @@ import {
   createExpireStaleApprovalsFunction,
   createHealthcheckFunction,
   createPayloadReachableCheck,
+  createPublishAtScheduledTimeFunction,
   createRevalidateOnPublishFunction,
+  type ScheduledPublishRequest,
 } from '@forumone/throughline-workflows'
 import { getPublishingService } from '@forumone/throughline-publishing'
 import { getEmailFunctions } from '@forumone/throughline-email'
@@ -23,6 +25,23 @@ const payload = await getPayload({ config })
 
 const emailFunctions = getEmailFunctions(payload) ?? []
 const formsFunctions = getFormsFunctions(payload) ?? []
+/*
+Through the publishing service, in process — so a scheduled publish passes the
+same composition, accessibility and approval gates as an interactive one. Not
+`payload.update`, which skips all of them.
+*/
+async function publishScheduled({ collection, id, reasoning }: ScheduledPublishRequest) {
+  const outcome = await getPublishingService(payload).publish({
+    collection,
+    id,
+    actor: { apiKeyName: 'scheduled-publish', channel: 'mcp' },
+    meta: { reasoning },
+  })
+  return { published: outcome.published, reason: outcome.reason }
+}
+
+const scheduledCollections = [{ slug: 'pages' }]
+
 const integrationRegistry = getIntegrationRegistry(payload)
 const integrationContext = getIntegrationContext(payload)
 const integrationFunctions =
@@ -36,28 +55,21 @@ export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
     createRevalidateOnPublishFunction({ inngest, payload }),
+    // On time: sleeps until each document's scheduled time.
+    createPublishAtScheduledTimeFunction({
+      inngest,
+      payload,
+      collections: scheduledCollections,
+      publish: publishScheduled,
+    }),
+    // The backstop, for a schedule whose wake-up event never arrived.
     createExecuteScheduledPublishesFunction({
       inngest,
       payload,
-      collections: [{ slug: 'pages' }],
-      /*
-      Through the publishing service, in process — so a scheduled publish passes
-      the same composition, accessibility and approval gates as an interactive
-      one. Not `payload.update`, which skips all of them.
-
-      No API key and no URL: this used to POST to `/api/publishing/mcp`, which
-      meant the deployment calling itself over HTTP, and broke whenever the
-      base URL or the key was wrong.
-      */
-      publish: async ({ collection, id, reasoning }) => {
-        const outcome = await getPublishingService(payload).publish({
-          collection,
-          id,
-          actor: { apiKeyName: 'scheduled-publish', channel: 'mcp' },
-          meta: { reasoning },
-        })
-        return { published: outcome.published, reason: outcome.reason }
-      },
+      collections: scheduledCollections,
+      publish: publishScheduled,
+      schedule: '17 3 * * *',
+      overdueByMs: 60 * 60 * 1000,
     }),
     createExpireStaleApprovalsFunction({ inngest, payload }),
     createAuditEventEchoFunction({ inngest }),

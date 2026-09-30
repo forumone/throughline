@@ -207,7 +207,35 @@ export interface ExecuteScheduledPublishesOptions extends BaseWorkflowOptions {
    * URL sat behind access protection.
    */
   publish: (request: ScheduledPublishRequest) => Promise<ScheduledPublishResult>
+  /**
+   * Leave a document alone until it is this many milliseconds past its time.
+   * Default: 0.
+   *
+   * For a host that also runs `createPublishAtScheduledTimeFunction`, which
+   * publishes on time and makes this poll a backstop for an event that never
+   * arrived. Without a grace period the two can reach the same due document in
+   * the same moment and publish it twice.
+   */
+  overdueByMs?: number
   /** Override the function id. Default: `execute-scheduled-publishes`. */
+  id?: string
+}
+
+export interface PublishAtScheduledTimeOptions extends BaseWorkflowOptions {
+  /**
+   * Collections that participate in scheduled publishing. An event naming any
+   * other collection is ignored.
+   */
+  collections: ScheduledCollectionConfig[]
+  /** How to publish one document. The same contract, and the same warning, as `ExecuteScheduledPublishesOptions.publish`. */
+  publish: (request: ScheduledPublishRequest) => Promise<ScheduledPublishResult>
+  /**
+   * The longest single sleep, in milliseconds. A schedule further out is
+   * reached by relaying the event. Default: six days — Inngest's free plan caps
+   * a sleep at seven.
+   */
+  maxSleepMs?: number
+  /** Override the function id. Default: `publish-at-scheduled-time`. */
   id?: string
 }
 

@@ -11,6 +11,9 @@ export type { ThroughlinePublishButtonProps } from '../admin/PublishButton.js'
 export { UnpublishButton } from '../admin/UnpublishButton.js'
 export type { ThroughlineUnpublishButtonProps } from '../admin/UnpublishButton.js'
 
+export { SchedulePublishField } from '../admin/SchedulePublishField.js'
+export type { ThroughlineSchedulePublishFieldProps } from '../admin/SchedulePublishField.js'
+
 export { callPublishingEndpoint, describeBlock } from '../admin/publishing-client.js'
 export type {
   CallPublishingEndpointArgs,

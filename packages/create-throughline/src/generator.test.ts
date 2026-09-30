@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { generate } from './generator.js'
+import { readWorkspaceVersions } from './utils/versions.js'
 import type { Answers } from './prompts.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -90,6 +91,27 @@ describe('generate (with reference DS)', () => {
     expect(webJson.name).toBe('demo-web')
   })
 
+  it('pins every Throughline package to its current workspace version', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const current = await readWorkspaceVersions(resolve(__dirname, '..', '..'))
+    const ranges: Array<[string, string]> = []
+    for (const file of ['apps/web/package.json', 'design-system/package.json']) {
+      const json = JSON.parse(await readFile(join(target, file), 'utf-8')) as {
+        dependencies?: Record<string, string>
+      }
+      for (const [name, range] of Object.entries(json.dependencies ?? {})) {
+        if (name.startsWith('@forumone/throughline-')) ranges.push([name, range])
+      }
+    }
+    // Ten in apps/web (nine plugins + design-contract), one in the design system.
+    expect(ranges).toHaveLength(11)
+    // A hand-typed range left them at ^0.2.0 — patches only, for a 0.x version —
+    // while the packages reached 0.9. Every range must be read, not typed.
+    for (const [name, range] of ranges) {
+      expect(range, name).toBe(`^${current[name]}`)
+    }
+  })
+
   it('wires the design-system workspace dependency into apps/web', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const webJson = JSON.parse(
@@ -106,6 +128,18 @@ describe('generate (with reference DS)', () => {
     expect(config).toContain("from '@acme/design-system/manifest'")
     expect(config).toContain('designSystemManifest')
     expect(config).not.toContain('your-design-system.example.com')
+  })
+
+  it('signs approval links and points them at the route approvalsPlugin serves', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
+    // `buildActionUrl` from approvals targets `/api/approvals/action`, the
+    // endpoint the plugin registers. The template once built an unsigned
+    // query string against `/api/approvals/decision`, which nothing serves.
+    expect(config).toContain('generateActionToken(')
+    expect(config).toContain('buildActionUrl(process.env.NEXT_PUBLIC_SERVER_URL!, token)')
+    expect(config).toContain("from '@forumone/throughline-approvals'")
+    expect(config).not.toContain('/api/approvals/decision')
   })
 
   it('creates a top-level design-system Storybook authoring package', async () => {
@@ -161,6 +195,7 @@ describe('generate (with reference DS)', () => {
     )
     expect(route).toContain('createRevalidateOnPublishFunction')
     expect(route).toContain('createExecuteScheduledPublishesFunction')
+    expect(route).toContain('createPublishAtScheduledTimeFunction')
     expect(route).toContain('createExpireStaleApprovalsFunction')
     expect(route).toContain('createAuditEventEchoFunction')
     expect(route).toContain('createHealthcheckFunction')
