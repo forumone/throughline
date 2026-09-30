@@ -108,6 +108,15 @@ describe('generate (with reference DS)', () => {
     expect(config).not.toContain('your-design-system.example.com')
   })
 
+  it("names the manifest from the project's design system, not the reference one", async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const script = await readFile(join(target, 'design-system/scripts/build-manifest.ts'), 'utf-8')
+    // The vendored script once hard-coded `@forumone/throughline-reference-ds`,
+    // so every scaffolded project published a manifest claiming to be it.
+    expect(script).not.toContain("'@forumone/throughline-reference-ds'")
+    expect(script).toContain('designSystem: await readPackage()')
+  })
+
   it('creates a top-level design-system Storybook authoring package', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     // Lives at the top level (a sibling of apps/), not under packages/.
