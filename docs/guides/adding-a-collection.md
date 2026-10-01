@@ -181,6 +181,38 @@ Publish the climate-resilience program.
 
 The publishing pipeline runs against the new collection. You'll see the same composition / accessibility / required-fields gates as you do for `pages`. If `policy.requiresApproval` is on, the approval flow kicks in.
 
+## 8. Put it in the access bucket map
+
+The scaffold's `apps/web/src/access/anonymousAccess.test.ts` lists every collection in the config in one of two buckets. **Adding `programs` makes `pnpm test` fail until you add it to one.**
+
+```ts
+describeAnonymousAccess(config, {
+  renderPath: {
+    pages: 'the page routes',
+    programs: 'the /programs/[slug] route and the /programs index', // where a page reads it
+    // ...
+  },
+  private: {
+    users: 'accounts',
+    // ...
+  },
+})
+```
+
+- **`renderPath`** is for collections the public site reads with nobody signed in, and the value says where. Count relationships populated at depth: an upload collection shown on a page belongs here even if no route queries it by name. The collection needs a `read` rule that allows an anonymous request. Payload's default, with no rule at all, needs a user. If the collection has drafts, as `programs` does, the rule has to return a query that limits anonymous readers to published documents. `true` would serve drafts to anyone:
+
+  ```ts
+  access: {
+    read: ({ req: { user } }) => (user ? true : { _status: { equals: 'published' } }),
+  },
+  ```
+
+- **`private`** is for collections the internet must not read: submissions, credentials, internal state. With no `read` rule, Payload's default already refuses an anonymous read. A rule that returns `true` or a query fails the test.
+
+The test loads `payload.config.ts` without connecting to a database, so it runs in CI's `fast` job on every pull request. The smoke pack (`apps/web/e2e`) makes the same check over HTTP in `verify`. To have it request `/api/programs` anonymously, add `programs` to `publicCollections` in `e2e/site.ts`. If the site exposes a collection that nobody should read anonymously, add it to `privateCollections`.
+
+The test also fails for collections a plugin brings. When you add a plugin, put its collections in a bucket too.
+
 ## What you didn't have to do
 
 - Tell the audit log about this collection (it auto-records)
@@ -188,4 +220,4 @@ The publishing pipeline runs against the new collection. You'll see the same com
 - Add a Forms-related anything (forms are their own collection)
 - Edit any plugin's source
 
-The seam is configuration. New collections compose against the existing plugins by listing themselves in three places: `collections`, `publishingPlugin.collections`, and the Payload MCP allowlist.
+The seam is configuration. New collections compose against the existing plugins by listing themselves in three places: `collections`, `publishingPlugin.collections`, and the Payload MCP allowlist. A fourth, the access bucket map, is a test rather than configuration, and it fails until you decide.

@@ -92,6 +92,17 @@ and kills it after five minutes (`PAYLOAD_CLI_TIMEOUT_MS`, `0` to disable;
 `migrate*` has no limit unless you set one). Run the Payload CLI through these
 scripts rather than `npx payload`.
 
+- `pnpm --dir apps/web test:smoke` — the Playwright smoke pack, against a local `next start` (run `pnpm build` first) or `E2E_BASE_URL`
+
+## Tests
+
+`apps/web` has two kinds of test.
+
+- **`pnpm test`** runs vitest in Node with no database and no browser, so it runs in CI's `fast` job on every pull request. `vitest.config.ts` gives `payload.config.ts` placeholder environment variables, so the config loads without connecting to anything. The first test, `src/access/anonymousAccess.test.ts`, puts every collection into one of two buckets: collections the public site reads with nobody signed in (`renderPath`), and collections it must not read (`private`). It then checks each collection's `read` rule against its bucket. **Adding a collection, or a plugin that brings collections, fails this test until you put each new collection in a bucket.** See the Throughline guide _Adding a collection_.
+- **`pnpm --dir apps/web test:smoke`** is a Playwright smoke pack (`e2e/`) that sends real requests to `next start` on an empty, migrated database. It checks that the front door answers, that an unknown path returns 404, that the admin shows its sign-in screen, and that the REST API refuses anonymous reads of private collections while allowing reads of public ones. It runs in CI's `verify` job, which has a database. Set `E2E_BASE_URL` to run it against a deployed site. Every check is a GET request. The paths it checks are configured in `e2e/site.ts`. That file also lists checks a new project cannot pass yet because it does not serve the route: security headers, `robots.txt`, the sitemap, `llms.txt` and a draft-mode route. Add each check when you add its route.
+
+Run `pnpm --dir apps/web test:smoke:install` once to download Chromium.
+
 ## Migrations
 
 The schema changes only through `apps/web/src/migrations` — `push` is off, in
@@ -125,14 +136,15 @@ map has never heard of.
 `.github/workflows/ci.yml` runs two tiers. `fast` runs on every pull request
 and needs no database: install from the lockfile, typecheck, lint, the gates
 below, manifest validation, the generated-files check and tests. `verify` runs
-on pushes to main: it migrates a fresh Postgres and runs a production build.
+on pushes to main: it migrates a fresh Postgres, runs a production build, and
+runs the smoke pack against it.
 
 ## Workspace gates
 
 Each is explained at the top of its script in `scripts/`:
 
 - `pnpm check:instances` — `payload`, `@payloadcms/ui`, `react` and `react-dom` each resolve to exactly one copy. Two byte-identical copies are two React contexts, and a runtime failure nothing else can see.
-- `pnpm check:tested` — every workspace package that ships code has at least one test. Not a coverage number. `apps/web` starts on its exception list; delete the entry with your first test.
+- `pnpm check:tested` — every workspace package that ships code has at least one test. Not a coverage number. A package with no tests can go on the exception list in the script, with a reason. An entry fails once that package has tests.
 - `pnpm check:audit` — high and critical production advisories against an allowlist that carries a reason for each entry, and that fails when an entry stops applying.
 
 ## Project layout

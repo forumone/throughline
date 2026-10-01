@@ -222,6 +222,18 @@ Set `storyId` to the canonical Storybook story for the component. The contract l
 
 Use the default story (the one that loads when you click into the component in Storybook), not a variant.
 
+## Defaults that reach the CMS
+
+If a component's boolean prop has a default in its signature, such as `decorative = true`, put that default in the contract as well:
+
+```typescript
+{ name: 'decorative', type: 'boolean', required: false, defaultValue: true }
+```
+
+When a block comes from the CMS, its component never uses its own default. A checkbox is saved as ticked or unticked, never left empty, so the prop always arrives with an explicit value. The contract's `defaultValue` is what an author's checkbox starts at, and when it is missing the box starts unticked. Saying "true by default" in `constraints` has no effect: the reference `Divider` did that, so every divider an author added was announced to screen readers.
+
+`defaultValue` applies only to `boolean` fields, and the schema rejects it on any other type. Do not add string defaults to the component either. A text prop's default is copy that no author typed, and it appears on every page that leaves the field blank.
+
 ## Testing the contract
 
 ```bash
@@ -231,6 +243,11 @@ pnpm --filter @your-scope/design-system validate
 ```
 
 `validate` runs `lintManifest` against your generated manifest, using the story IDs from `storybook-static/index.json`. Failures are structured (missing story, prop schema mismatch with example, anti-example shape error).
+
+`validate` checks the contract against itself. It does not check the contract against the component or against the blocks the CMS generates from it. A site built on `@forumone/throughline-design-system-payload` covers those two gaps with the package's test helpers. See the [package reference](../reference/design-system-payload.md#testing-testing).
+
+- `check-block-props <manifest> <components-dir>` runs each contract through the renderer's coercion and compares the props that come out with the component's `<Name>Args.ts`. One site's contract declared a bare `image` field for a component that read `image.src` and `image.alt`, and every image rendered with no `src` and no `alt`.
+- `describeBlockInvariants(blocks)` checks two things. A newly added block must pass every generated validation before the author types anything. And each checkbox must start at the `defaultValue` its contract declares.
 
 ## Getting Claude's feedback on the contract
 

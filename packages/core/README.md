@@ -13,6 +13,7 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 | Observability      | `./observability` | `jobFailuresPlugin`, `getJobFailureWriter`, `createErrorReporter`, `reportError`, `buildRequestErrorReport`, `describeErrorReporting`                           |
 | Logger             | (main)            | `defaultLogger`, `createNamedLogger`                                                                                                                            |
 | Utils              | (main)            | `documentContentHash`, `sha256Hex`, `formatZodIssues`                                                                                                           |
+| Testing            | `./testing` only  | `describeAnonymousAccess`, `checkAnonymousAccess` — test helpers for a site; not re-exported from the main entry                                                |
 | Payload CLI runner | bin               | `throughline-payload` — see [below](#running-the-payload-cli-throughline-payload)                                                                               |
 
 There is no `./auth` any more. It held an MCP key collection, a bearer-token
@@ -21,7 +22,7 @@ own `/mcp`. `@payloadcms/plugin-mcp` owns the transport, the keys and authentica
 now; `createMcpToolCollector` is how this suite's tools get to it. `sha256Hex`
 survived, under `./utils`.
 
-The main entry re-exports everything; the subpath exports keep bundles smaller for consumers who only need one slice.
+The main entry re-exports everything except `./testing`; the subpath exports keep bundles smaller for consumers who only need one slice.
 
 ## Installation
 
@@ -303,6 +304,37 @@ the nearest ancestor with a `pnpm-workspace.yaml`, or, outside a pnpm
 workspace, the nearest directory with a `package.json`. Add it to
 `.gitignore`. On Windows, which has neither process groups nor `ps`, the runner
 just runs Payload.
+
+## Testing what an anonymous reader can read
+
+`@forumone/throughline-core/testing` holds a site's access rules to a bucket map, as a vitest suite that needs no database. It imports `vitest`, an optional peer, so it lives on its own subpath and the main entry never loads it.
+
+Every query the public site makes runs with nobody signed in, so a collection's own `read` rule decides whether a page can see its content. Close one by mistake and nothing errors: the page renders empty. Open the wrong one and the audit log or the MCP keys are on the internet.
+
+```ts
+// apps/web/src/access/anonymousAccess.test.ts
+import { describeAnonymousAccess } from '@forumone/throughline-core/testing'
+import config from '../payload.config'
+
+describeAnonymousAccess(config, {
+  renderPath: {
+    pages: 'the [...slug] route',
+    media: 'every populated upload',
+  },
+  private: ['users', 'payload-mcp-api-keys', 'audit-events', 'payload-preferences'],
+  // Optional. When given, every global must be in it.
+  globals: { renderPath: { navigation: 'the header and footer' } },
+})
+```
+
+It asserts:
+
+- **Every collection is in exactly one bucket.** That covers the collections plugins and Payload add as well as the site's own. A collection in no bucket fails, so adding one forces somebody to decide. An entry the config no longer has fails too.
+- **Render-path collections allow an anonymous read.** The rule must answer `true` or a query. Having no rule fails, because Payload's default needs a user.
+- **Collections with drafts narrow that read.** On a collection with `versions.drafts`, a bare `true` serves unpublished documents, so the rule has to answer a query, usually `{ _status: { equals: 'published' } }`.
+- **Private collections refuse it.** `true` or a query fails. Having no rule passes, because Payload's default refuses.
+
+A rule that calls `req.payload` cannot be checked as a value, and it throws rather than guessing. `checkAnonymousAccess(config, buckets)` returns the same findings as a list, for a script or a custom assertion.
 
 ## Why all of this lives in one package
 

@@ -5,8 +5,9 @@ name: CI
 #   fast    every pull request and every push to main. No database: every gate
 #           here needs the config to parse, not to connect.
 #   verify  pushes to main, and on demand. A Postgres service, the migrations,
-#           and a production build — `next build` boots Payload to collect page
-#           data, so it needs a migrated database.
+#           a production build — `next build` boots Payload to collect page
+#           data, so it needs a migrated database — and the Playwright smoke
+#           pack against `next start` on that build.
 #
 # A green `fast` is what a pull request is reviewed on; `verify` is what says
 # main still builds and migrates. Add a path filter to run `verify` on pull
@@ -129,3 +130,14 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # The smoke pack (apps/web/e2e): `next start` on the build above, against
+      # the empty database migrated above, asserting only what answers without
+      # content — the front door, a 404, the admin sign-in screen, and the REST
+      # API refusing an anonymous read of private collections. Here and not in
+      # `fast`, because the server needs a database to answer at all.
+      - name: Install Chromium for the smoke pack
+        run: pnpm --dir apps/web test:smoke:install
+
+      - name: Smoke test
+        run: pnpm --dir apps/web test:smoke

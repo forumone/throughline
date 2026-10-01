@@ -92,9 +92,19 @@ see the design-contract package in the Throughline repository.
 ## Tests
 
 `check:tested` requires at least one test in every package that ships code.
-`apps/web` starts on its exception list in `scripts/check-tested-packages.ts`;
-delete that entry with its first test. Good first tests are the ones that need
-no database: access rules as values, field validations, hooks as functions.
+
+`apps/web` starts with one: `src/access/anonymousAccess.test.ts`, which
+`pnpm test` runs through a vitest config that loads `payload.config.ts` without
+a database. It puts every collection in one of two buckets: read by the
+rendered site, so anonymous reads must be allowed, or private, so they must be
+refused. A new collection fails it until you add it to a bucket. Decide which,
+and don't open a collection to anonymous reads to make the test pass. More good
+first tests need no database: field validations, and hooks as functions.
+
+`pnpm test:smoke` runs the Playwright smoke pack in `e2e/` against
+`next start`, so build first, or against a deployed site when `E2E_BASE_URL`
+is set. Every check is a GET. CI runs it in `verify`, after the production
+build. Add routes to `e2e/site.ts` as the site gains them.
 
 ## Conventions
 

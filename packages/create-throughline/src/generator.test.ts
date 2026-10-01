@@ -431,7 +431,10 @@ describe('workspace gates', () => {
           skipSideEffects: true,
         })
         const source = await readFile(join(target, GATES['check:tested']), 'utf-8')
-        expect(source).toContain("'apps/web':")
+        // apps/web ships its access test, so an entry for it would be stale on
+        // day one — and the gate fails a stale entry.
+        expect(source).not.toContain("'apps/web':")
+        expect(existsSync(join(target, 'apps/web/src/access/anonymousAccess.test.ts'))).toBe(true)
         // The reference DS ships tests; the placeholder has source and none.
         if (useReferenceDs) expect(source).not.toContain("'design-system':")
         else expect(source).toContain("'design-system':")

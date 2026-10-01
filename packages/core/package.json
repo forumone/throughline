@@ -36,6 +36,10 @@
     "./observability": {
       "types": "./dist/observability/index.d.ts",
       "default": "./dist/observability/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
     }
   },
   "files": [
@@ -74,7 +78,13 @@
   },
   "peerDependencies": {
     "payload": "^3.89.0",
-    "inngest": "^4.0.0"
+    "inngest": "^4.0.0",
+    "vitest": "^3.0.0 || ^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@forumone/throughline-plugin-contract": "workspace:*",

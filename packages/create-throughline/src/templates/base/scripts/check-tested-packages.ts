@@ -25,8 +25,6 @@ after the package that caused them.
  * by the same change that makes it untrue.
  */
 const ACCEPTED: Record<string, string> = {
-  'apps/web':
-    'Freshly scaffolded: the config and routes are generated wiring. Delete this entry with your first test here — an access rule, a hook or a field validation is the place to start.',
 {{#if useReferenceDs}}{{else}}  'design-system':
     'Placeholder until the design system is written. Delete this entry with its first component.',
 {{/if}}}
