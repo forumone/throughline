@@ -12,11 +12,11 @@ PAYLOAD_SECRET                  # 48+ random bytes; signs Payload sessions
 NEXT_PUBLIC_SERVER_URL          # https://your-domain.com (or http://localhost:3000)
 ```
 
-| Variable | Generate / obtain | Missing? |
-| --- | --- | --- |
-| `DATABASE_URI` | From Neon / Supabase / your DB provider | Payload fails to boot |
-| `PAYLOAD_SECRET` | `openssl rand -base64 48` | Payload fails to boot; sessions can't be signed |
-| `NEXT_PUBLIC_SERVER_URL` | Your deployed domain | Webhooks, email links, Inngest serve URL all break |
+| Variable                 | Generate / obtain                       | Missing?                                           |
+| ------------------------ | --------------------------------------- | -------------------------------------------------- |
+| `DATABASE_URI`           | From Neon / Supabase / your DB provider | Payload fails to boot                              |
+| `PAYLOAD_SECRET`         | `openssl rand -base64 48`               | Payload fails to boot; sessions can't be signed    |
+| `NEXT_PUBLIC_SERVER_URL` | Your deployed domain                    | Webhooks, email links, Inngest serve URL all break |
 
 `NEXT_PUBLIC_SERVER_URL` ends up in:
 
@@ -116,7 +116,7 @@ The Components plugin's `propose_components` tool ranks candidates by intent mat
 
 ```typescript
 componentsPlugin({
-  manifest: { /* ... */ },
+  manifest: {/* ... */},
   matching: { strategy: 'voyage', model: 'voyage-3-lite' },
 })
 ```
@@ -132,13 +132,30 @@ NODE_OPTIONS=--max-old-space-size=4096   # avoids OOM on large block schemas
 
 Neither is required. Use them when local dev feels sluggish or fails on memory.
 
+## Payload CLI runner
+
+Read by `throughline-payload`, which the scaffold's `payload`, `generate:*` and
+`migrate*` scripts run through. Neither belongs in `.env`; set them on the
+command line for one run.
+
+```
+PAYLOAD_CLI_TIMEOUT_MS=900000   # wall clock in ms; 0 disables. Default 300000, none for migrate*
+PAYLOAD_CLI_GRACE_MS=5000       # wait between SIGTERM and SIGKILL
+```
+
+```bash
+PAYLOAD_CLI_TIMEOUT_MS=0 pnpm --dir apps/web generate:types
+```
+
+See the [core reference](../reference/core.md#throughline-payload-bin).
+
 ## Where files live
 
-| File | Purpose | Committed to git? |
-| --- | --- | --- |
-| `.env.example` | Template; documents every variable | Yes |
-| `.env.local` | Your actual values | No (in `.gitignore`) |
-| Vercel project settings | Production values | Set via Vercel UI |
+| File                    | Purpose                            | Committed to git?    |
+| ----------------------- | ---------------------------------- | -------------------- |
+| `.env.example`          | Template; documents every variable | Yes                  |
+| `.env.local`            | Your actual values                 | No (in `.gitignore`) |
+| Vercel project settings | Production values                  | Set via Vercel UI    |
 
 Never commit `.env.local`. The CLI scaffolder includes it in `.gitignore`; if you add another env file, add it to `.gitignore` too.
 

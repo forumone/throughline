@@ -13,3 +13,8 @@ dist/
 .vscode/
 
 coverage/
+
+# Written by throughline-payload (@forumone/throughline-core): the process
+# group of each in-flight Payload CLI run, so the next run can reap one whose
+# runner was killed before it could clean up.
+.payload-cli-pids

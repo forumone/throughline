@@ -62,33 +62,35 @@ describe('generate (with reference DS)', () => {
   })
 
   it('substitutes projectName into package.json', async () => {
-    await generate(
-      makeAnswers(target, { projectName: 'acme-site' }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
-    const json = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8')) as { name: string }
+    await generate(makeAnswers(target, { projectName: 'acme-site' }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
+    const json = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8')) as {
+      name: string
+    }
     expect(json.name).toBe('acme-site')
   })
 
   it('uses the package scope when given', async () => {
-    await generate(
-      makeAnswers(target, { packageScope: 'acme' }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
-    const webJson = JSON.parse(
-      await readFile(join(target, 'apps/web/package.json'), 'utf-8'),
-    ) as { name: string }
+    await generate(makeAnswers(target, { packageScope: 'acme' }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
+    const webJson = JSON.parse(await readFile(join(target, 'apps/web/package.json'), 'utf-8')) as {
+      name: string
+    }
     expect(webJson.name).toBe('@acme/web')
   })
 
   it('falls back to a project-prefixed name when scope is blank', async () => {
-    await generate(
-      makeAnswers(target, { packageScope: '', projectName: 'demo' }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
-    const webJson = JSON.parse(
-      await readFile(join(target, 'apps/web/package.json'), 'utf-8'),
-    ) as { name: string }
+    await generate(makeAnswers(target, { packageScope: '', projectName: 'demo' }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
+    const webJson = JSON.parse(await readFile(join(target, 'apps/web/package.json'), 'utf-8')) as {
+      name: string
+    }
     expect(webJson.name).toBe('demo-web')
   })
 
@@ -113,11 +115,40 @@ describe('generate (with reference DS)', () => {
     }
   })
 
+  it('runs every Payload CLI script through the bounded runner', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const webJson = JSON.parse(await readFile(join(target, 'apps/web/package.json'), 'utf-8')) as {
+      scripts: Record<string, string>
+      dependencies: Record<string, string>
+    }
+    const rootJson = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8')) as {
+      scripts: Record<string, string>
+    }
+
+    // A bare `payload` behind pnpm outlives a killed shell and can spin on a
+    // core forever. The runner ships as a bin of throughline-core.
+    expect(webJson.dependencies['@forumone/throughline-core']).toBeDefined()
+    expect(webJson.scripts).toMatchObject({
+      payload: 'throughline-payload',
+      'payload:reap': 'throughline-payload --reap',
+      'generate:types': 'throughline-payload generate:types',
+      'generate:importmap': 'throughline-payload generate:importmap',
+      migrate: 'PAYLOAD_MIGRATING=1 throughline-payload migrate',
+      'migrate:create': 'throughline-payload migrate:create',
+      'migrate:status': 'throughline-payload migrate:status',
+    })
+    for (const [name, script] of Object.entries(webJson.scripts)) {
+      expect(script, name).not.toMatch(/(^|[\s=&;|])payload(\s|$)/)
+    }
+    expect(rootJson.scripts['payload:reap']).toBe('pnpm --dir apps/web run payload:reap')
+    expect(await readFile(join(target, '.gitignore'), 'utf-8')).toMatch(/^\.payload-cli-pids$/m)
+  })
+
   it('wires the design-system workspace dependency into apps/web', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
-    const webJson = JSON.parse(
-      await readFile(join(target, 'apps/web/package.json'), 'utf-8'),
-    ) as { dependencies: Record<string, string> }
+    const webJson = JSON.parse(await readFile(join(target, 'apps/web/package.json'), 'utf-8')) as {
+      dependencies: Record<string, string>
+    }
     expect(webJson.dependencies['@acme/design-system']).toBe('workspace:*')
     // The npm reference-ds package is vendored, not depended on.
     expect(webJson.dependencies['@forumone/throughline-reference-ds']).toBeUndefined()
@@ -160,8 +191,12 @@ describe('generate (with reference DS)', () => {
     // Vendored, editable component source + Storybook + Foundations.
     expect(existsSync(join(target, 'design-system/.storybook/main.ts'))).toBe(true)
     expect(existsSync(join(target, 'design-system/src/components/Hero/Hero.tsx'))).toBe(true)
-    expect(existsSync(join(target, 'design-system/src/components/Hero/Hero.contract.ts'))).toBe(true)
-    expect(existsSync(join(target, 'design-system/src/foundations/LayoutContainers.stories.tsx'))).toBe(true)
+    expect(existsSync(join(target, 'design-system/src/components/Hero/Hero.contract.ts'))).toBe(
+      true,
+    )
+    expect(
+      existsSync(join(target, 'design-system/src/foundations/LayoutContainers.stories.tsx')),
+    ).toBe(true)
     // .gitignore is authored as `gitignore` and restored on output.
     expect(existsSync(join(target, 'design-system/.gitignore'))).toBe(true)
     expect(existsSync(join(target, 'design-system/gitignore'))).toBe(false)
@@ -175,10 +210,10 @@ describe('generate (with reference DS)', () => {
     expect(scoped.name).toBe('@acme/design-system')
 
     const noScopeTarget = join(dirname(target), 'noscope')
-    await generate(
-      makeAnswers(noScopeTarget, { packageScope: '', projectName: 'demo' }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
+    await generate(makeAnswers(noScopeTarget, { packageScope: '', projectName: 'demo' }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
     const unscoped = JSON.parse(
       await readFile(join(noScopeTarget, 'design-system/package.json'), 'utf-8'),
     ) as { name: string }
@@ -199,10 +234,7 @@ describe('generate (with reference DS)', () => {
 
   it('inngest endpoint registers all framework functions', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
-    const route = await readFile(
-      join(target, 'apps/web/src/app/api/inngest/route.ts'),
-      'utf-8',
-    )
+    const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
     expect(route).toContain('createRevalidateOnPublishFunction')
     expect(route).toContain('createExecuteScheduledPublishesFunction')
     expect(route).toContain('createPublishAtScheduledTimeFunction')
@@ -240,10 +272,10 @@ describe('generate (with reference DS)', () => {
   })
 
   it('puts the project name into the .env file', async () => {
-    await generate(
-      makeAnswers(target, { projectName: 'acme-site' }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
+    await generate(makeAnswers(target, { projectName: 'acme-site' }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
     const env = await readFile(join(target, '.env.example'), 'utf-8')
     expect(env).toContain('EMAIL_FROM_NAME=acme-site')
   })
@@ -263,22 +295,22 @@ describe('generate (without reference DS)', () => {
   })
 
   it('omits any design-system dependency from apps/web', async () => {
-    await generate(
-      makeAnswers(target, { useReferenceDs: false }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
-    const webJson = JSON.parse(
-      await readFile(join(target, 'apps/web/package.json'), 'utf-8'),
-    ) as { dependencies: Record<string, string> }
+    await generate(makeAnswers(target, { useReferenceDs: false }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
+    const webJson = JSON.parse(await readFile(join(target, 'apps/web/package.json'), 'utf-8')) as {
+      dependencies: Record<string, string>
+    }
     expect(webJson.dependencies['@forumone/throughline-reference-ds']).toBeUndefined()
     expect(webJson.dependencies['@acme/design-system']).toBeUndefined()
   })
 
   it('writes a placeholder top-level design-system package + Storybook + README', async () => {
-    await generate(
-      makeAnswers(target, { useReferenceDs: false }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
+    await generate(makeAnswers(target, { useReferenceDs: false }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
     expect(existsSync(join(target, 'design-system/package.json'))).toBe(true)
     expect(existsSync(join(target, 'design-system/src/index.ts'))).toBe(true)
     expect(existsSync(join(target, 'design-system/README.md'))).toBe(true)
@@ -288,10 +320,10 @@ describe('generate (without reference DS)', () => {
   })
 
   it('uses the URL manifest config in payload.config.ts', async () => {
-    await generate(
-      makeAnswers(target, { useReferenceDs: false }),
-      { templatesDir: TEMPLATES_DIR, skipSideEffects: true },
-    )
+    await generate(makeAnswers(target, { useReferenceDs: false }), {
+      templatesDir: TEMPLATES_DIR,
+      skipSideEffects: true,
+    })
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
     expect(config).toContain('your-design-system.example.com')
     expect(config).not.toContain("from '@forumone/throughline-reference-ds/manifest'")

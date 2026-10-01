@@ -4,13 +4,14 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 
 ## What's inside
 
-| Subsystem | Subpath | Role |
-|---|---|---|
-| Audit | `./audit` | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS` |
-| Events | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam) |
-| MCP | `./mcp` | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext` |
-| Logger | (main) | `defaultLogger`, `createNamedLogger` |
-| Utils | (main) | `documentContentHash`, `sha256Hex`, `formatZodIssues` |
+| Subsystem          | Subpath    | Role                                                                                                                |
+| ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| Audit              | `./audit`  | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS` |
+| Events             | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                   |
+| MCP                | `./mcp`    | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext`                          |
+| Logger             | (main)     | `defaultLogger`, `createNamedLogger`                                                                                |
+| Utils              | (main)     | `documentContentHash`, `sha256Hex`, `formatZodIssues`                                                               |
+| Payload CLI runner | bin        | `throughline-payload` — see [below](#running-the-payload-cli-throughline-payload)                                   |
 
 There is no `./auth` any more. It held an MCP key collection, a bearer-token
 authenticator and `createMcpHandler` — a JSON-RPC subset each plugin mounted at its
@@ -139,13 +140,13 @@ not as everything.
 
 The consequential tools in this suite and the scopes they require:
 
-| Scope | Tools |
-|---|---|
-| `publishing.execute` | `publish`, `unpublish`, `schedule_publish`, `rollback` |
-| `approvals.request` | `request_approval` |
-| `approvals.decide` | `respond_to_approval` |
-| `forms.manage` | `create_form`, `update_form_fields`, `update_form_destinations` |
-| `integrations.trigger` | `trigger_sync`, `test_integration` |
+| Scope                  | Tools                                                           |
+| ---------------------- | --------------------------------------------------------------- |
+| `publishing.execute`   | `publish`, `unpublish`, `schedule_publish`, `rollback`          |
+| `approvals.request`    | `request_approval`                                              |
+| `approvals.decide`     | `respond_to_approval`                                           |
+| `forms.manage`         | `create_form`, `update_form_fields`, `update_form_destinations` |
+| `integrations.trigger` | `trigger_sync`, `test_integration`                              |
 
 Everything else — the component tools, the audit queries, the read side of publishing and approvals — needs only a valid key.
 
@@ -165,7 +166,6 @@ declare module '@forumone/throughline-core/events' {
 
 After augmentation, `inngest.send({ name: 'approval/decided', data: { ... } })` is type-checked everywhere.
 
-
 ## Document content hashing
 
 `documentContentHash(document)` reduces a Payload document to a hash of the part an editor authored, ignoring the metadata that moves without the content moving — `id`, `createdAt`, `updatedAt`, `_status`, `__v`, `_id`, `globalType`, stripped at every level of the document. Object key order does not affect the result, because blocks come back out of JSONB in no promised order; array order does, because that is the order of the blocks on the page.
@@ -177,9 +177,63 @@ const version = await documentContentHash(page)
 const withExtras = await documentContentHash(page, { exclude: ['syncedAt'] })
 ```
 
-It exists so that approvals can bind to *what an approver read* rather than to when it was last saved. Approvals writes it as `targetVersion`; publishing recomputes it at publish time. Two consequences worth stating: a save that changed nothing keeps a granted approval, and an edit that is reverted brings one back.
+It exists so that approvals can bind to _what an approver read_ rather than to when it was last saved. Approvals writes it as `targetVersion`; publishing recomputes it at publish time. Two consequences worth stating: a save that changed nothing keeps a granted approval, and an edit that is reverted brings one back.
 
 **Two callers only agree if they hash a document loaded the same way.** Both of the above use `payload.findByID({ collection, id, draft: true })` at the config's default depth. A populated relationship and a bare relationship id are different values, and normalising cannot turn one into the other — so a third caller fetching at a different depth would produce a hash that matches nothing.
+
+## Running the Payload CLI: `throughline-payload`
+
+`pnpm payload generate:types` is shell → pnpm → node, and pnpm (like npm and
+yarn) does not forward signals to the node child it spawns. Kill the shell — a
+Ctrl-C, an agent's tool-call timeout, a cancelled CI step — and node keeps
+running, reparented to PID 1. When the run was hung rather than slow, it spins
+on a core until something kills it; one machine collected 48 of them.
+
+`throughline-payload` is a drop-in for the `payload` binary that cannot do that.
+Point every script that runs the Payload CLI at it:
+
+```json
+{
+  "scripts": {
+    "payload": "throughline-payload",
+    "payload:reap": "throughline-payload --reap",
+    "generate:types": "throughline-payload generate:types",
+    "generate:importmap": "throughline-payload generate:importmap",
+    "migrate": "PAYLOAD_MIGRATING=1 throughline-payload migrate",
+    "migrate:create": "throughline-payload migrate:create",
+    "migrate:status": "throughline-payload migrate:status"
+  }
+}
+```
+
+Arguments pass straight through. What it adds:
+
+- **Its own process group.** Payload runs `detached`, so the whole subtree can be
+  killed as a group, by pid. Nothing is ever matched by process name.
+- **Signals forwarded.** SIGINT, SIGTERM and SIGHUP go to the group; after a
+  grace period, whatever ignored them gets SIGKILL. When Payload exits on its
+  own, anything it left running in its group goes with it.
+- **A wall clock.** `PAYLOAD_CLI_TIMEOUT_MS`, default 300000 (five minutes); `0`
+  disables it. The `migrate` family (`migrate`, `migrate:create`, …) has no wall
+  clock unless you set one: a large migration is legitimately long and
+  `migrate:create` can stop at a prompt. A timed-out run exits 124.
+  `PAYLOAD_CLI_GRACE_MS` (default 5000) is the wait between the polite signal
+  and SIGKILL.
+- **A sweep for what a killed runner left behind.** A SIGKILLed runner runs no
+  handlers, so each run is recorded in `.payload-cli-pids` and the next run —
+  or `throughline-payload --reap` — kills the group of any entry whose runner
+  is gone. An entry is acted on only if the pid is alive, its start time and
+  full command line still match what was recorded (so a recycled pid is never
+  touched), the command line is rooted in this workspace, and its runner is
+  gone (so a concurrent run keeps its child). Anything else is forgotten, not
+  signalled.
+
+Payload is resolved from the directory the command runs in — the app — not
+from this package's install. `.payload-cli-pids` lives at the workspace root:
+the nearest ancestor with a `pnpm-workspace.yaml`, or, outside a pnpm
+workspace, the nearest directory with a `package.json`. Add it to
+`.gitignore`. On Windows, which has neither process groups nor `ps`, the runner
+just runs Payload.
 
 ## Why all of this lives in one package
 

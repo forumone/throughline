@@ -15,6 +15,7 @@
     "check:tested": "tsx scripts/check-tested-packages.ts",
     "check:audit": "tsx scripts/check-audit.ts",
     "check:migrations": "pnpm --dir apps/web run check:migrations",
+    "payload:reap": "pnpm --dir apps/web run payload:reap",
     "format": "prettier --write ."
   },
   "devDependencies": {
