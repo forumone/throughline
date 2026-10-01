@@ -16,3 +16,7 @@ coverage
 # group of each in-flight Payload CLI run, so the next run can reap one whose
 # runner was killed before it could clean up.
 .payload-cli-pids
+
+# The check-block-props bin test writes a TSX fixture under the package, so
+# react/jsx-runtime resolves; it removes it afterwards.
+.tmp-check-block-props-*
