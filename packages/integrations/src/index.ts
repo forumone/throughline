@@ -19,8 +19,16 @@ export type {
   IntegrationHealth,
   IntegrationInstance,
   IntegrationInstanceLoaded,
+  IntegrationStatusUpdate,
   IntegrationSyncStatus,
 } from './types.js'
+
+export {
+  problemReport,
+  statusFromProblems,
+  DEFAULT_PROBLEM_REPORT_LENGTH,
+} from './sync/problems.js'
+export type { ProblemReportOptions } from './sync/problems.js'
 
 export { requestManualSync, MANUAL_SYNC_EVENT } from './sync/manual-sync.js'
 export type {

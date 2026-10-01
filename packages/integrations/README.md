@@ -90,6 +90,32 @@ integrationsPlugin({
 
 The webhook integration is registered automatically. Additional integrations are appended; duplicate ids throw at plugin init.
 
+## Reporting a run's status
+
+An integration records each run on its instance with `ctx.updateStatus`, which writes the `lastSyncAt` / `lastSyncStatus` / `lastError` fields the admin shows:
+
+```ts
+await ctx.updateStatus(instance.id, 'success')                 // clears lastError
+await ctx.updateStatus(instance.id, 'failed', 'HTTP 502')      // replaces lastError
+await ctx.updateStatus(instance.id, 'partial', '3 of 40 skipped')
+```
+
+`partial` and `failed` require a message, and the types refuse a call without one, so the admin never shows a run that was not clean with no reason beside it. Only `success` clears `lastError`.
+
+A run that imports many records and skips some should collect one line per skipped record and let `statusFromProblems` choose the status:
+
+```ts
+import { statusFromProblems } from '@forumone/throughline-integrations'
+
+const problems = [
+  ...rejected.map((r) => `record ${r.id}: ${r.reason}`),
+  ...unrenderable.map((r) => `record ${r.id}: fields this site cannot render`),
+]
+await ctx.updateStatus(instance.id, ...statusFromProblems(problems))
+```
+
+It returns `['success']` for an empty list and `['partial', report]` otherwise. The report comes from `problemReport(problems, { maxLength })`, which joins the lines with ` | ` and caps the result at 500 characters by default. A report over the cap is cut short and ends with the total, e.g. `… (40 problems in all)`. Pass the same `problemReport` string to the audit event's `errorMessage` so the two say the same thing.
+
 ## Wiring Inngest functions
 
 Integration `createFunctions` returns Inngest functions, but **this plugin does not serve them**. The client app's Inngest endpoint composes them with its own functions. See [`docs/integrations-wiring.md`](../../docs/integrations-wiring.md) in the repository root for the pattern.
