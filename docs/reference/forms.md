@@ -8,7 +8,7 @@ Policy-aware forms layer. Wraps Payload's Form Builder plugin with privacy notic
 pnpm add @forumone/throughline-forms @payloadcms/plugin-form-builder
 ```
 
-Peer dependencies: `payload@^3.0.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core` and `@forumone/throughline-email`.
+Peer dependencies: `payload@^3.89.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core` and `@forumone/throughline-email`.
 
 > [!IMPORTANT]
 > `@payloadcms/plugin-form-builder@3.83.0` pins exactly to `payload@3.83.0` (no caret compat). Match the version in your project's lockfile to your Payload version.

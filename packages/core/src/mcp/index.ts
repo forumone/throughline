@@ -23,3 +23,11 @@ export type {
 export { deniedEnvelope } from './envelope.js'
 
 export { auditServerFor, mcpServerRefusal } from './audit-server.js'
+
+export {
+  MCP_API_KEYS_SLUG,
+  isMcpApiKeyPrincipal,
+  isSignedIn,
+  mcpApiKeyAccess,
+  signedIn,
+} from './api-key-access.js'

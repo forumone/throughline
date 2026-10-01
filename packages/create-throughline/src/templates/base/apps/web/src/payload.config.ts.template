@@ -8,6 +8,7 @@ import {
   auditPlugin,
   createInngestClient,
   createMcpToolCollector,
+  mcpApiKeyAccess,
 } from '@forumone/throughline-core'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
@@ -230,21 +231,13 @@ export default buildConfig({
 
     integrationsPlugin({ inngest, mcpTools }),
 
-    // Last of the tool-bearing chain. An MCP key is a credential: the plugin
-    // ships its collection with no access rules — "anybody signed in" — so it
-    // is narrowed to admins here.
+    // Last of the tool-bearing chain. An MCP key is a credential that runs
+    // every tool as the person it is bound to, so who may mint, read and
+    // revoke one is an admin's call: `mcpApiKeyAccess` narrows the key
+    // collection to `isAdmin`, and refuses a key principal outright.
     mcpPlugin({
       mcp: { tools: mcpTools.tools },
-      overrideApiKeyCollection: (collection) => ({
-        ...collection,
-        access: {
-          ...collection.access,
-          read: isAdmin,
-          create: isAdmin,
-          update: isAdmin,
-          delete: isAdmin,
-        },
-      }),
+      overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
     }),
   ],
 })

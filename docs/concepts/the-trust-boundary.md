@@ -87,6 +87,7 @@ Subscribers are isolated. A failing CRM sync doesn't roll back the publish — t
 
 - It does not prevent Claude from creating malicious content. Claude can still write objectionable text in fields. The boundary is about *publishing*, not authoring.
 - It does not prevent Claude from spamming integrations. Rate limiting is the Integrations plugin's job, per integration.
+- It does not make your access rules right. The pipeline guards publishing. Who can read drafts or manage MCP keys depends on your collections' `access` blocks. A rule that treats any `req.user` as signed in will also admit an MCP key document on REST. See [Security model](../operations/security-model.md#signed-in-is-not-booleanrequser).
 - It does not prevent humans with database access from doing anything they want. The boundary is enforced at the application layer, not the storage layer. If you give someone Postgres credentials, you've given them everything.
 
 The boundary's job is to make conversational publishing *safe*. Not to make the system *secure against hostile internal actors with database access*. Those are different problems.

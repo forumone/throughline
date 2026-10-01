@@ -8,7 +8,7 @@ Foundation for the Throughline framework: the audit log, MCP authentication and 
 pnpm add @forumone/throughline-core
 ```
 
-Peer dependency: `payload@^3.0.0`.
+Peer dependency: `payload@^3.89.0`.
 
 ## Subpath exports
 
@@ -64,6 +64,25 @@ keys — a `mcp-api-keys` collection, a bearer-token authenticator, `generateApi
 and serve them to a JSON-RPC handler of its own. `@payloadcms/plugin-mcp` owns keys
 and authentication now, on its own `payload-mcp-api-keys` collection, and the host
 registers it.
+
+What it does have is two access helpers for a site that registers `mcpPlugin`:
+
+| Symbol | Purpose |
+| --- | --- |
+| `mcpApiKeyAccess(isAdmin)` | An `overrideApiKeyCollection` for `mcpPlugin`. Applies the site's admin rule to `read`, `create`, `update`, `delete` and `unlock` on `payload-mcp-api-keys`, and refuses a key principal first. Changes `access` and nothing else |
+| `isSignedIn(user)` / `signedIn` | A person, not anonymous and not an MCP key document. Use instead of `Boolean(req.user)` |
+| `isMcpApiKeyPrincipal(user)` | `true` for a key document from `payload-mcp-api-keys` on `req.user` |
+| `MCP_API_KEYS_SLUG` | `'payload-mcp-api-keys'` |
+
+```typescript
+mcpPlugin({
+  mcp: { tools: mcpTools.tools },
+  overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
+})
+```
+
+The [security model](../operations/security-model.md#signed-in-is-not-booleanrequser)
+explains why `Boolean(req.user)` isn't a "signed in" check.
 
 `sha256Hex(input)` survived the deletion and is exported from
 `@forumone/throughline-core/utils`. `documentContentHash` is its caller.

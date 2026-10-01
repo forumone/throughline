@@ -3,7 +3,12 @@ import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { examplePlugin } from './example-plugin'
-import { auditPlugin, createInngestClient, createMcpToolCollector } from '@forumone/throughline-core'
+import {
+  auditPlugin,
+  createInngestClient,
+  createMcpToolCollector,
+  mcpApiKeyAccess,
+} from '@forumone/throughline-core'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
@@ -13,7 +18,7 @@ import { integrationsPlugin } from '@forumone/throughline-integrations'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { Manifest } from '@forumone/throughline-design-contract'
 import { buildConfig } from 'payload'
-import type { CollectionConfig } from 'payload'
+import type { Access, CollectionConfig } from 'payload'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -77,6 +82,16 @@ const Pages: CollectionConfig = {
   versions: { drafts: true },
 }
 
+/*
+A person in `users` with the admin role. Checked by collection first: `req.user`
+can be something other than a person, and only a person has roles.
+*/
+const isAdmin: Access = ({ req: { user } }) => {
+  if (user?.collection !== Users.slug) return false
+  const roles = (user as { roles?: unknown }).roles
+  return Array.isArray(roles) && roles.includes('admin')
+}
+
 const inngest = createInngestClient({
   id: 'throughline-playground',
   isDev: process.env.NODE_ENV !== 'production',
@@ -110,7 +125,7 @@ export default buildConfig({
 
   `mcpPlugin` below brings `payload-mcp-api-keys` and serves every plugin's
   tools on one `/api/mcp`. It is exact-pinned to the Payload version this app
-  runs — `3.83.0`, not a range — because two Payloads in one graph makes `Block`
+  runs — `3.90.2`, not a range — because two Payloads in one graph makes `Block`
   not assignable to `Block`.
   */
   collections: [Users, Pages],
@@ -174,7 +189,14 @@ export default buildConfig({
     Last of the tool-bearing chain, and handed the collector's array itself
     rather than a copy: it reads `mcp.tools` per request, and the servers above
     fill that array at `onInit`.
+
+    The key collection is admin-only: a key runs every tool as the person it is
+    bound to, so minting, reading and revoking one is an admin's call.
+    `mcpApiKeyAccess` also refuses a key principal outright.
     */
-    mcpPlugin({ mcp: { tools: mcpTools.tools } }),
+    mcpPlugin({
+      mcp: { tools: mcpTools.tools },
+      overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
+    }),
   ],
 })

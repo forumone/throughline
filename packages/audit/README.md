@@ -24,7 +24,7 @@ Each tool returns conversational output: relative times ("2 hours ago"), named a
 pnpm add @forumone/throughline-audit
 ```
 
-Peers: `payload@^3.0.0`. Required runtime peer: `@forumone/throughline-core` (the audit log writer).
+Peers: `payload@^3.89.0`. Required runtime peer: `@forumone/throughline-core` (the audit log writer).
 
 ## Usage
 

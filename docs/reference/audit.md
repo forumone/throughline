@@ -8,7 +8,7 @@ Read-only MCP query tools over the audit log. Pairs with the `auditPlugin` from 
 pnpm add @forumone/throughline-audit
 ```
 
-Peer dependencies: `payload@^3.0.0`. Depends on `@forumone/throughline-core`.
+Peer dependencies: `payload@^3.89.0`. Depends on `@forumone/throughline-core`.
 
 ## Public API
 

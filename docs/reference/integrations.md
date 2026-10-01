@@ -8,7 +8,7 @@ Plugin architecture for connecting Throughline-powered Payload sites to external
 pnpm add @forumone/throughline-integrations
 ```
 
-Peer dependencies: `payload@^3.0.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core`.
+Peer dependencies: `payload@^3.89.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core`.
 
 ## Public API
 

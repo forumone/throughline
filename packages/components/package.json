@@ -44,7 +44,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "payload": "^3.0.0"
+    "payload": "^3.89.0"
   },
   "dependencies": {
     "@forumone/throughline-core": "workspace:*",
