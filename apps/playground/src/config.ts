@@ -186,7 +186,9 @@ export function playgroundConfig(options: PlaygroundConfigOptions): Config {
       // Every minute, in-process, as a long-lived dev server can. A serverless
       // host calls /api/payload-jobs/run and /api/payload-jobs/handle-schedules
       // from its scheduler instead.
-      ...(options.autoRun === false ? {} : { autoRun: [{ cron: '* * * * *', queue: 'throughline' }] }),
+      ...(options.autoRun === false
+        ? {}
+        : { autoRun: [{ cron: '* * * * *', queue: 'throughline' }] }),
     },
     /*
     Order is load-bearing twice over.
@@ -222,7 +224,8 @@ export function playgroundConfig(options: PlaygroundConfigOptions): Config {
         // the playground gains a `groups` field on Users.
         groupResolver: { resolveUsers: async () => [] },
         tokenSecret:
-          process.env.APPROVAL_TOKEN_SECRET ?? 'playground-approval-secret-change-me-change-me-change',
+          process.env.APPROVAL_TOKEN_SECRET ??
+          'playground-approval-secret-change-me-change-me-change',
         mcpTools,
       }),
       publishingPlugin({

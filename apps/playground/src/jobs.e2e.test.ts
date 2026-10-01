@@ -52,7 +52,12 @@ async function draftPage(slug: string, extra: Record<string, unknown> = {}) {
 }
 
 async function liveStatus(id: number | string) {
-  const page = await payload.findByID({ collection: 'pages', id, draft: false, overrideAccess: true })
+  const page = await payload.findByID({
+    collection: 'pages',
+    id,
+    draft: false,
+    overrideAccess: true,
+  })
   return (page as { _status?: string })._status
 }
 

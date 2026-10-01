@@ -56,7 +56,11 @@ export function executeScheduledPublishesJob(
       on: { cron: schedule },
     },
     async ({ step, logger, payload: contextPayload }) => {
-      const payload = jobPayload(options.payload, contextPayload, options.id ?? 'execute-scheduled-publishes')
+      const payload = jobPayload(
+        options.payload,
+        contextPayload,
+        options.id ?? 'execute-scheduled-publishes',
+      )
       const dueBy = new Date(Date.now() - (options.overdueByMs ?? 0)).toISOString()
       let publishedCount = 0
       let blockedCount = 0
@@ -100,11 +104,14 @@ export function executeScheduledPublishesJob(
             async (): Promise<'published' | 'blocked' | 'error'> => {
               let result
               try {
-                result = await options.publish({
-                  collection: doc.collection,
-                  id: doc.id,
-                  reasoning: REASONING,
-                }, { payload })
+                result = await options.publish(
+                  {
+                    collection: doc.collection,
+                    id: doc.id,
+                    reasoning: REASONING,
+                  },
+                  { payload },
+                )
               } catch (error) {
                 logger.error('Scheduled publish threw', {
                   document: doc.title,

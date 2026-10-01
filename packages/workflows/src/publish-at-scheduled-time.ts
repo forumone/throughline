@@ -53,9 +53,7 @@ type Outcome =
  * composition / accessibility / approval checks as an interactive one, and a
  * refusal is logged, not retried.
  */
-export function publishAtScheduledTimeJob(
-  options: JobOptions<PublishAtScheduledTimeOptions>,
-): Job {
+export function publishAtScheduledTimeJob(options: JobOptions<PublishAtScheduledTimeOptions>): Job {
   const maxSleepMs = options.maxSleepMs ?? DEFAULT_MAX_SLEEP_MS
   const collections = new Map(options.collections.map((c) => [c.slug, c]))
 
@@ -74,7 +72,11 @@ export function publishAtScheduledTimeJob(
       on: { event: SCHEDULED_EVENT },
     },
     async ({ event, step, logger, payload: contextPayload }): Promise<Outcome> => {
-      const payload = jobPayload(options.payload, contextPayload, options.id ?? 'publish-at-scheduled-time')
+      const payload = jobPayload(
+        options.payload,
+        contextPayload,
+        options.id ?? 'publish-at-scheduled-time',
+      )
       const data = event.data as Partial<ScheduledEventData>
       const config = data.collection ? collections.get(data.collection) : undefined
       const target = typeof data.scheduledFor === 'string' ? Date.parse(data.scheduledFor) : NaN
@@ -120,11 +122,14 @@ export function publishAtScheduledTimeJob(
 
       return step.run('publish', async (): Promise<Outcome> => {
         try {
-          const result = await options.publish({
-            collection: config.slug,
-            id: request.id,
-            reasoning: REASONING,
-          }, { payload })
+          const result = await options.publish(
+            {
+              collection: config.slug,
+              id: request.id,
+              reasoning: REASONING,
+            },
+            { payload },
+          )
           if (!result.published) {
             logger.warn('Scheduled publish blocked by policy', {
               ...request,
