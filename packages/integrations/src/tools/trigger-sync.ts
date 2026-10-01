@@ -9,7 +9,8 @@ import { requestManualSync } from '../sync/manual-sync.js'
 export interface TriggerSyncDeps {
   payload: Payload
   collectionSlug: string
-  inngest: Inngest
+  inngest?: Inngest
+  emit?: (event: { name: string; data: unknown }) => Promise<void>
 }
 
 const inputSchema = z.object({
