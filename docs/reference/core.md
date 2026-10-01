@@ -19,6 +19,7 @@ import { auditPlugin, createMcpToolCollector } from '@forumone/throughline-core'
 import { auditPlugin } from '@forumone/throughline-core/audit'
 import { createInngestClient } from '@forumone/throughline-core/events'
 import { createMcpToolCollector } from '@forumone/throughline-core/mcp'
+import { reportError, jobFailuresPlugin } from '@forumone/throughline-core/observability'
 import { assertEnvironment } from '@forumone/throughline-core/env'
 ```
 
@@ -177,6 +178,64 @@ assertEnvironment(
 - `checkEnvValue(requirement, value)` — the single-value check a plugin runs at init on `options.x ?? process.env[name]`, so its backstop and its declaration cannot disagree. Returns `{ kind: 'missing' }`, `{ kind: 'too-short', length, minLength }` or `undefined`. Empty and whitespace-only count as missing.
 
 `EnvRequirement` is defined in `@forumone/throughline-plugin-contract` and re-exported here. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
+
+## Observability: job failures and error reporting
+
+`@forumone/throughline-core/observability` — free of Payload and Inngest at
+runtime, so `instrumentation.ts` can import it without loading the CMS.
+
+```typescript
+import {
+  jobFailuresPlugin, // adds the `job-failures` collection + writer
+  getJobFailureWriter, // (payload) => JobFailureWriter | undefined
+  createJobFailuresCollection,
+  createJobFailureWriter,
+  DEFAULT_JOB_FAILURES_SLUG, // 'job-failures'
+  JOB_FAILURE_KINDS, // ['job', 'healthcheck']
+  createErrorReporter, // (options?) => ErrorReporter
+  reportError, // the default reporter: ERROR_WEBHOOK_URL, 3s timeout
+  buildRequestErrorReport, // (error, request, context?, options?) for onRequestError
+  buildJobFailureReport,
+  buildHealthcheckFailureReport,
+  describeErrorReporting, // a sentence for the boot log: on / OFF / MISCONFIGURED
+  summariseReport, // the one-line `text` every report carries
+  clientPrefix,
+  currentDeployment,
+  DEFAULT_REPORTED_HEADERS,
+  NEVER_REPORTED_HEADERS,
+} from '@forumone/throughline-core/observability'
+```
+
+```typescript
+jobFailuresPlugin({
+  slug?: string,          // default 'job-failures'
+  readAccess?: Access,    // default: users with the admin role
+  logger?: Logger,
+  enabled?: boolean,
+})
+
+createErrorReporter({
+  url?: string,                           // default: process.env.ERROR_WEBHOOK_URL, read per call
+  webhookHeaders?: Record<string, string>, // sent to the receiver, e.g. authorization
+  timeoutMs?: number,                     // default 3000
+  logger?: Logger,                        // where a failed delivery is logged
+  fetch?: typeof fetch,
+})
+```
+
+Neither the writer nor a reporter ever throws or rejects. A row that cannot be
+written is logged at `error` with the failure's summary and message; a report
+that cannot be delivered is logged at `warn`.
+
+`buildRequestErrorReport` copies request headers from an allowlist —
+`DEFAULT_REPORTED_HEADERS` unless you pass `headers` — and never copies any of
+`NEVER_REPORTED_HEADERS` (`authorization`, `cookie`, `x-api-key`,
+`x-forwarded-for`, …), whatever you pass.
+
+The handlers that use these for Inngest failures live in
+`@forumone/throughline-workflows`. See
+[Observability](../operations/observability.md#job-failures) for why job
+failures are not audit rows.
 
 ## Logger
 

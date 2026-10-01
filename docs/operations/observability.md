@@ -1,7 +1,8 @@
 # Observability
 
-Three places to look when something's wrong, and an honest account of what each
-one contains.
+Four places to look when something's wrong, and an honest account of what each
+one contains — plus one place errors are *sent*, which is the only one that
+tells somebody without them having to go and look.
 
 > **This document was wrong, and the corrections are the point.** Audit 12 H3
 > ran every SQL example in it against the database. All of them failed on
@@ -25,7 +26,10 @@ That "MCP tool call" is the shape of the whole thing, and explains the columns.
 this" — which also means a code path that is not a tool has nowhere to write
 without borrowing a server's name. The one cron that writes here does exactly
 that (`expire-stale-approvals` writes as `approvals`/`expire-stale-approvals`),
-and it is the convention to follow.
+because expiring an approval is an approval action and has an owning server.
+
+A job that *failed* is not an action anybody took, and does not borrow a name.
+It goes to [the job-failures collection](#job-failures) instead.
 
 ### Schema
 
@@ -178,7 +182,9 @@ values are exactly the list above.
 - Anything that did not come through an MCP tool — a REST or Local API write,
   the admin UI, a migration, a seed script
 - Form submissions (see the table above)
-- Healthcheck results (see the table above)
+- Healthcheck results (see the table above) — failing ones are in
+  [job failures](#job-failures)
+- Workflows that ran out of retries — [job failures](#job-failures)
 - Inngest function internal step state (use the Inngest dashboard)
 - HTTP request logs (use platform logs)
 
@@ -208,6 +214,144 @@ Local API — which bypasses access control — and not through REST.
 One year is a sensible default for active operations; one-off compliance use
 cases may want longer.
 
+## Job failures
+
+`jobFailuresPlugin` (from `@forumone/throughline-core/observability`) adds a
+`job-failures` collection: one row per background job that ran out of retries,
+and one per healthcheck run with a failing check. The scaffold registers it.
+Admins read it in the admin; nobody can create, edit or delete a row through
+the admin or REST — the writer uses the Local API.
+
+Rows are written by the two handlers in `@forumone/throughline-workflows`:
+
+```typescript
+import {
+  createHealthcheckFailureHandler,
+  createTerminalFailureHandler,
+} from '@forumone/throughline-workflows'
+
+const onTerminalFailure = createTerminalFailureHandler({ payload })
+
+createExpireStaleApprovalsFunction({ inngest, payload, onTerminalFailure })
+createHealthcheckFunction({
+  inngest,
+  payload,
+  checks: [createPayloadReachableCheck()],
+  onFailure: createHealthcheckFailureHandler({ payload }),
+  onTerminalFailure,
+})
+```
+
+Each failure goes to three places, in this order, and each works without the
+others:
+
+1. **The log** — one `error` line, `[job-failed] <summary>`, with the full
+   report (stack included) as context. Always, configured or not.
+2. **A `job-failures` row** — if `jobFailuresPlugin` is registered. Without it
+   the handler skips the row and does the other two.
+3. **The error webhook** — `ERROR_WEBHOOK_URL`, if set. See below.
+
+None of them throws, and neither handler does: an Inngest `onFailure` handler
+is itself a function run, and a throw there is retried — a retry storm about
+the reporter while the original failure is what nobody sees. A row that cannot
+be written (the migration has not run, the database is down) is logged at
+`error` with the failure's own summary and message, so it is demoted to the
+log rather than lost.
+
+`createTerminalFailureHandler` works as the `onFailure` of any Inngest
+function, not just this suite's — it reads `function_id`, `run_id` and the
+triggering event's name from Inngest's `function.failed` payload. The
+functions the email, forms and integrations plugins build are not given it by
+the scaffold; pass it to those yourself if you build them yourself.
+
+### Why not the audit log
+
+The audit log answers "who did what, through which tool"; `mcp_server` and
+`mcp_tool` are `NOT NULL` because every row is a tool call. Before this
+collection existed a cron had two choices, both bad: borrow a server's name,
+which makes those columns lie, or invent one, which Payload rejects — and the
+audit writer swallows the rejection by design, so the row silently never
+existed. A failed job also has fields the audit log does not (a run id, a
+triggering event) and a different lifetime: worth keeping for weeks, where
+audit rows are kept indefinitely.
+
+### Schema
+
+| Field | Column | Notes |
+| --- | --- | --- |
+| `createdAt` | `created_at` | When the failure was reported |
+| `kind` | `kind` | `enum_job_failures_kind`: `'job' \| 'healthcheck'` |
+| `source` | `source` | The Inngest function id, or the healthcheck's id |
+| `summary` | `summary` | `[environment] kind: message — source` |
+| `message` | `message` | The error's message; for a healthcheck, the failing check names |
+| `errorName` | `error_name` | `TypeError`, etc. |
+| `runId` | `run_id` | Inngest's run id — search for it in the dashboard |
+| `triggerEvent` | `trigger_event` | The event that started the run |
+| `details` | `details` | `jsonb`; a healthcheck's failed checks and what each said |
+| `environment` | `environment` | `VERCEL_ENV`, else `NODE_ENV` |
+| `commit` | `commit` | `VERCEL_GIT_COMMIT_SHA`, first 12 characters |
+
+No stack: rows are readable in the admin, and a stack names file paths. The
+log line and the webhook report carry it.
+
+```sql
+-- What has been failing this week, worst first. Uses (source, created_at).
+SELECT source, kind, count(*) AS failures, max(created_at) AS most_recent
+FROM job_failures
+WHERE created_at > NOW() - INTERVAL '7 days'
+GROUP BY source, kind
+ORDER BY failures DESC;
+```
+
+Retention is the same shape as the audit log's — a cron through the Local API —
+and can be much shorter.
+
+## Error reporting
+
+`@forumone/throughline-core/observability` posts error reports to a webhook:
+`ERROR_WEBHOOK_URL`, or the `url` you pass to `createErrorReporter`. Which
+error tracker a site uses is the site's choice, so this does not pick one —
+the receiver can be a log drain, an alerting endpoint, a Slack incoming
+webhook, or a small proxy in front of Sentry.
+
+Every report is JSON with a one-line `text` added (`[production] job: … —
+expire-stale-approvals`), which is what makes a plain Slack webhook work; other
+receivers ignore it. Three kinds are sent: `request` (from `onRequestError`),
+`job` and `healthcheck` (from the workflow handlers above).
+
+The scaffold wires the request half in `apps/web/src/instrumentation.ts`:
+
+```typescript
+import type { Instrumentation } from 'next'
+import { buildRequestErrorReport, reportError } from '@forumone/throughline-core/observability'
+
+export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  const report = buildRequestErrorReport(error, request, context)
+  console.error('[error]', JSON.stringify(report))
+  await reportError(report)
+}
+```
+
+Rules the reporter keeps:
+
+- **It never throws or rejects.** A failed delivery — refused, timed out,
+  non-2xx — is logged as a warning and dropped.
+- **It gives up after 3 seconds** (`timeoutMs`), shorter than any function
+  timeout, so a slow receiver cannot hold a function open.
+- **Request headers are an allowlist.** By default `x-request-id`,
+  `x-vercel-id`, `user-agent` and `referer`; pass `headers` to
+  `buildRequestErrorReport` to change it. `authorization`,
+  `proxy-authorization`, `cookie`, `set-cookie`, `x-api-key` and
+  `x-forwarded-for` are never copied even if listed — `cookie` carries the
+  Payload session. The client address is reduced to a /16 or /64 prefix.
+- **Unset is reported.** `describeErrorReporting()` returns a sentence for a
+  boot log line, distinguishing off from misconfigured; the scaffold's
+  `register()` warns when reports are going nowhere.
+
+To authenticate to the receiver, `createErrorReporter({ webhookHeaders: {
+authorization: '…' } })` and pass that reporter as the workflow handlers'
+`report` option.
+
 ## Inngest dashboard
 
 Every workflow run shows up here. Filter by:
@@ -226,9 +370,10 @@ Practical patterns:
 - **Per-incident triage**: filter to a specific function and time window when investigating
 - **Trend watching**: the dashboard's metrics view shows function call rates and error rates over time — alert on sudden changes
 
-The dashboard is the source of truth for "did this workflow actually run?" —
-and for most functions it is the *only* record, because a workflow writes an
-audit row only if it is written to do so, and one is.
+The dashboard is the source of truth for "did this workflow actually run?".
+A run that ran out of retries is also in [job failures](#job-failures) if the
+function was given `createTerminalFailureHandler` — a successful run is
+recorded nowhere else.
 
 ## Resend delivery logs
 
@@ -255,12 +400,14 @@ A reasonable starting set, with where the signal actually comes from today:
 | Tool crash rate | Audit log — `system.error` | any, in a quiet system |
 | Email send failure rate | Resend dashboard | any send-failed in the last hour |
 | Inngest function failure rate | Inngest dashboard | any function with >1% error rate over 1 hour |
-| Healthcheck failures | **Not the audit log** — whatever you pass as `onFailure` | any check failing for >2 consecutive runs |
+| Workflows out of retries | `job-failures`, and the error webhook | any |
+| Healthcheck failures | `job-failures` (`kind = 'healthcheck'`), and the error webhook | any check failing for >2 consecutive runs |
+| Unhandled request errors | The error webhook, from `instrumentation.ts` | a burst |
 | Approval expiry rate | Audit log — `approval.expired` | a spike, meaning approvers aren't responsive |
 
-Nothing in that table alerts on its own. Throughline ships the data; the host
-routes it. Two of the rows are only reachable by polling the audit log, which
-means a query on a schedule that somebody has to write.
+Only the error webhook rows push; the rest are reachable by polling, which
+means a query on a schedule that somebody has to write. Set `ERROR_WEBHOOK_URL`
+and the webhook rows need nothing else.
 
 ## Healthchecks
 
@@ -294,17 +441,18 @@ createHealthcheckFunction({
       },
     },
   ],
-  onFailure: async (failures) => {
-    // Route this somewhere. The default is `console.error`.
-  },
+  // Log, a job-failures row, and the error webhook. The default is a bare
+  // `console.error`.
+  onFailure: createHealthcheckFailureHandler({ payload }),
 })
 ```
 
 **Failing checks do not land in the audit log.** They are passed to
-`onFailure`, once per run, with every failed check's name and details; the
-default implementation is a `console.error` and nothing subscribes to it. The
-`system.healthcheck` action exists in the enum and nothing writes it. A
-`system.healthcheck.failed` action does not exist at all.
+`onFailure`, once per run, with every failed check's name and details.
+`createHealthcheckFailureHandler` records them in
+[job failures](#job-failures) and reports them; without it, the default is a
+`console.error`. The `system.healthcheck` audit action exists in the enum and
+nothing writes it.
 
 The function also sends a `system/healthcheck` Inngest event on every run,
 failures or not, so an external dashboard can watch for the *absence* of a
@@ -395,3 +543,8 @@ operational queries SQL is faster.
 - `packages/audit/src/tools/*.ts` — the five read-side MCP tools
 - `packages/workflows/src/healthcheck.ts` — the healthcheck function and its
   two check helpers
+- `packages/core/src/observability/collection.ts` — the `job-failures` fields
+- `packages/core/src/observability/writer.ts` — report → row, and why it never throws
+- `packages/core/src/observability/report.ts` — report shapes, the header
+  allowlist, and the webhook reporter
+- `packages/workflows/src/failure-handler.ts` — the two failure handlers

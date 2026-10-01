@@ -2,7 +2,7 @@
 
 Inngest function factories for the framework. Five functions: revalidate-on-publish, execute-scheduled-publishes, expire-stale-approvals, audit-event-echo, and healthcheck. Each is a factory you call from your Inngest endpoint and add to the `functions` array.
 
-This package is *not* a Payload plugin. It's a library of function factories. Wire them in your `apps/web/src/app/api/inngest/route.ts`.
+This package is _not_ a Payload plugin. It's a library of function factories. Wire them in your `apps/web/src/app/api/inngest/route.ts`.
 
 It also ships the Payload hooks that drop Next cache tags when a collection or global changes (`createTagRevalidationHooks`), and the tag scheme they share with your cached reads (`createCacheTags`). You attach those to collections and globals in `payload.config.ts`.
 
@@ -28,6 +28,9 @@ import {
   createTagRevalidationHooks,
   createCacheTags,
   defaultCacheTags,
+  createTerminalFailureHandler,
+  createHealthcheckFailureHandler,
+  failureOptions,
 } from '@forumone/throughline-workflows'
 
 // Dependency-free, for frontend code:
@@ -55,6 +58,9 @@ import type {
   HealthcheckDefinition,
   HealthcheckOptions,
   HealthcheckResult,
+  WorkflowFailureHandler,
+  FailureHandlerOptions,
+  HealthcheckFailureHandlerOptions,
 } from '@forumone/throughline-workflows'
 ```
 
@@ -198,6 +204,32 @@ The package ships two helpers:
 
 Add your own checks (database connectivity, Redis, third-party services) by writing values matching `HealthcheckDefinition`.
 
+## Failure handlers
+
+Every factory accepts `onTerminalFailure` (handed to Inngest as `onFailure`,
+called once when a run has exhausted its retries). The healthcheck also accepts
+its own `onFailure`, called once per run with the failing checks. These two
+build a handler for each:
+
+```typescript
+createTerminalFailureHandler({
+  payload?: Payload,            // finds the jobFailuresPlugin writer on it
+  writer?: JobFailureWriter,    // instead of the one on payload
+  report?: ErrorReporter | false, // default: core's reportError (ERROR_WEBHOOK_URL)
+  logger?: Logger,              // default: core's console logger
+}): WorkflowFailureHandler
+
+createHealthcheckFailureHandler({
+  ...the same,
+  functionId?: string,          // recorded as the source; default 'healthcheck'
+})
+```
+
+Each failure is logged, written to `job-failures` (when `jobFailuresPlugin` is
+registered) and reported (when `ERROR_WEBHOOK_URL` is set). Neither handler
+throws: an `onFailure` that throws is retried by Inngest. The terminal handler
+works as the `onFailure` of any Inngest function, not only these factories.
+
 ## Common usage
 
 In a generated app's Inngest endpoint:
@@ -234,7 +266,8 @@ export const { GET, POST, PUT } = serve({
   functions: [
     createRevalidateOnPublishFunction({ inngest, payload }),
     createExecuteScheduledPublishesFunction({
-      inngest, payload,
+      inngest,
+      payload,
       collections: [{ slug: 'pages' }],
       publishingServerUrl: process.env.NEXT_PUBLIC_SERVER_URL!,
       systemApiKey: process.env.PUBLISHING_SYSTEM_API_KEY!,
@@ -242,7 +275,8 @@ export const { GET, POST, PUT } = serve({
     createExpireStaleApprovalsFunction({ inngest, payload }),
     createAuditEventEchoFunction({ inngest }),
     createHealthcheckFunction({
-      inngest, payload,
+      inngest,
+      payload,
       checks: [createPayloadReachableCheck({ payload })],
     }),
     ...(getEmailFunctions(payload) ?? []),

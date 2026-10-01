@@ -75,14 +75,20 @@ async function exportsOf(file: string, seen = new Set<string>()): Promise<Set<st
   return names
 }
 
-/** `import { a, type B, c as d } from '@forumone/throughline-x'` -> ['x', ['a', 'B', 'c']] */
+/**
+ * `import { a, type B, c as d } from '@forumone/throughline-x'` -> ['x', ['a', 'B', 'c']].
+ * A subpath import comes back as `x/sub`, and resolves to `x/src/sub/index.ts`.
+ */
 function throughlineImports(file: string, text: string): Array<[string, string[]]> {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const found: Array<[string, string[]]> = []
   for (const statement of source.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier))
       continue
-    const match = /^@forumone\/throughline-([a-z-]+)$/.exec(statement.moduleSpecifier.text)
+    // `@forumone/throughline-core` or a subpath, `@forumone/throughline-core/observability`
+    const match = /^@forumone\/throughline-([a-z-]+(?:\/[a-z-]+)?)$/.exec(
+      statement.moduleSpecifier.text,
+    )
     const bindings = statement.importClause?.namedBindings
     if (!match || !bindings || !ts.isNamedImports(bindings)) continue
     found.push([
@@ -119,15 +125,30 @@ for (const useReferenceDs of [true, false]) {
     })
 
     it('imports only names each Throughline package exports', async () => {
-      const files = ['apps/web/src/payload.config.ts', 'apps/web/src/app/api/inngest/route.ts']
+      const files = [
+        'apps/web/src/payload.config.ts',
+        'apps/web/src/app/api/inngest/route.ts',
+        'apps/web/src/instrumentation.ts',
+      ]
       const missing: string[] = []
       let checked = 0
 
       for (const file of files) {
         const text = await readFile(join(target, file), 'utf-8')
         for (const [pkg, names] of throughlineImports(file, text)) {
-          const entry = join(PACKAGES_DIR, pkg, 'src', 'index.ts')
+          const [dir, subpath] = pkg.split('/') as [string, string | undefined]
+          const entry = join(PACKAGES_DIR, dir, 'src', subpath ?? '', 'index.ts')
           expect(existsSync(entry), `${file} imports @forumone/throughline-${pkg}`).toBe(true)
+          if (subpath) {
+            // A source directory is not an export: the subpath has to be in `exports` too.
+            const manifest = JSON.parse(
+              await readFile(join(PACKAGES_DIR, dir, 'package.json'), 'utf-8'),
+            ) as { exports?: Record<string, unknown> }
+            expect(
+              manifest.exports?.[`./${subpath}`],
+              `${file} imports @forumone/throughline-${pkg}, which package.json does not export`,
+            ).toBeDefined()
+          }
           const exported = await exportsOf(entry)
           for (const name of names) {
             checked += 1

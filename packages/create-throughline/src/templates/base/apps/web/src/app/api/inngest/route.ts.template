@@ -8,10 +8,12 @@ import {
   createAuditEventEchoFunction,
   createExecuteScheduledPublishesFunction,
   createExpireStaleApprovalsFunction,
+  createHealthcheckFailureHandler,
   createHealthcheckFunction,
   createPayloadReachableCheck,
   createPublishAtScheduledTimeFunction,
   createRevalidateOnPublishFunction,
+  createTerminalFailureHandler,
   type ScheduledPublishRequest,
 } from '@forumone/throughline-workflows'
 import { getPublishingService } from '@forumone/throughline-publishing'
@@ -24,6 +26,13 @@ import {
 
 const inngest = createInngestClient({ id: '{{projectName}}' })
 const payload = await getPayload({ config })
+
+/*
+A workflow that runs out of retries is logged, recorded in the `job-failures`
+collection, and posted to ERROR_WEBHOOK_URL if that is set. Passed to every
+factory below: a factory without it fails silently into Inngest's dashboard.
+*/
+const onTerminalFailure = createTerminalFailureHandler({ payload })
 
 const emailFunctions = getEmailFunctions(payload) ?? []
 const formsFunctions = getFormsFunctions(payload) ?? []
@@ -72,13 +81,20 @@ const integrationFunctions =
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
-    createRevalidateOnPublishFunction({ inngest, payload, urlBuilders, cacheTags }),
+    createRevalidateOnPublishFunction({
+      inngest,
+      payload,
+      urlBuilders,
+      cacheTags,
+      onTerminalFailure,
+    }),
     // On time: sleeps until each document's scheduled time.
     createPublishAtScheduledTimeFunction({
       inngest,
       payload,
       collections: scheduledCollections,
       publish: publishScheduled,
+      onTerminalFailure,
     }),
     // The backstop, for a schedule whose wake-up event never arrived.
     createExecuteScheduledPublishesFunction({
@@ -88,13 +104,16 @@ export const { GET, POST, PUT } = serve({
       publish: publishScheduled,
       schedule: '17 3 * * *',
       overdueByMs: 60 * 60 * 1000,
+      onTerminalFailure,
     }),
-    createExpireStaleApprovalsFunction({ inngest, payload }),
-    createAuditEventEchoFunction({ inngest }),
+    createExpireStaleApprovalsFunction({ inngest, payload, onTerminalFailure }),
+    createAuditEventEchoFunction({ inngest, onTerminalFailure }),
     createHealthcheckFunction({
       inngest,
       payload,
       checks: [createPayloadReachableCheck()],
+      onFailure: createHealthcheckFailureHandler({ payload }),
+      onTerminalFailure,
     }),
     ...emailFunctions,
     ...formsFunctions,

@@ -17,6 +17,16 @@ This package has **no Payload plugin** — it exports factories only. Workflows 
 | `createTagRevalidationHooks` | Payload `afterChange` / `afterDelete` hooks that drop Next cache tags when a collection or global changes |
 | `createCacheTags` | The one tag scheme hooks, workflow and readers all build tags from (also on `@forumone/throughline-workflows/cache-tags`) |
 
+Plus two failure handlers, for the `onTerminalFailure` every factory accepts and the healthcheck's own `onFailure`:
+
+- `createTerminalFailureHandler({ payload })` — logs a run that exhausted its retries, writes a `job-failures` row (when core's `jobFailuresPlugin` is registered) and posts it to `ERROR_WEBHOOK_URL`. Never throws. Works as any Inngest function's `onFailure`.
+- `createHealthcheckFailureHandler({ payload })` — the same, once per healthcheck run with failing checks.
+
+```ts
+const onTerminalFailure = createTerminalFailureHandler({ payload })
+createExpireStaleApprovalsFunction({ inngest, payload, onTerminalFailure })
+```
+
 Plus two reusable check helpers used with the healthcheck factory:
 
 - `createPayloadReachableCheck(slug?)` — verifies Payload can `find` from a collection
@@ -305,7 +315,7 @@ Each handler runs in its own `step.run`, so failures isolate.
 
 ## Options reference
 
-Every factory takes a typed options object. See `src/types.ts` for the full surface — defaults documented there:
+Every factory takes a typed options object. See `src/types.ts` for the full surface — defaults documented there. All of them also accept `onTerminalFailure?` and `concurrency?`:
 
 - `RevalidateOnPublishOptions` — `urlBuilders` (required), `cacheTags?`, `collectionTags?`, `revalidate?`, `id?`
 - `TagRevalidationOptions` — `cacheTags?`, `revalidateTag?`; per hook, `tags?` and (collection `afterChange`) `operations?`
