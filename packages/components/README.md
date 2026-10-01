@@ -26,7 +26,7 @@ Every consequential call writes to the audit log via `@forumone/throughline-core
 pnpm add @forumone/throughline-components
 ```
 
-Peer: `payload@^3.0.0`. Required runtime: `@forumone/throughline-core` (the components plugin asserts the `audit-log` capability at init).
+Peer: `payload@^3.89.0`. Required runtime: `@forumone/throughline-core` (the components plugin asserts the `audit-log` capability at init).
 
 ## Usage
 

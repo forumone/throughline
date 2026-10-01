@@ -4,14 +4,14 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 
 ## What's inside
 
-| Subsystem          | Subpath    | Role                                                                                                                |
-| ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------- |
-| Audit              | `./audit`  | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS` |
-| Events             | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                   |
-| MCP                | `./mcp`    | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext`                          |
-| Logger             | (main)     | `defaultLogger`, `createNamedLogger`                                                                                |
-| Utils              | (main)     | `documentContentHash`, `sha256Hex`, `formatZodIssues`                                                               |
-| Payload CLI runner | bin        | `throughline-payload` — see [below](#running-the-payload-cli-throughline-payload)                                   |
+| Subsystem          | Subpath    | Role                                                                                                                                                            |
+| ------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Audit              | `./audit`  | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS`                                             |
+| Events             | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                                                               |
+| MCP                | `./mcp`    | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext`, `mcpApiKeyAccess`, `isSignedIn`, `signedIn`, `isMcpApiKeyPrincipal` |
+| Logger             | (main)     | `defaultLogger`, `createNamedLogger`                                                                                                                            |
+| Utils              | (main)     | `documentContentHash`, `sha256Hex`, `formatZodIssues`                                                                                                           |
+| Payload CLI runner | bin        | `throughline-payload` — see [below](#running-the-payload-cli-throughline-payload)                                                                               |
 
 There is no `./auth` any more. It held an MCP key collection, a bearer-token
 authenticator and `createMcpHandler` — a JSON-RPC subset each plugin mounted at its
@@ -27,7 +27,7 @@ The main entry re-exports everything; the subpath exports keep bundles smaller f
 pnpm add @forumone/throughline-core
 ```
 
-Peers: `payload@^3.0.0` and `inngest@^4.0.0`.
+Peers: `payload@^3.89.0` and `inngest@^4.0.0`.
 
 ## The audit log
 
@@ -75,27 +75,45 @@ The `audit-events` collection sits in the admin sidebar's `Throughline` group by
 
 ## MCP authentication
 
-`createApiKeysCollection` adds a Payload collection that stores SHA-256 hashes of bearer tokens (the raw key is shown to the operator once on create, then never persisted). `createBearerTokenAuthenticator` validates incoming requests against that collection.
+`@payloadcms/plugin-mcp` handles MCP authentication. It adds the `payload-mcp-api-keys` collection, looks up `Authorization: Bearer <key>` on `/api/mcp`, and runs each tool as the person the key is bound to. This package's `createApiKeysCollection`, `createBearerTokenAuthenticator` and `createMcpHandler` are gone.
+
+What this package adds is two access helpers for a site that registers that plugin.
+
+**Only admins should manage keys.** A key runs every tool as its user, so minting, reading and revoking keys is an admin's job. The plugin doesn't enforce that by default. `mcpApiKeyAccess(isAdmin)` is an `overrideApiKeyCollection` that applies your admin rule to `read`, `create`, `update`, `delete` and `unlock`, and refuses an MCP key principal before it asks the rule:
 
 ```ts
-import { createApiKeysCollection, createBearerTokenAuthenticator, createMcpHandler } from '@forumone/throughline-core'
-import type { Payload } from 'payload'
+import { createMcpToolCollector, mcpApiKeyAccess } from '@forumone/throughline-core'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
+import type { Access } from 'payload'
 
-// In your Payload config:
-collections: [createApiKeysCollection({ usersSlug: 'users' })],
+const isAdmin: Access = ({ req: { user } }) =>
+  user?.collection === 'users' && Array.isArray(user.roles) && user.roles.includes('admin')
 
-// In your MCP route:
-const authenticator = createBearerTokenAuthenticator({ payload })
-const handleMcp = createMcpHandler({
-  payload,
-  serverName: 'publishing',
-  tools: [/* McpToolDefinition[] */],
-  authenticator,
+mcpPlugin({
+  mcp: { tools: mcpTools.tools },
+  overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
 })
-
-// Next.js app router:
-export const POST = (req: Request) => handleMcp(req)
 ```
+
+It changes `access` and nothing else. To set other options too, call it inside your own override:
+
+```ts
+overrideApiKeyCollection: collection => {
+  const hardened = mcpApiKeyAccess(isAdmin)(collection)
+  return { ...hardened, admin: { ...hardened.admin, group: 'Throughline' } }
+},
+```
+
+**"Signed in" is not `Boolean(req.user)`.** Before Payload 3.89.0, the key collection's `auth.useAPIKey` registered Payload's API-key strategy on every REST route, so a key _document_ could become `req.user`. It has no roles, but it passes `Boolean(req.user)`, so a rule like "published, or anybody signed in" served drafts to anyone holding a key. Payload 3.89.0 fixed this, and it's this package's peer floor. Refuse the principal in your own rules as well:
+
+| Export                       | What it does                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `isSignedIn(user)`           | `true` for a person, `false` for anonymous or an MCP key document. A type guard |
+| `signedIn`                   | `isSignedIn` as an `Access` function                                            |
+| `isMcpApiKeyPrincipal(user)` | `true` only for a key document from `payload-mcp-api-keys`                      |
+| `MCP_API_KEYS_SLUG`          | `'payload-mcp-api-keys'`                                                        |
+
+None of these affects `/api/mcp`. A tool call there arrives as the key's user, in `users`, with that person's roles. See [the security model](../../docs/operations/security-model.md#signed-in-is-not-booleanrequser).
 
 ### Scopes
 

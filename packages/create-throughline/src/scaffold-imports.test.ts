@@ -197,12 +197,25 @@ describe('the scaffold serves Throughline tools over MCP', () => {
     expect(config).toContain('mcp: { tools: mcpTools.tools }')
   })
 
-  it('makes the MCP key collection admin-only', () => {
-    const start = config.indexOf('overrideApiKeyCollection')
-    expect(start).toBeGreaterThan(-1)
-    const override = config.slice(start, config.indexOf('}),', start))
-    for (const operation of ['read', 'create', 'update', 'delete']) {
-      expect(override, operation).toContain(`${operation}: isAdmin`)
+  it("makes the MCP key collection admin-only, with core's helper", () => {
+    // `mcpApiKeyAccess` narrows read, create, update, delete and unlock to the
+    // site's `isAdmin`, and refuses a key principal first; its own suite in
+    // core covers that. What is asserted here is that the scaffold uses it, on
+    // the right plugin, with the site's admin rule.
+    const mcp = config.indexOf('mcpPlugin({')
+    const call = config.slice(mcp, config.indexOf('\n    }),', mcp))
+    expect(call).toContain('overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),')
+    expect(config).toMatch(
+      /import \{[^}]*\bmcpApiKeyAccess\b[^}]*\} from '@forumone\/throughline-core'/,
+    )
+    expect(config).toMatch(/^const isAdmin: Access = /m)
+  })
+
+  it('pins a payload that no longer lets an MCP key sign in over REST', () => {
+    // Payload before 3.89.0 registered the key collection's API-key strategy
+    // globally, so a key document became `req.user` on every REST route.
+    for (const name of ['payload', '@payloadcms/plugin-mcp']) {
+      expect(web.dependencies[name], name).toBe('^3.89.0')
     }
   })
 

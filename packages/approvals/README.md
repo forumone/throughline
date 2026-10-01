@@ -24,7 +24,7 @@ Conversational approval workflow server for Throughline. Provides the resolver t
 pnpm add @forumone/throughline-approvals
 ```
 
-Peers: `payload@^3.0.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log).
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log).
 
 ## Usage
 

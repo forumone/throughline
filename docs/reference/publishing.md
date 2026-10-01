@@ -8,7 +8,7 @@ The trust boundary of the framework. The Publishing MCP server wraps Payload's u
 pnpm add @forumone/throughline-publishing
 ```
 
-Peer dependencies: `payload@^3.0.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core`.
+Peer dependencies: `payload@^3.89.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core`.
 
 ## Public API
 

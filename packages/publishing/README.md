@@ -17,7 +17,7 @@ Policy-gated publishing server for Throughline. The trust boundary that decides 
 pnpm add @forumone/throughline-publishing
 ```
 
-Peers: `payload@^3.0.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log). The admin controls additionally use `@payloadcms/ui` and `react`, both already present in any Payload 3 admin.
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log). The admin controls additionally use `@payloadcms/ui` and `react`, both already present in any Payload 3 admin.
 
 ## Usage
 

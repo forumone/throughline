@@ -28,7 +28,7 @@ Plus two reusable check helpers used with the healthcheck factory:
 pnpm add @forumone/throughline-workflows
 ```
 
-Peers: `payload@^3.0.0`, `inngest@^4.0.0`. `next` is an **optional** peer — install it only if you use `createRevalidateOnPublishFunction` or `createTagRevalidationHooks` with their default revalidators.
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`. `next` is an **optional** peer — install it only if you use `createRevalidateOnPublishFunction` or `createTagRevalidationHooks` with their default revalidators.
 
 ## Usage
 

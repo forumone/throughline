@@ -25,10 +25,15 @@ export { createInngestClient } from './events/index.js'
 export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events/index.js'
 
 export {
+  MCP_API_KEYS_SLUG,
   McpMetaSchema,
   auditContext,
   deniedEnvelope,
   createMcpToolCollector,
+  isMcpApiKeyPrincipal,
+  isSignedIn,
+  mcpApiKeyAccess,
+  signedIn,
   toPayloadMcpTool,
   toPayloadMcpTools,
   withMeta,

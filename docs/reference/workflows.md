@@ -12,7 +12,7 @@ It also ships the Payload hooks that drop Next cache tags when a collection or g
 pnpm add @forumone/throughline-workflows
 ```
 
-Peer dependencies: `inngest@^4.0.0`, `payload@^3.0.0`, and optionally `next@>=15` for the default revalidators. Depends on `@forumone/throughline-core` and `@forumone/throughline-publishing` (for `isDraftWrite`).
+Peer dependencies: `inngest@^4.0.0`, `payload@^3.89.0`, and optionally `next@>=15` for the default revalidators. Depends on `@forumone/throughline-core` and `@forumone/throughline-publishing` (for `isDraftWrite`).
 
 ## Public API
 

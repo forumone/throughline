@@ -56,7 +56,7 @@ The other server packages do one job well. This is a **framework within the fram
 pnpm add @forumone/throughline-integrations
 ```
 
-Peers: `payload@^3.0.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log). `react` and `@payloadcms/ui` are optional peers, needed only to render the Sync now button — a host that never loads `@forumone/throughline-integrations/client` needs neither.
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log). `react` and `@payloadcms/ui` are optional peers, needed only to render the Sync now button — a host that never loads `@forumone/throughline-integrations/client` needs neither.
 
 ## Usage
 

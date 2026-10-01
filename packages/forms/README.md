@@ -34,7 +34,7 @@ After this package, an authorized user can ask Claude "build me a contact form t
 pnpm add @forumone/throughline-forms
 ```
 
-Peers: `payload@^3.0.0`, `inngest@^4.0.0`, `react@^18 || ^19`, `@payloadcms/plugin-form-builder@^3.0.0`. Form Builder must be installed in the consumer (it's a peer the plugin imports), and the version should match your `payload` version exactly because Form Builder's peers are version-locked, not caret-compatible.
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`, `react@^18 || ^19`, `@payloadcms/plugin-form-builder@^3.0.0`. Form Builder must be installed in the consumer (it's a peer the plugin imports), and the version should match your `payload` version exactly because Form Builder's peers are version-locked, not caret-compatible.
 
 ## The destination allowlist is the security perimeter
 

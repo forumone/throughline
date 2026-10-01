@@ -18,7 +18,7 @@ After this package, the approval workflow is end-to-end: a marketer requests app
 pnpm add @forumone/throughline-email
 ```
 
-Peers: `payload@^3.0.0`, `inngest@^4.0.0`, `react@^18 || ^19`. The plugin lazy-loads `resend` and `@react-email/render` on first send, so a misconfigured deploy fails on first email rather than at boot.
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`, `react@^18 || ^19`. The plugin lazy-loads `resend` and `@react-email/render` on first send, so a misconfigured deploy fails on first email rather than at boot.
 
 ## Usage
 

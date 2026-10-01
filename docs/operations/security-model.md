@@ -21,14 +21,28 @@ Three primary protections:
 | Surface | Auth mechanism |
 | --- | --- |
 | Payload admin UI | Cookie-based session, signed by `PAYLOAD_SECRET` |
-| MCP endpoints | Bearer token from `api-keys` collection |
+| MCP endpoint (`/api/mcp`) | Bearer key from `payload-mcp-api-keys`, which `@payloadcms/plugin-mcp` brings |
 | Approval email URLs | HMAC-signed token (signed by `APPROVAL_TOKEN_SECRET`) |
 | Public form submissions | Honeypot + IP-based rate limit; no login |
 | Inngest function delivery | Payload of HMAC-signed events from Inngest |
 
 ### MCP API keys
 
-API keys live in Payload's `api-keys` collection. Each key has a `name`, a `keyValue` (the secret), and optionally a list of allowed `capabilities`. The MCP server validates `Authorization: Bearer <keyValue>` on each request and refuses if the key is unknown, disabled, or lacks the requested capability.
+Keys live in `payload-mcp-api-keys`, the collection `@payloadcms/plugin-mcp` adds. Each key is bound to a person in `users` and carries one checkbox per tool. `/api/mcp` looks up `Authorization: Bearer <key>`, refuses an unknown key, and runs every tool as the person the key is bound to. That person's roles apply, and an unticked tool is denied.
+
+A key is a credential, so only admins should manage keys. The plugin doesn't enforce that by default. Older releases declared the collection with no `access` block, which meant anybody signed in. Current releases let each person manage their own keys. Narrow it to admins with `mcpApiKeyAccess` from `@forumone/throughline-core`. The scaffold does this already:
+
+```ts
+import { mcpApiKeyAccess } from '@forumone/throughline-core'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
+
+mcpPlugin({
+  mcp: { tools: mcpTools.tools },
+  overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
+})
+```
+
+`isAdmin` is your site's own `Access` rule. The helper applies it to `read`, `create`, `update`, `delete` and `unlock`, and refuses an MCP key principal before it asks the rule, so a key can never manage keys. It changes `access` and nothing else. To set other options too, such as the collection's `admin.group`, call it inside your own override and spread the result.
 
 Best practices:
 
@@ -84,6 +98,27 @@ Roles gate MCP tool access. The Components plugin's `propose_components` tool re
 
 Custom roles are easy: add to the `users.roles` field options, add to the access function for whatever resources you're gating.
 
+### "Signed in" is not `Boolean(req.user)`
+
+Payload's `defaultAccess`, and many hand-written rules, treat any `req.user` as a signed-in person. In a Throughline site that is not true. The MCP key collection sets `auth.useAPIKey`, and **before Payload 3.89.0** that registered Payload's API-key strategy for every REST route. A request with `Authorization: payload-mcp-api-keys API-Key <key>` then got the *key document* as `req.user`. It has no roles, so role checks refused it. `Boolean(req.user)` didn't, so a rule like "published, or anybody signed in" served every draft to anyone holding a key, with no MCP involved.
+
+Payload 3.89.0 fixed this upstream, and every Throughline package now requires `payload@^3.89.0`. Don't rely on that alone. A site's own access layer should refuse the key principal too, so the hole stays closed even if that one upstream fix regresses. Core exports the check:
+
+```ts
+import { isSignedIn, signedIn } from '@forumone/throughline-core'
+
+// A predicate, for rules that do more than one thing:
+export const publishedOrSignedIn: Access = ({ req }) =>
+  isSignedIn(req.user) ? true : { _status: { equals: 'published' } }
+
+// Or the Access function itself, in a collection's `access` block:
+access: { read: publishedOrSignedIn, create: signedIn }
+```
+
+`isSignedIn` refuses only a principal from `payload-mcp-api-keys`. A tool call through `/api/mcp` arrives as the person the key is bound to, so the check doesn't affect it. Watch self-scoped rules in particular. `{ id: { equals: req.user.id } }` checked against `users` would match whichever user has the key document's id, because both tables use small sequential ids. Gate such a rule on `isSignedIn` first. `isMcpApiKeyPrincipal(req.user)` is exported for rules that need to tell the two apart directly.
+
+Also check role checks that look up the collection first. A role rule reads `req.user.roles`, which a key document doesn't have, so it refuses already. Checking `req.user.collection === 'users'` first states that intent, and it's what TypeScript asks for once `payload-types.ts` exists.
+
 ### Groups
 
 Orthogonal to roles. Groups (`editorial`, `legal`, `senior`) are about content workflow, not system access. See [Configuring approvers](../guides/configuring-approvers.md).
@@ -108,7 +143,7 @@ The boundary is enforced at the application layer. Database access bypasses it (
 | --- | --- | --- |
 | User passwords | `users` collection (Payload-managed) | bcrypt at rest; never logged |
 | Sessions | Cookies | Signed (not encrypted) by `PAYLOAD_SECRET` |
-| MCP API keys | `api-keys` collection | Plaintext at rest (Postgres); use database-level encryption-at-rest for sensitive deployments |
+| MCP API keys | `payload-mcp-api-keys` collection | Encrypted with `PAYLOAD_SECRET`, plus an HMAC index for lookup (Payload's API-key fields). Rotating `PAYLOAD_SECRET` invalidates every key |
 | Integration configs | `integrations` collection | Plaintext at rest |
 | Audit log diffs | `audit-events` collection, `diff` column | Plaintext; each entry is `{ before, after }` and can hold sensitive values |
 | Approval tokens (in email URLs) | Not stored after send; signed | HMAC; verify-only |
@@ -139,6 +174,9 @@ Before going live:
 - [ ] All secrets are 48+ random bytes, generated with `openssl rand -base64`
 - [ ] `PAYLOAD_SECRET`, `APPROVAL_TOKEN_SECRET`, `FORMS_IP_HASH_SECRET` are different values
 - [ ] MCP API keys are scoped per-consumer, not shared
+- [ ] `mcpPlugin` is passed `overrideApiKeyCollection: mcpApiKeyAccess(isAdmin)`, so only admins manage keys
+- [ ] No access rule treats `Boolean(req.user)` as "signed in"; use `isSignedIn` from `@forumone/throughline-core`
+- [ ] `payload` is 3.89.0 or later
 - [ ] Payload admin is behind your platform's auth/firewall (or only accessible from approved IPs)
 - [ ] Form destinations are an explicit allowlist; no wildcards
 - [ ] Database backups are configured (provider-managed for Neon/Supabase; explicit for self-hosted)

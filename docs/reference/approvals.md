@@ -8,7 +8,7 @@ The Approvals MCP server. Manages approval workflows: requesting, deciding, expi
 pnpm add @forumone/throughline-approvals
 ```
 
-Peer dependencies: `payload@^3.0.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core` and `@forumone/throughline-publishing` (for the resolver protocol).
+Peer dependencies: `payload@^3.89.0`, `inngest@^4.0.0`. Depends on `@forumone/throughline-core` and `@forumone/throughline-publishing` (for the resolver protocol).
 
 ## Public API
 
