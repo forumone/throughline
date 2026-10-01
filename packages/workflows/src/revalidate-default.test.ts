@@ -29,6 +29,7 @@ async function publish(data: Record<string, unknown>) {
   createRevalidateOnPublishFunction({
     inngest: fakeInngest.inngest,
     payload: createFakePayload().payload,
+    urlBuilders: { pages: (slug) => `/${slug}`, posts: (slug) => `/blog/${slug}` },
   })
   await fakeInngest.invoke('revalidate-on-publish', { name: 'content/page.published', data })
 }

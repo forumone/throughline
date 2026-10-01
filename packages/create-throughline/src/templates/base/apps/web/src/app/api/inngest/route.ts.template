@@ -2,6 +2,7 @@ import type { InngestFunction } from 'inngest'
 import { serve } from 'inngest/next'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { cacheTags } from '@/lib/cache-tags'
 import { createInngestClient } from '@forumone/throughline-core'
 import {
   createAuditEventEchoFunction,
@@ -44,6 +45,16 @@ async function publishScheduled({ collection, id, reasoning }: ScheduledPublishR
 const scheduledCollections = [{ slug: 'pages' }]
 
 /*
+Where each publishable collection's documents are served, so a publish
+revalidates the right path. There are no defaults: a collection missing here
+has its cache tags dropped but no path revalidated, and the run logs a warning.
+Add an entry for every collection you give publishingPlugin.
+*/
+const urlBuilders = {
+  pages: (slug: string) => (slug === 'home' ? '/' : `/${slug}`),
+}
+
+/*
 Typed with this app's own `InngestFunction.Any`. The registry is generic in what
 `createFunctions` returns and defaults to `unknown`, because the platform never
 touches those functions — and one `unknown` element leaves `serve()` unable to
@@ -61,7 +72,7 @@ const integrationFunctions =
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
-    createRevalidateOnPublishFunction({ inngest, payload }),
+    createRevalidateOnPublishFunction({ inngest, payload, urlBuilders, cacheTags }),
     // On time: sleeps until each document's scheduled time.
     createPublishAtScheduledTimeFunction({
       inngest,

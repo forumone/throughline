@@ -130,23 +130,33 @@ If your blocks come from the reference DS, you already have a renderer to plug i
 
 ## 5. Wire revalidation
 
-The `createRevalidateOnPublishFunction` workflow needs to know how to compute paths to revalidate for this collection. By default it builds `/blog/:slug` for `posts`. For `programs`, override:
+Two things keep the cache honest for a new collection.
+
+**Tell the publish workflow where its documents live.** `createRevalidateOnPublishFunction` has no built-in paths, so add an entry to `urlBuilders` in `apps/web/src/app/api/inngest/route.ts`:
 
 ```typescript
-createRevalidateOnPublishFunction({
-  inngest,
-  payload,
-  buildPaths: (event) => {
-    if (event.data.collection === 'programs') {
-      return [`/programs/${event.data.doc.slug}`, '/programs']
-    }
-    // fall back to default for other collections
-    return undefined
-  },
-}),
+const urlBuilders = {
+  pages: (slug: string) => (slug === 'home' ? '/' : `/${slug}`),
+  programs: (slug: string) => `/programs/${slug}`,
+}
 ```
 
-Returning `undefined` defers to the default behavior. Returning an array overrides it.
+Without it, a publish drops the collection's cache tags but revalidates no page path, and the run logs a warning.
+
+**Drop its tags on every visible change.** The workflow only hears publish events. Add the tag hooks so a save, an unpublish and a delete all invalidate, using the scheme in `apps/web/src/lib/cache-tags.ts`:
+
+```typescript
+const Programs: CollectionConfig = {
+  slug: 'programs',
+  hooks: {
+    afterChange: [revalidation.afterCollectionChange()],
+    afterDelete: [revalidation.afterCollectionDelete()],
+  },
+  // ...
+}
+```
+
+`revalidation` is the `createTagRevalidationHooks({ cacheTags })` the scaffolded `payload.config.ts` already builds. Draft saves drop nothing. If your program pages cache a read, tag it from the same object — `cacheTags.collection('programs')` — so the hook and the reader name the same tag.
 
 ## 6. Generate Payload types
 

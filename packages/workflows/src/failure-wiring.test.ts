@@ -27,7 +27,7 @@ function build() {
   const payload = createFakePayload()
   const base = { inngest: fake.inngest, payload, onTerminalFailure: handler }
 
-  createRevalidateOnPublishFunction({ ...base, revalidate: async () => {} })
+  createRevalidateOnPublishFunction({ ...base, urlBuilders: {}, revalidate: async () => {} })
   createExecuteScheduledPublishesFunction({
     ...base,
     collections: [{ slug: 'pages' }],

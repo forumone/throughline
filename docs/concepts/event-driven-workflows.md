@@ -63,7 +63,8 @@ inngest.createFunction(
 ## Where the framework's subscribers live
 
 - **`@forumone/throughline-workflows`** — the framework's own workers
-  - `createRevalidateOnPublishFunction` — subscribes to `content/page.*`, calls `revalidatePath`
+  - `createRevalidateOnPublishFunction` — subscribes to `content/page.*`, revalidates the page path the site's `urlBuilders` give and drops the collection's cache tags
+  - Not a subscriber, but alongside: `createTagRevalidationHooks` — Payload hooks that drop cache tags on the changes no event announces (globals, non-publish saves, deletes), named by the same `createCacheTags` scheme as the readers
   - `createExecuteScheduledPublishesFunction` — cron, finds due `scheduledPublishAt` rows and calls Publishing MCP
   - `createExpireStaleApprovalsFunction` — cron, finds stale approvals and fires `approval/expired`
   - `createAuditEventEchoFunction` — subscribes to `approval/*` and writes audit rows

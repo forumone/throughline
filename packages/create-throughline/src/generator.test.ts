@@ -215,6 +215,30 @@ describe('generate (with reference DS)', () => {
     expect(route).toContain("createInngestClient({ id: 'demo' })")
   })
 
+  /*
+  revalidate-on-publish has no built-in URL builders, so a scaffold that passed
+  none would revalidate no page path at all. And a tag has two ends: the hooks,
+  the workflow and the readers all have to build it from the one scheme.
+  */
+  it('wires cache revalidation to one tag scheme, with explicit URL builders', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
+    const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
+    const tags = await readFile(join(target, 'apps/web/src/lib/cache-tags.ts'), 'utf-8')
+
+    expect(tags).toContain("from '@forumone/throughline-workflows/cache-tags'")
+    expect(tags).toContain('export const cacheTags = createCacheTags(')
+    expect(route).toContain("import { cacheTags } from '@/lib/cache-tags'")
+    expect(route).toContain(
+      'createRevalidateOnPublishFunction({ inngest, payload, urlBuilders, cacheTags })',
+    )
+    expect(route).toMatch(/const urlBuilders = \{\s+pages:/)
+    expect(config).toContain("import { cacheTags } from './lib/cache-tags'")
+    expect(config).toContain('createTagRevalidationHooks({ cacheTags })')
+    expect(config).toContain('afterChange: [revalidation.afterCollectionChange()]')
+    expect(config).toContain('afterDelete: [revalidation.afterCollectionDelete()]')
+  })
+
   it('puts the project name into the .env file', async () => {
     await generate(
       makeAnswers(target, { projectName: 'acme-site' }),

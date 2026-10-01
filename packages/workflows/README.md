@@ -1,8 +1,8 @@
 # @forumone/throughline-workflows
 
-Composable Inngest function factories for the Throughline framework. Client apps import the factories they need and merge the functions into their Inngest endpoint.
+Composable Inngest function factories for the Throughline framework, and the Payload hooks that keep a Next cache honest. Client apps import the factories they need and merge the functions into their Inngest endpoint.
 
-This package has **no Payload plugin** — it exports factories only. Workflows subscribe to events the server packages emit; they don't modify Payload configuration.
+This package has **no Payload plugin** — it exports factories only. Workflows subscribe to events the server packages emit; they don't modify Payload configuration. The cache-revalidation hooks are factories too: you attach them to the collections and globals you choose.
 
 ## What this package provides
 
@@ -14,6 +14,8 @@ This package has **no Payload plugin** — it exports factories only. Workflows 
 | `createExpireStaleApprovalsFunction` | Daily cron that flips pending approvals past `expiresAt` to `expired` and fires an `approval/expired` event |
 | `createAuditEventEchoFunction` | Fan-out point: turns `audit/event.recorded` into `notification/send-approval-*` events plus custom handlers |
 | `createHealthcheckFunction` | Periodic health monitoring with configurable checks |
+| `createTagRevalidationHooks` | Payload `afterChange` / `afterDelete` hooks that drop Next cache tags when a collection or global changes |
+| `createCacheTags` | The one tag scheme hooks, workflow and readers all build tags from (also on `@forumone/throughline-workflows/cache-tags`) |
 
 Plus two reusable check helpers used with the healthcheck factory:
 
@@ -26,7 +28,7 @@ Plus two reusable check helpers used with the healthcheck factory:
 pnpm add @forumone/throughline-workflows
 ```
 
-Peers: `payload@^3.0.0`, `inngest@^4.0.0`. `next` is an **optional** peer — install it only if you use `createRevalidateOnPublishFunction` with the default revalidator.
+Peers: `payload@^3.0.0`, `inngest@^4.0.0`. `next` is an **optional** peer — install it only if you use `createRevalidateOnPublishFunction` or `createTagRevalidationHooks` with their default revalidators.
 
 ## Usage
 
@@ -52,7 +54,16 @@ const payload = await getPayload({ config })
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
-    createRevalidateOnPublishFunction({ inngest, payload }),
+    createRevalidateOnPublishFunction({
+      inngest,
+      payload,
+      // Required. Where each publishable collection is served.
+      urlBuilders: {
+        pages: (slug) => (slug === 'home' ? '/' : `/${slug}`),
+        posts: (slug) => `/news/${slug}`,
+      },
+      cacheTags, // the same scheme your readers use — see below
+    }),
     createExecuteScheduledPublishesFunction({
       inngest,
       payload,
@@ -77,14 +88,116 @@ By C10, every server package fires Inngest events when consequential things happ
 
 The factories-only shape (no Payload plugin) is the same reasoning. A workflow that wants to revalidate Next.js pages doesn't need to register a Payload collection. A scheduled-publish executor doesn't need a Payload hook. They're cron / event handlers that happen to read from Payload.
 
-## Non-Next.js frontends
+The tag-revalidation hooks are the one place this package reaches into Payload configuration, and only because you put them there: they are plain hook functions, not a plugin. They live here rather than in `publishing` because this package already owns Next cache invalidation — the optional `next` peer, the Next 16 `revalidateTag` profile, and the tag `createRevalidateOnPublishFunction` fires — and one tag scheme has to serve both. They use publishing's `isDraftWrite`, which makes `publishing` a dependency of this package. Publishing depends on nothing here, so there is no cycle.
 
-The default `revalidate` function dynamically imports `next/cache` and is a no-op anywhere `revalidatePath` / `revalidateTag` aren't available. For other frameworks supply your own:
+## Cache tags: one scheme, both ends
+
+A cache tag has two ends: a reader that caches under it and a writer that drops it. Nothing in the type system connects them. Name them differently and everything compiles, every test passes, the hook runs, and the page never refreshes. So build both from one object:
+
+```typescript
+// src/lib/cache-tags.ts — imported by payload.config.ts, the Inngest route and readers
+import { createCacheTags } from '@forumone/throughline-workflows/cache-tags'
+
+export const cacheTags = createCacheTags()
+// or name them your way:
+// createCacheTags({ collection: (slug) => `c:${slug}`, global: (slug) => `g:${slug}` })
+```
+
+The defaults are the bare slug for a collection (`pages`, which is also what `createRevalidateOnPublishFunction` has always fired) and `global_<slug>` for a global. The `/cache-tags` subpath imports nothing, so frontend code can use it without pulling in Payload.
+
+A reader tags its cached read from the same object:
+
+```typescript
+import { unstable_cache } from 'next/cache'
+import { cacheTags } from '@/lib/cache-tags'
+
+export const getNavigation = unstable_cache(
+  async () => (await getPayload({ config })).findGlobal({ slug: 'navigation' }),
+  ['navigation'],
+  { tags: [cacheTags.global('navigation')] },
+)
+// With Cache Components: cacheTag(cacheTags.global('navigation')) inside a 'use cache' function.
+```
+
+## Tag-revalidation hooks
+
+`createRevalidateOnPublishFunction` reacts to publishing events, so it covers publishes, unpublishes and rollbacks of publishable collections — and nothing else. A global (navigation, footer, settings) is read on every page and usually cached, and nothing publishes it. A collection an integration writes emits no publishing event. A delete is not a publish. Each of those leaves the cached copy standing until the next deploy unless a hook drops it:
+
+```typescript
+import { createTagRevalidationHooks } from '@forumone/throughline-workflows'
+import { cacheTags } from './lib/cache-tags'
+
+const revalidation = createTagRevalidationHooks({ cacheTags })
+
+const Pages: CollectionConfig = {
+  slug: 'pages',
+  hooks: {
+    // Navigation links to pages and caches their slugs, so a page change drops it too.
+    afterChange: [
+      revalidation.afterCollectionChange({
+        tags: (t, slug) => [t.collection(slug), t.global('navigation')],
+      }),
+    ],
+    afterDelete: [revalidation.afterCollectionDelete()],
+  },
+  // ...
+}
+
+const Media: CollectionConfig = {
+  slug: 'media',
+  upload: true,
+  hooks: {
+    // An upload cannot be referenced by anything cached yet.
+    afterChange: [revalidation.afterCollectionChange({ operations: ['update'] })],
+    afterDelete: [revalidation.afterCollectionDelete()],
+  },
+  // ...
+}
+
+const Navigation: GlobalConfig = {
+  slug: 'navigation',
+  hooks: { afterChange: [revalidation.afterGlobalChange()] },
+  // ...
+}
+```
+
+What they do:
+
+- **Drop tags, not paths.** Each hook calls `revalidateTag(tag, { expire: 0 })`, the immediate expiry Next 16 requires a profile for. Paths are the workflow's job. A collection hook defaults to `cacheTags.collection(slug)`, a global hook to `cacheTags.global(slug)`; `tags` replaces that list.
+- **Skip draft writes.** On `update`, a collection hook asks publishing's `isDraftWrite`, so a draft save or an autosave tick drops nothing, while an unpublish still does. That answer is recorded by `publishingPlugin` for the collections it manages; on any other collection every write counts as visible, which is the safe direction. A `create` that lands as a draft is skipped too: nothing published existed a moment ago. Global hooks drop on every save.
+- **Never throw.** A throwing `afterChange` fails the editor's save over a cache miss. Outside a Next request — seeds, migrations, the Payload CLI under `tsx` — Next throws `static generation store missing`; there is no server to be stale, so that is logged at `debug`. Any other failure means the cache did not clear while a server was running, and is logged at `error` with the cause and the tag.
+- **Other frontends.** Pass `revalidateTag: (tag) => myCdn.purgeTag(tag)` to drop tags somewhere other than Next.
+
+These overlap with `createRevalidateOnPublishFunction` on a publish — both drop the collection tag — which is harmless: dropping a tag twice is dropping it once. Use the workflow for page paths and the sitemap, and the hooks for everything a publish event never announces.
+
+## Migrating from the built-in URL builders
+
+Before 0.5, `createRevalidateOnPublishFunction` guessed paths: `pages` → `/<slug>` (`home` → `/`), `posts` → `/blog/<slug>`, and any other collection → `/<slug>`. A site whose routes differed revalidated the wrong path without a word. `urlBuilders` is now required and has no built-in entries. A collection with no entry still has its tags dropped, but no path is revalidated and the run logs a warning.
+
+If you relied on the defaults, pass them explicitly — the same behaviour as before:
 
 ```typescript
 createRevalidateOnPublishFunction({
   inngest,
   payload,
+  urlBuilders: {
+    pages: (slug) => (slug === 'home' || slug === '' ? '/' : `/${slug}`),
+    posts: (slug) => `/blog/${slug}`,
+  },
+})
+```
+
+Then check them against your routes: if your posts are not under `/blog`, they never were being revalidated.
+
+## Non-Next.js frontends
+
+The default `revalidate` function dynamically imports `next/cache`, so the package installs and imports without Next. For other frameworks supply your own:
+
+```typescript
+createRevalidateOnPublishFunction({
+  inngest,
+  payload,
+  urlBuilders,
   revalidate: async ({ path, tags }) => {
     if (path) await myCdn.purge(path)
     for (const tag of tags) await myCdn.purgeTag(tag)
@@ -194,7 +307,8 @@ Each handler runs in its own `step.run`, so failures isolate.
 
 Every factory takes a typed options object. See `src/types.ts` for the full surface — defaults documented there:
 
-- `RevalidateOnPublishOptions` — `revalidate?`, `urlBuilders?`, `collectionTags?`, `id?`
+- `RevalidateOnPublishOptions` — `urlBuilders` (required), `cacheTags?`, `collectionTags?`, `revalidate?`, `id?`
+- `TagRevalidationOptions` — `cacheTags?`, `revalidateTag?`; per hook, `tags?` and (collection `afterChange`) `operations?`
 - `PublishAtScheduledTimeOptions` — `collections[]`, `publish`, `maxSleepMs?` (default six days), `id?`
 - `ExecuteScheduledPublishesOptions` — `collections[]`, `publish`, `schedule?` (default `*/5 * * * *`), `overdueByMs?` (default 0), `id?`
 - `ExpireStaleApprovalsOptions` — `collectionSlug?` (default `approvals`), `schedule?` (default `0 2 * * *`), `id?`
@@ -204,6 +318,6 @@ Every factory takes a typed options object. See `src/types.ts` for the full surf
 ## Related packages
 
 - `@forumone/throughline-core` — required peer; provides the audit writer the approval-expiration cron uses
-- `@forumone/throughline-publishing` — emits the publishing events the revalidation cron subscribes to
+- `@forumone/throughline-publishing` — emits the publishing events the revalidation workflow subscribes to, and provides the `isDraftWrite` predicate the tag hooks use (a dependency)
 - `@forumone/throughline-approvals` — owns the approvals collection the expiration cron reads
 - `@forumone/throughline-email` (C11) — will subscribe to `notification/send-approval-*`
