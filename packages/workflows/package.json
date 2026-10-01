@@ -1,7 +1,7 @@
 {
   "name": "@forumone/throughline-workflows",
   "version": "0.4.0",
-  "description": "Composable Inngest function factories for the Throughline framework — revalidation, scheduled publishing, approval expiration, audit fan-out, healthcheck.",
+  "description": "Composable Inngest function factories and Payload cache-revalidation hooks for the Throughline framework — revalidation, scheduled publishing, approval expiration, audit fan-out, healthcheck.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./cache-tags": {
+      "types": "./dist/cache-tags.d.ts",
+      "default": "./dist/cache-tags.js"
     }
   },
   "files": [
@@ -54,7 +58,8 @@
     }
   },
   "dependencies": {
-    "@forumone/throughline-core": "workspace:*"
+    "@forumone/throughline-core": "workspace:*",
+    "@forumone/throughline-publishing": "workspace:*"
   },
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",

@@ -106,6 +106,7 @@ publish pipeline rather than going through MCP.
 - One MCP endpoint at `/api/mcp`, Bearer-authenticated, carrying every plugin's tools
 - An Inngest endpoint at `/api/inngest` running revalidate, scheduled-publish, expire-approval, audit-echo, healthcheck, email, forms, and integration workers
 - An example `Pages` collection with the standard `policy` group attached
+- Cache revalidation named in one place: `apps/web/src/lib/cache-tags.ts` builds every Next cache tag, `Pages` drops its tag on every visible save and delete, and the publish workflow revalidates the paths `urlBuilders` gives it in the Inngest route. Add an entry there, and the hooks, for each collection you add
 - A `users` collection with a role/group taxonomy your approvers plugin can resolve against
 
 ## Next

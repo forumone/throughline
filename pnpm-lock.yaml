@@ -688,6 +688,9 @@ importers:
       '@forumone/throughline-core':
         specifier: workspace:*
         version: link:../core
+      '@forumone/throughline-publishing':
+        specifier: workspace:*
+        version: link:../publishing
     devDependencies:
       '@forumone/throughline-eslint-config':
         specifier: workspace:*

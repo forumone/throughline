@@ -1,5 +1,6 @@
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
+import type { CacheTags } from './cache-tags.js'
 
 /**
  * Common dependencies for workflow factories. Every factory takes an
@@ -123,15 +124,30 @@ export interface RevalidateOnPublishOptions extends BaseWorkflowOptions {
    */
   revalidate?: RevalidateFn
   /**
-   * Per-collection URL builders. Built-in defaults: pages → /slug
-   * (with `home` mapped to `/`), posts → /blog/slug. Other collections
-   * fall back to /<slug> unless you provide a builder.
+   * Per-collection URL builders: where a document of each collection is
+   * served, given its slug. Required, and there are no built-in entries —
+   * only the site knows its routes. A collection with no entry has its tags
+   * dropped and no path revalidated, and the run logs a warning.
+   *
+   * ```ts
+   * urlBuilders: {
+   *   pages: (slug) => (slug === 'home' ? '/' : `/${slug}`),
+   *   posts: (slug) => `/news/${slug}`,
+   * }
+   * ```
    */
-  urlBuilders?: Record<string, (slug: string) => string>
+  urlBuilders: Record<string, (slug: string) => string>
   /**
-   * Per-collection cache tags. Defaults to `[<collection>]`. Multiple tags
-   * supported for collections that participate in shared listings (e.g.
-   * `programs` → `['programs', 'sitemap']`).
+   * The tag scheme, shared with readers and with
+   * `createTagRevalidationHooks`. A collection with no `collectionTags` entry
+   * drops `[cacheTags.collection(<collection>)]`. Default: `defaultCacheTags`,
+   * whose collection tag is the bare slug.
+   */
+  cacheTags?: CacheTags
+  /**
+   * Per-collection cache tags, overriding the scheme for that collection.
+   * Multiple tags supported for collections that participate in shared
+   * listings (e.g. `programs` → `['programs', 'sitemap']`).
    */
   collectionTags?: Record<string, string[]>
   /**

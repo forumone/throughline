@@ -33,6 +33,7 @@ export interface FakeInngest {
   invoke: (
     fnId: string,
     event: { name: string; data: unknown; ts?: number },
+    logger?: Partial<HandlerCtx['logger']>,
   ) => Promise<unknown>
 }
 
@@ -60,7 +61,7 @@ export function createFakeInngest(): FakeInngest {
     functions,
     sends,
     sleeps,
-    invoke: async (fnId, event) => {
+    invoke: async (fnId, event, logger) => {
       const fn = functions.find((f) => f.id === fnId)
       if (!fn) throw new Error(`Function "${fnId}" not registered`)
       const ctx: HandlerCtx = {
@@ -74,7 +75,7 @@ export function createFakeInngest(): FakeInngest {
             sends.push(sent)
           },
         },
-        logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+        logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {}, ...logger },
       }
       return fn.handler(ctx)
     },

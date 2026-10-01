@@ -32,9 +32,9 @@ Throughline doesn't gate which choice you make. The publish event is the integra
 
 **Why deferred**: Next.js handles HTTP caching; Inngest handles work caching. Beyond that, "cache layer" usually means something specific to your traffic shape (hot pages, expensive computations) and the framework can't predict it.
 
-**Path forward**: the Workflows package ships `createRevalidateOnPublishFunction` which calls `revalidatePath` on publish. That handles Next.js's data cache. For more:
+**Path forward**: the Workflows package ships `createRevalidateOnPublishFunction`, which revalidates page paths and cache tags on publish, and `createTagRevalidationHooks`, which drops cache tags when a global, a non-publish save or a delete changes what a cached read returns. Both name their tags through `createCacheTags`, the same scheme your readers use. For more:
 
-- **Component output cache**: wrap expensive renderers in `unstable_cache`
+- **Component output cache**: wrap expensive renderers in `unstable_cache`, tagged from your `createCacheTags` scheme
 - **External data cache**: Redis or Cloudflare Workers KV in front of expensive third-party API calls
 - **CDN cache**: configure cache headers on your platform; the framework doesn't gate
 

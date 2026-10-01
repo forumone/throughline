@@ -1,16 +1,23 @@
 import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
+import { defaultCacheTags } from './cache-tags.js'
+import { IMMEDIATE, loadNextCache } from './next-revalidate.js'
 import type { RevalidateFn, RevalidateOnPublishOptions, RevalidatePathsInput } from './types.js'
-
-const DEFAULT_URL_BUILDERS: Record<string, (slug: string) => string> = {
-  pages: (slug) => (slug === 'home' || slug === '' ? '/' : `/${slug}`),
-  posts: (slug) => `/blog/${slug}`,
-}
 
 /**
  * Builds the `revalidate-on-publish` Inngest function. Subscribes to the
  * publishing taxonomy and revalidates Next.js cache entries for the affected
  * page, the listing routes, and the sitemap.
+ *
+ * The page path comes from `options.urlBuilders`, which is required: only the
+ * site knows where a collection's documents are served. A collection with no
+ * builder gets its tags dropped and no path revalidated, with a warning —
+ * there used to be built-in builders (`pages` → `/<slug>`, `posts` →
+ * `/blog/<slug>`, anything else → `/<slug>`), and a site whose routes differed
+ * revalidated the wrong path without a word.
+ *
+ * Tags default to `cacheTags.collection(<collection>)`. Pass the same
+ * `cacheTags` your readers and your tag hooks use.
  *
  * The default revalidate function dynamically imports `next/cache`, so the
  * package is safe to install in non-Next.js contexts. Pass `options.revalidate`
@@ -19,7 +26,8 @@ const DEFAULT_URL_BUILDERS: Record<string, (slug: string) => string> = {
 export function createRevalidateOnPublishFunction(
   options: RevalidateOnPublishOptions,
 ): InngestFunction.Any {
-  const urlBuilders = { ...DEFAULT_URL_BUILDERS, ...options.urlBuilders }
+  const urlBuilders = options.urlBuilders
+  const cacheTags = options.cacheTags ?? defaultCacheTags
   const collectionTags = options.collectionTags ?? {}
   const revalidate = options.revalidate ?? defaultRevalidate
 
@@ -43,10 +51,17 @@ export function createRevalidateOnPublishFunction(
       const data = (event.data ?? {}) as { collection?: string; slug?: string; id?: string }
       const collection = data.collection ?? 'pages'
       const slug = data.slug ?? data.id ?? ''
-      const tags = collectionTags[collection] ?? [collection]
+      const tags = collectionTags[collection] ?? [cacheTags.collection(collection)]
 
       await step.run('revalidate-page-path', async () => {
-        const builder = urlBuilders[collection] ?? ((s: string) => `/${s}`)
+        const builder = Object.hasOwn(urlBuilders, collection) ? urlBuilders[collection] : undefined
+        if (!builder) {
+          logger.warn(
+            'No urlBuilders entry for this collection, so no page path was revalidated. Add one to createRevalidateOnPublishFunction.',
+            { collection, slug },
+          )
+          return
+        }
         const path = builder(slug)
         await revalidate({ path, tags })
         logger.info('Revalidated page path', { path, tags })
@@ -66,34 +81,13 @@ export function createRevalidateOnPublishFunction(
 }
 
 /**
- * How stale a caller may find a tag after this runs: not at all.
- *
- * Next 16 made `revalidateTag`'s second argument required — it is a cache-life
- * profile — and one-argument calls log a deprecation warning on every publish.
- * `{ expire: 0 }` is the immediate expiry the one-argument form used to mean,
- * and it is what an editor pressing Publish expects.
- *
- * Passed unconditionally rather than behind a version check. The peer range is
- * `next >= 15`, and Next 15's `revalidateTag` takes one parameter and ignores a
- * second, so the two-argument call is correct on both.
- *
- * `updateTag`, which Next offers as the other way out of the deprecation, is
- * not usable here: it throws outside a Server Action, and this runs in an
- * Inngest step behind a route handler.
- */
-const IMMEDIATE = { expire: 0 }
-
-/**
  * Default revalidator: dynamic-imports `next/cache` so the package can be
  * imported in environments without Next.js (e.g. test runners that don't
  * stub the module). Calls `revalidatePath` only when `path` is non-empty
  * because `revalidatePath('')` triggers a noisy Next.js warning.
  */
 const defaultRevalidate: RevalidateFn = async ({ path, tags }: RevalidatePathsInput) => {
-  const { revalidatePath, revalidateTag } = (await import('next/cache')) as {
-    revalidatePath: (path: string) => void
-    revalidateTag: (tag: string, profile: string | { expire: number }) => void
-  }
+  const { revalidatePath, revalidateTag } = await loadNextCache()
   if (path) revalidatePath(path)
   for (const tag of tags) revalidateTag(tag, IMMEDIATE)
 }

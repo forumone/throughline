@@ -4,13 +4,15 @@ Inngest function factories for the framework. Five functions: revalidate-on-publ
 
 This package is *not* a Payload plugin. It's a library of function factories. Wire them in your `apps/web/src/app/api/inngest/route.ts`.
 
+It also ships the Payload hooks that drop Next cache tags when a collection or global changes (`createTagRevalidationHooks`), and the tag scheme they share with your cached reads (`createCacheTags`). You attach those to collections and globals in `payload.config.ts`.
+
 ## Install
 
 ```bash
 pnpm add @forumone/throughline-workflows
 ```
 
-Peer dependencies: `inngest@^4.0.0`, `payload@^3.0.0`. Depends on `@forumone/throughline-core`.
+Peer dependencies: `inngest@^4.0.0`, `payload@^3.0.0`, and optionally `next@>=15` for the default revalidators. Depends on `@forumone/throughline-core` and `@forumone/throughline-publishing` (for `isDraftWrite`).
 
 ## Public API
 
@@ -23,13 +25,27 @@ import {
   createHealthcheckFunction,
   createPayloadReachableCheck,
   createManifestReachableCheck,
+  createTagRevalidationHooks,
+  createCacheTags,
+  defaultCacheTags,
 } from '@forumone/throughline-workflows'
+
+// Dependency-free, for frontend code:
+import { createCacheTags } from '@forumone/throughline-workflows/cache-tags'
 
 import type {
   BaseWorkflowOptions,
   RevalidateFn,
   RevalidatePathsInput,
   RevalidateOnPublishOptions,
+  CacheTags,
+  CacheTagScheme,
+  TagRevalidationOptions,
+  TagRevalidationHooks,
+  CollectionTagHookOptions,
+  GlobalTagHookOptions,
+  TagSelector,
+  RevalidateTagFn,
   ScheduledCollectionConfig,
   ExecuteScheduledPublishesOptions,
   ExpireStaleApprovalsOptions,
@@ -46,38 +62,69 @@ import type {
 
 ### `createRevalidateOnPublishFunction(options)`
 
-Subscribes to `content/page.published` and `content/page.unpublished`. Calls `revalidatePath(...)` for each affected document so Next.js rebuilds the relevant pages.
-
-```typescript
-createRevalidateOnPublishFunction({
-  inngest,
-  payload,                                   // for cross-document lookups
-  revalidate?: (paths: string[]) => Promise<void>,    // default: imports from 'next/cache'
-  buildPaths?: (event) => string[] | undefined,        // override path computation per collection
-})
-```
-
-Default path builders:
-
-- `pages` collection: `home` slug → `/`; otherwise `/${slug}`
-- `posts` collection: `/blog/${slug}`
-
-Override via `buildPaths`:
+Subscribes to `content/page.published`, `content/page.unpublished` and `content/page.rolled_back`. For each event it revalidates the document's page path, drops the collection's cache tags, and revalidates `/sitemap.xml`.
 
 ```typescript
 createRevalidateOnPublishFunction({
   inngest,
   payload,
-  buildPaths: (event) => {
-    if (event.data.collection === 'programs') {
-      return [`/programs/${event.data.doc.slug}`, '/programs']
-    }
-    return undefined  // fall back to default
-  },
+  urlBuilders: Record<string, (slug: string) => string>,  // required; no built-in entries
+  cacheTags?: CacheTags,                  // default: defaultCacheTags
+  collectionTags?: Record<string, string[]>, // per-collection override of the scheme
+  revalidate?: ({ path, tags }) => Promise<void>, // default: next/cache, loaded on first use
+  id?: string,                            // default: 'revalidate-on-publish'
 })
 ```
 
+`urlBuilders` says where each collection's documents are served:
+
+```typescript
+urlBuilders: {
+  pages: (slug) => (slug === 'home' ? '/' : `/${slug}`),
+  programs: (slug) => `/programs/${slug}`,
+}
+```
+
+A collection with no entry has its tags dropped and no path revalidated, and the run logs a warning. Nothing is guessed: up to 0.4 there were built-in builders (`pages` → `/<slug>`, `posts` → `/blog/<slug>`, anything else → `/<slug>`), and a site whose routes differed revalidated the wrong path silently. To keep the old behaviour, pass those two entries explicitly — see the package README's migration note.
+
+Tags default to `[cacheTags.collection(collection)]` — the bare slug under the default scheme.
+
 In non-Next.js environments, override `revalidate` with your own cache-flushing function.
+
+### `createCacheTags(scheme?)`
+
+The one place tag strings are built. Pass the result to the hooks, to `createRevalidateOnPublishFunction`, and to every cached read (`unstable_cache` tags, `cacheTag()`, `fetch` `next.tags`), so writers and readers cannot name different tags.
+
+```typescript
+const cacheTags = createCacheTags({
+  collection?: (slug) => string,   // default: slug
+  global?: (slug) => string,       // default: `global_${slug}`
+})
+cacheTags.collection('pages')      // 'pages'
+cacheTags.global('navigation')     // 'global_navigation'
+```
+
+Also exported from `@forumone/throughline-workflows/cache-tags`, which imports nothing.
+
+### `createTagRevalidationHooks(options?)`
+
+Payload hooks that drop cache tags when content changes — including the changes no publishing event announces: globals, non-publish saves, deletes, and collections an integration writes.
+
+```typescript
+const revalidation = createTagRevalidationHooks({
+  cacheTags?: CacheTags,                    // default: defaultCacheTags
+  revalidateTag?: (tag) => void | Promise<void>, // default: next/cache revalidateTag(tag, { expire: 0 })
+})
+
+revalidation.afterCollectionChange({ tags?, operations? }) // CollectionAfterChangeHook
+revalidation.afterCollectionDelete({ tags? })              // CollectionAfterDeleteHook
+revalidation.afterGlobalChange({ tags? })                  // GlobalAfterChangeHook
+```
+
+- `tags: (cacheTags, slug) => string[]` replaces the default (`cacheTags.collection(slug)` or `cacheTags.global(slug)`), e.g. to drop a navigation global when a page it links to changes.
+- `operations` limits which `afterChange` operations drop; `['update']` suits an upload collection.
+- Collection `afterChange` skips draft writes (autosave included) using publishing's `isDraftWrite`, and skips a document created as a draft. An unpublish still drops.
+- A hook never throws. Outside a Next request (seeds, migrations, the CLI) the failure is logged at `debug`; any other failure at `error`, with the tag and the cause.
 
 ### `createExecuteScheduledPublishesFunction(options)`
 

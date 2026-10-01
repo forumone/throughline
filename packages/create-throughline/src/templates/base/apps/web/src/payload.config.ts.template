@@ -21,6 +21,8 @@ import { auditQueryPlugin } from '@forumone/throughline-audit'
 import { integrationsPlugin } from '@forumone/throughline-integrations'
 import { emailPlugin } from '@forumone/throughline-email'
 import { formsPlugin } from '@forumone/throughline-forms'
+import { createTagRevalidationHooks } from '@forumone/throughline-workflows'
+import { cacheTags } from './lib/cache-tags'
 import { databaseConnectionString } from './lib/database'
 {{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-contract'
 import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
@@ -39,6 +41,14 @@ Hand over `mcpTools.tools` itself — a spread or `.slice()` would hand over
 something nobody fills.
 */
 const mcpTools = createMcpToolCollector()
+
+/*
+Drops a Next cache tag when content changes, named by the same scheme your
+cached reads use (see lib/cache-tags.ts). Give every collection and global that
+a cached read renders a pair of these: afterChange and afterDelete on a
+collection, afterChange on a global. Draft saves and autosave drop nothing.
+*/
+const revalidation = createTagRevalidationHooks({ cacheTags })
 
 // A person in `users` with the admin role. `req.user` can also be an MCP key
 // document, which has no roles and is never an admin, so the collection is
@@ -78,6 +88,10 @@ const Pages: CollectionConfig = {
   slug: 'pages',
   admin: { useAsTitle: 'title' },
   versions: { drafts: true },
+  hooks: {
+    afterChange: [revalidation.afterCollectionChange()],
+    afterDelete: [revalidation.afterCollectionDelete()],
+  },
   fields: [
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true },
