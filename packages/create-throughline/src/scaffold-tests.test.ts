@@ -103,6 +103,7 @@ for (const useReferenceDs of [true, false]) {
           'form-submissions',
           'forms',
           'integrations',
+          'job-failures',
           'pages',
           'payload-kv',
           'payload-locked-documents',

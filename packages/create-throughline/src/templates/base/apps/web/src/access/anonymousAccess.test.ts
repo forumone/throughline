@@ -27,6 +27,7 @@ describeAnonymousAccess(config, {
     approvals: 'who signed off on what',
     'form-submissions': 'what readers typed into a form',
     integrations: 'connection settings and sync state',
+    'job-failures': 'background jobs that ran out of retries, with their errors',
     'payload-kv': 'the key-value store Payload keeps',
     'payload-locked-documents': 'who is editing what',
     'payload-preferences': 'admin UI state',
