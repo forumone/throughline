@@ -1,5 +1,45 @@
 # @forumone/create-throughline
 
+## 0.4.0
+
+### Minor Changes
+
+- 8b7d698: A scaffolded project ships a two-tier CI workflow:
+
+  - `fast` runs on every pull request with no database. It installs from the lockfile, then runs typecheck, lint, the workspace and migration gates, manifest validation, a generated-files check and tests, with a non-blocking audit.
+  - `verify` runs on pushes to main. It migrates a fresh Postgres and runs a production build.
+
+  `check-generated.sh` regenerates `payload-types.ts` and the admin import map and fails on any difference, including an uncommitted file. `apps/web` gains `generate:types` and `generate:importmap`.
+
+- 8b7d698: A scaffolded project manages its schema through migrations from the first table on:
+
+  - **Config.** `payload.config.ts` sets `push: false` and an explicit `migrationDir`. It connects through a resolver that knows the Vercel–Neon integration's variables, keeps a migration off Neon's pooled endpoint, and accepts an optional migration-only credential.
+  - **Scripts.** `apps/web` gains `migrate`, `migrate:create`, `migrate:status`, `migrate:snapshot` and `check:migrations`. The check asserts that every migration has its schema snapshot, that no snapshot is orphaned, and that no drop follows a `CASCADE` that has already carried it out.
+  - **Write guard.** `scripts/lib/target.ts` gives scripts that write to a database a `requireTarget` guard.
+
+- 8b7d698: A scaffolded project ships three workspace gates as root scripts:
+
+  - `check:instances`: `payload`, `@payloadcms/ui`, `react` and `react-dom` each resolve to exactly one copy
+  - `check:tested`: every package that ships code has at least one test
+  - `check:audit`: production advisories are checked against an allowlist that carries a reason for each entry and fails when an entry goes stale
+
+### Patch Changes
+
+- e9077b3: The reference design system's manifest build and validation, which every scaffolded project vendors, now:
+
+  - refuse a component directory with no contract, instead of silently leaving it out of the manifest
+  - read the directories that hold components from a `CONTRACT_LAYERS` list
+  - name the manifest from the project's own `package.json`, instead of claiming to be `@forumone/throughline-reference-ds`
+  - treat `antiExamples.empty` and `intent.brevity` as errors
+
+- 6800052: The scaffold compiles against the current Throughline releases, and serves its tools over MCP:
+
+  - `payload.config.ts` no longer imports `createApiKeysCollection`, which core removed.
+  - One `createMcpToolCollector()` is passed to every tool-bearing plugin, and `@payloadcms/plugin-mcp` is registered after them, with its key collection narrowed to admins.
+  - The Inngest route types the integration registry, so `serve()` can type its function list.
+  - `@payloadcms/plugin-form-builder` is a caret range like the rest of `@payloadcms/*`, so it no longer installs a second `@payloadcms/ui`.
+  - `.env.example` and the printed next steps drop the per-server MCP keys that no longer exist.
+
 ## 0.3.1
 
 ### Patch Changes
