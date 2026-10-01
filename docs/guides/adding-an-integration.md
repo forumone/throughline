@@ -168,6 +168,22 @@ Notice:
 - `concurrency: { limit: 5 }` — protects PageStore from concurrent floods.
 - The function fires for every published page; subscribers filter their own work, the framework doesn't gate.
 
+### Reporting how the run went
+
+The example above leaves out the instance's status fields. A real worker reports each run with `ctx.updateStatus`, and the admin shows the result as Last Sync Status and Last Error:
+
+```typescript
+import { statusFromProblems } from '@forumone/throughline-integrations'
+
+// One line for each record this run left undone.
+const problems: string[] = []
+// ... push `page ${slug}: ${reason}` as records fail ...
+
+await ctx.updateStatus(instance.id, ...statusFromProblems(problems))
+```
+
+`statusFromProblems` returns `success` when the list is empty and `partial` with a capped summary otherwise. For a run that failed outright, pass the reason yourself: `ctx.updateStatus(instance.id, 'failed', message)`. A `partial` or `failed` status without a message does not typecheck, and only `success` clears Last Error.
+
 ### 5. Compose the integration value
 
 ```typescript

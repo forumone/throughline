@@ -13,6 +13,17 @@ export type IntegrationCategory =
 
 export type IntegrationSyncStatus = 'success' | 'partial' | 'failed' | 'never-run'
 
+/**
+ * The status and message arguments of {@link IntegrationContext.updateStatus}.
+ *
+ * A run that was not clean has to say why: `partial` and `failed` carry a
+ * message, and `success` carries none. `never-run` is not here because a run
+ * that reports its status has run.
+ */
+export type IntegrationStatusUpdate =
+  | [status: 'success']
+  | [status: 'partial' | 'failed', error: string]
+
 export interface IntegrationConfigValidation {
   ok: boolean
   reason?: string
@@ -108,12 +119,20 @@ export interface IntegrationContext {
   loadInstances: <Config = Record<string, unknown>>(
     integrationId: string,
   ) => Promise<Array<IntegrationInstanceLoaded<Config>>>
-  /** Updates an instance's lastSyncAt / lastSyncStatus / lastError. */
-  updateStatus: (
-    instanceId: string,
-    status: IntegrationSyncStatus,
-    error?: string,
-  ) => Promise<void>
+  /**
+   * Records the outcome of a run on the instance: `lastSyncAt`,
+   * `lastSyncStatus`, and `lastError`.
+   *
+   * `success` takes no message and clears `lastError`. `partial` and `failed`
+   * require one, and it replaces `lastError`, so the admin always shows why
+   * the run was not clean. For a run with per-record failures, build the
+   * arguments from the list of failures with `statusFromProblems`:
+   *
+   * ```ts
+   * await ctx.updateStatus(instance.id, ...statusFromProblems(problems))
+   * ```
+   */
+  updateStatus: (instanceId: string, ...update: IntegrationStatusUpdate) => Promise<void>
   /** Writes an audit event. Thin wrapper over core's audit writer. */
   recordAudit: (event: IntegrationAuditEvent) => Promise<void>
 }

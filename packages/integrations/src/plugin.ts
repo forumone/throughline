@@ -5,6 +5,7 @@ import { type IntegrationsPluginOptions, validateOptions, DEFAULT_INTEGRATIONS_S
 import { IntegrationRegistry } from './registry.js'
 import { createIntegrationsCollection } from './collection.js'
 import { createSyncEndpoint } from './endpoints/sync.js'
+import { createStatusWriter } from './sync/status.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { IntegrationContext } from './types.js'
 import {
@@ -99,17 +100,7 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
               config: (doc['config'] ?? {}) as Config,
             }))
           },
-          async updateStatus(instanceId, status, error) {
-            await payload.update({
-              collection: collectionSlug,
-              id: instanceId,
-              data: {
-                lastSyncAt: new Date().toISOString(),
-                lastSyncStatus: status,
-                ...(error !== undefined ? { lastError: error } : { lastError: null }),
-              },
-            })
-          },
+          updateStatus: createStatusWriter(payload, collectionSlug),
           async recordAudit(event) {
             await auditWriter({
               actor: { type: 'system', apiKeyName: `integration:${event.integrationId}` },
