@@ -140,7 +140,7 @@ describe('the scaffold checks its environment at startup', () => {
     for (const pkg of Object.values(PLUGIN_LISTS)) {
       const source = await readFile(join(PACKAGES_DIR, pkg, 'src', 'options.ts'), 'utf-8')
       for (const { name, minLength } of declarationsIn(source)) {
-        expect(table, name).toMatch(new RegExp(`\\| \`${name}\` \\| ${minLength ?? '—'} \\|`))
+        expect(table, name).toMatch(new RegExp(`\\|\\s*\`${name}\`\\s*\\|\\s*${minLength ?? '—'}\\s*\\|`))
       }
     }
   })
