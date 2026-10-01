@@ -1,5 +1,6 @@
 import type { CollectionSlug, Field } from 'payload'
 import { formatLabels } from 'payload/shared'
+import { withAltFallback } from '../altText'
 import { fieldOverride, type Overrides } from '../overrides'
 import { labelFor, optionLabel, selectDescription } from './labels'
 import { arrange, oneLine, summaryFields } from './layout'
@@ -350,7 +351,8 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
       // authored content, so there is nothing to put in the CMS.
       if (!field.of || field.of.length === 0) return null
 
-      const children = childFields(field.of, ctx, path)
+      const of = withAltFallback(field.of)
+      const children = childFields(of, ctx, path)
 
       /*
       An optional group holds its children to a weaker promise than it looks.
@@ -374,7 +376,7 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
         name: field.name,
         type: 'group',
         ...admin,
-        validate: allOrNothing(field.of),
+        validate: allOrNothing(of),
         fields: relaxRequired(children),
       }
     }
@@ -385,8 +387,9 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
       }
       // A row is drawn on one line and named by its contents where it can be
       // — see the end of `./layout.ts`.
-      const generated = generateChildren(field.of, ctx, path)
-      const summary = summaryFields(field.of, generated)
+      const of = withAltFallback(field.of)
+      const generated = generateChildren(of, ctx, path)
+      const summary = summaryFields(of, generated)
       const rowLabel =
         summary.length > 0
           ? {
@@ -407,7 +410,7 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
         ...(description || summary.length > 0
           ? { admin: { ...(description ? { description } : {}), ...rowLabel } }
           : {}),
-        fields: oneLine(childFields(field.of, ctx, path, generated)),
+        fields: oneLine(childFields(of, ctx, path, generated)),
       }
     }
   }
