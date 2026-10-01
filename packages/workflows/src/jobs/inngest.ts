@@ -14,12 +14,15 @@ failure handler once, here, and every job gets it unless the job names its own,
 instead of threading `onTerminalFailure` into every factory.
 */
 import type { Inngest, InngestFunction } from 'inngest'
+import type { Payload } from 'payload'
 import type { WorkflowFailureHandler } from '../types.js'
 import type { Job, JobContext, JobEvent, JobIdempotency, JobLogger, JobsAdapter } from './types.js'
 
 export interface InngestJobsOptions {
   /** Every job's terminal-failure handler, unless the job declares its own. */
   onFailure?: WorkflowFailureHandler
+  /** Handed to every job as `context.payload`. */
+  payload?: Payload
 }
 
 export interface InngestJobsAdapter extends JobsAdapter {
@@ -77,7 +80,11 @@ export function jobEvents(job: Job): readonly string[] {
 }
 
 /** Inngest's handler arguments, as a job's context. */
-function toContext(args: InngestHandlerArgs, emit: JobContext['emit']): JobContext {
+function toContext(
+  args: InngestHandlerArgs,
+  emit: JobContext['emit'],
+  payload: Payload | undefined,
+): JobContext {
   return {
     event: {
       name: args.event.name,
@@ -96,6 +103,7 @@ function toContext(args: InngestHandlerArgs, emit: JobContext['emit']): JobConte
     runId: args.runId ?? 'unknown',
     logger: args.logger,
     emit,
+    ...(payload ? { payload } : {}),
   }
 }
 
@@ -120,7 +128,9 @@ export function inngestJobs(
         config: Record<string, unknown>,
         handler: (args: InngestHandlerArgs) => Promise<unknown>,
       ) => InngestFunction.Any
-    )(inngestFunctionConfig(job, options), (args) => job.handler(toContext(args, emit)))
+    )(inngestFunctionConfig(job, options), (args) =>
+      job.handler(toContext(args, emit, options.payload)),
+    )
 
   return {
     runner: 'inngest',

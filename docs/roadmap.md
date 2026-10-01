@@ -424,7 +424,9 @@ Gate: the workflow tests pass against both adapters, the playground runs on Payl
 - [x] Move failure handling (the `job-failures` writer, error reporting) into the adapter layer: both adapters take one `onFailure` for every job, and `createTerminalFailureHandler` serves either (#211, #213)
 - [ ] Port every workflow and plugin job to `defineJob`; run the workflow tests against both adapters
     - [x] The six workflows in `@forumone/throughline-workflows` (#214)
-    - [ ] email (three approval notifications), integrations (the webhook), forms (four)
+    - [x] email: the three approval notifications, plus `emailJobs()` and an optional `inngest` (#215)
+    - [ ] integrations: the webhook, through a jobs method on the `Integration` contract
+    - [x] ~~forms~~ Won't do: forms is not in 1.0 (decision 4)
 - [ ] Playground runs on `payloadJobs`
 - [ ] Measure "publishes on the minute" under `payloadJobs`, and record the result in the spec (it settles decision 3)
 - [ ] Release as 0.x

@@ -36,8 +36,9 @@ describe('validateOptions', () => {
     expect(result.env.replyTo).toBeUndefined()
   })
 
-  it('throws when inngest is missing', () => {
-    expect(() => validateOptions({ ...baseOptions, inngest: undefined as unknown as Inngest })).toThrow(/Inngest client/)
+  it('accepts no inngest, for a site that runs the notifications as jobs', () => {
+    const { inngest: _inngest, ...withoutInngest } = baseOptions
+    expect(() => validateOptions(withoutInngest)).not.toThrow()
   })
 
   it('reads the api key from RESEND_API_KEY when not provided', () => {

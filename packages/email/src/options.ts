@@ -17,8 +17,12 @@ export interface BuildActionUrlArgs {
 }
 
 export interface EmailPluginOptions extends BaseCorePluginOptions {
-  /** Inngest client used to register the three notification functions. */
-  inngest: Inngest
+  /**
+   * Inngest client used to register the three notification functions. Omit it
+   * on a site that runs jobs on Payload Jobs: pass `emailJobs(options)` to its
+   * jobs adapter instead.
+   */
+  inngest?: Inngest
   /** Resend API key. Falls back to `process.env.RESEND_API_KEY`. */
   apiKey?: string
   /** From address (e.g. `notifications@example.com`). Falls back to `EMAIL_FROM_ADDRESS`. */
@@ -104,9 +108,6 @@ export function validateOptions(options: EmailPluginOptions): {
   env: ResolvedEmailEnv
   brandName: string
 } {
-  if (!options.inngest) {
-    throw new Error('emailPlugin requires an Inngest client (`options.inngest`).')
-  }
   // The backstop for a site that does not call `assertEnvironment`, driven by
   // the same declarations it would have passed.
   const apiKey = options.apiKey ?? process.env[API_KEY_ENV.name]

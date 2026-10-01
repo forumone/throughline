@@ -1,4 +1,5 @@
 import type { Inngest, InngestFunction } from 'inngest'
+import { defineJob, inngestJobs, type Job, type JobContext } from '@forumone/throughline-workflows'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'
@@ -38,16 +39,24 @@ const SUBJECT_BY_DECISION: Record<ApprovalDecisionKind, (title: string) => strin
  * action travels with the event so we render the right variant without
  * re-checking the approval's status.
  */
-export function createNotifyApprovalDecisionFunction(
-  deps: NotifyApprovalDecisionDeps,
-): InngestFunction.Any {
-  return deps.inngest.createFunction(
-    {
-      id: deps.id ?? 'notify-approval-decision',
-      retries: 3,
-      triggers: [{ event: 'notification/send-approval-decision' }],
-    },
-    async ({ event, step, logger }) => {
+/** What the job needs at run time: the deps, less the Inngest client and id. */
+export type NotifyApprovalDecisionJobDeps = Omit<NotifyApprovalDecisionDeps, 'inngest' | 'id'>
+
+/**
+ * The same notification as a runner-neutral job. `resolve` supplies its
+ * dependencies when it runs: the factory below passes the ones it was built
+ * with, and `emailJobs` reads them from `context.payload`, for a runner
+ * whose jobs are declared before Payload exists.
+ */
+export function notifyApprovalDecisionJob(
+  resolve: (context: JobContext) => NotifyApprovalDecisionJobDeps,
+  id = 'notify-approval-decision',
+): Job {
+  return defineJob(
+    { id, retries: 3, on: { event: 'notification/send-approval-decision' } },
+    async (context) => {
+      const { event, step, logger } = context
+      const deps = resolve(context)
       const data = (event.data ?? {}) as { approvalId?: string; decision?: string }
       const approvalId = data.approvalId
       const decisionAction = data.decision ?? ''
@@ -113,4 +122,8 @@ export function createNotifyApprovalDecisionFunction(
       return { approvalId, decision, sent: 1 }
     },
   )
+}
+
+export function createNotifyApprovalDecisionFunction(deps: NotifyApprovalDecisionDeps): InngestFunction.Any {
+  return inngestJobs(deps.inngest).toFunction(notifyApprovalDecisionJob(() => deps, deps.id))
 }

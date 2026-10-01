@@ -368,6 +368,9 @@ importers:
       '@forumone/throughline-plugin-contract':
         specifier: workspace:*
         version: link:../plugin-contract
+      '@forumone/throughline-workflows':
+        specifier: workspace:*
+        version: link:../workflows
       '@react-email/components':
         specifier: ^0.5.4
         version: 0.5.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

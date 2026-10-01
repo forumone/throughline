@@ -1,4 +1,5 @@
 import type { Inngest, InngestFunction } from 'inngest'
+import { defineJob, inngestJobs, type Job, type JobContext } from '@forumone/throughline-workflows'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'
@@ -21,16 +22,24 @@ export interface NotifyApprovalExpiredDeps {
  * cron). Notifies the original requester so they can decide whether to
  * re-request approval or drop the change.
  */
-export function createNotifyApprovalExpiredFunction(
-  deps: NotifyApprovalExpiredDeps,
-): InngestFunction.Any {
-  return deps.inngest.createFunction(
-    {
-      id: deps.id ?? 'notify-approval-expired',
-      retries: 3,
-      triggers: [{ event: 'approval/expired' }],
-    },
-    async ({ event, step, logger }) => {
+/** What the job needs at run time: the deps, less the Inngest client and id. */
+export type NotifyApprovalExpiredJobDeps = Omit<NotifyApprovalExpiredDeps, 'inngest' | 'id'>
+
+/**
+ * The same notification as a runner-neutral job. `resolve` supplies its
+ * dependencies when it runs: the factory below passes the ones it was built
+ * with, and `emailJobs` reads them from `context.payload`, for a runner
+ * whose jobs are declared before Payload exists.
+ */
+export function notifyApprovalExpiredJob(
+  resolve: (context: JobContext) => NotifyApprovalExpiredJobDeps,
+  id = 'notify-approval-expired',
+): Job {
+  return defineJob(
+    { id, retries: 3, on: { event: 'approval/expired' } },
+    async (context) => {
+      const { event, step, logger } = context
+      const deps = resolve(context)
       const data = (event.data ?? {}) as { approvalId?: string; requesterId?: string | null }
       const approvalId = data.approvalId
       if (!approvalId) return { skipped: true, reason: 'no-approvalId' }
@@ -81,4 +90,8 @@ export function createNotifyApprovalExpiredFunction(
       return { approvalId, sent: 1 }
     },
   )
+}
+
+export function createNotifyApprovalExpiredFunction(deps: NotifyApprovalExpiredDeps): InngestFunction.Any {
+  return inngestJobs(deps.inngest).toFunction(notifyApprovalExpiredJob(() => deps, deps.id))
 }
