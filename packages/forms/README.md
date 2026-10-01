@@ -115,6 +115,10 @@ Consent is enforced server-side. A request to `/api/forms/submit` with `consent:
 - **Honeypot** — every rendered form should include a visually hidden field (use `position: absolute; left: -10000px`, **not** `display: none`). The submit endpoint silently 200s when the honeypot has a value, so bots don't pivot on a 4xx.
 - **Rate limit** — Postgres-counted, per (form, IP-hash) per hour. Default 5; per-form override via `policy.spamProtection.rateLimit`. Phase-2 deployments with high-traffic forms can swap in a Redis-backed limiter (the rate-limit module is intentionally a single function call).
 
+## Environment
+
+`formsEnv` declares what the plugin reads from the environment and refuses to start without — `FORMS_IP_HASH_SECRET`, 32+ characters, used when `ipHashSecret` is omitted. Pass it to `assertEnvironment` from `@forumone/throughline-core` at the top of `payload.config.ts` so it is reported together with every other missing variable. The plugin's own init check reads the same declaration.
+
 ## Options reference
 
 | Option | Default | Notes |

@@ -145,6 +145,51 @@ export function validateOptions(options: MyPluginOptions): MyPluginOptions {
 
 Options types exported from `src/index.ts` should be the Zod-inferred type so client apps and the validator can never drift.
 
+## Environment variables
+
+If your plugin falls back to `process.env` for something it cannot start without — a secret, an API key — declare it as data, export the list next to the plugin, and drive your own init check from the same entries.
+
+```typescript
+// options.ts
+import { checkEnvValue } from '@forumone/throughline-core'
+import type { EnvRequirement } from '@forumone/throughline-plugin-contract'
+
+const SIGNING_SECRET_ENV = {
+  name: 'MY_PLUGIN_SIGNING_SECRET',
+  minLength: 32,
+  why: 'Signs my-plugin webhooks; myPlugin will not start without it. Generate with `openssl rand -base64 48`.',
+} as const satisfies EnvRequirement
+
+/** What myPlugin reads from the environment and refuses to start without. */
+export const myPluginEnv: readonly EnvRequirement[] = [SIGNING_SECRET_ENV]
+
+export function validateOptions(options: MyPluginOptions) {
+  // …
+  const secret = options.signingSecret ?? process.env[SIGNING_SECRET_ENV.name]
+  if (secret === undefined || checkEnvValue(SIGNING_SECRET_ENV, secret)) {
+    throw new Error(
+      `myPlugin requires options.signingSecret or the ${SIGNING_SECRET_ENV.name} env var (${SIGNING_SECRET_ENV.minLength}+ characters).`,
+    )
+  }
+}
+```
+
+```typescript
+// index.ts
+export { myPlugin } from './plugin.js'
+export { myPluginEnv } from './options.js'
+```
+
+The conventions:
+
+- **Name the list after the plugin**: `myPlugin` exports `myPluginEnv`, as `approvalsPlugin` exports `approvalsEnv`. That is how a site finds it.
+- **Declare only what the plugin refuses to start without.** A variable with a sensible default, or one only read on first use, is not a requirement — the site decides whether its own deployment needs it.
+- **Write `why` for the person fixing a deploy**: what the value is for and how to get one. It is printed beside the name. Never a value, or anything derived from one.
+- **Keep the init check.** It is the backstop for a site that does not call `assertEnvironment`, and because it reads the same entry, the two cannot disagree.
+- **Test that they agree.** With only the declared variables set and no options, `validateOptions` passes; with any one unset, or one character under its `minLength`, it throws. See `packages/approvals/src/env.test.ts`.
+
+A site then passes your list to `assertEnvironment` from `@forumone/throughline-core` at the top of its `payload.config.ts`, with every other plugin's and its own, and gets every missing variable reported in one error. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
+
 ## MCP server endpoint
 
 Core plugins expose MCP servers as Next.js endpoints registered through Payload's `endpoints` config. This means client apps get the MCP endpoint automatically when they install the plugin — no manual route wiring.
@@ -179,6 +224,7 @@ Never import another core plugin package directly — go through the registry.
 Every plugin ships with unit tests (Vitest) covering:
 
 - Options validation — both happy path and meaningful error messages
+- The environment declaration, against what the init check enforces (see above)
 - Pure helper functions
 - Tool handlers invoked through their contract (not via HTTP)
 

@@ -18,6 +18,7 @@ Peer dependencies: `payload@^3.89.0`, `inngest@^4.0.0`. Depends on `@forumone/th
 ```typescript
 import {
   formsPlugin,
+  formsEnv,
   getFormsFunctions,
   validateOptions,
   listDestinations,
@@ -90,6 +91,10 @@ interface AllowedDestination {
 - Default privacy notice and rate limits filled in
 - `ipHashSecret` checked for length
 
+## `formsEnv`
+
+The environment `formsPlugin` refuses to start without when `ipHashSecret` is omitted: `FORMS_IP_HASH_SECRET`, at least 32 characters. Pass it to `assertEnvironment` from core so it is reported with everything else; the plugin's init check reads the same declaration. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
+
 ## Submit endpoint
 
 `POST /api/forms/<slug>/submit` is the public submission endpoint. The plugin registers it. The flow:
@@ -158,7 +163,7 @@ import { formsPlugin } from '@forumone/throughline-forms'
 
 formsPlugin({
   inngest,
-  ipHashSecret: process.env.FORMS_IP_HASH_SECRET!,
+  // ipHashSecret: falls back to FORMS_IP_HASH_SECRET (see formsEnv)
   allowedDestinations: [
     {
       type: 'email',

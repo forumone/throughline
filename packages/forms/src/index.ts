@@ -6,6 +6,7 @@ export {
   DEFAULT_PRIVACY_NOTICE,
   DEFAULT_RATE_LIMIT,
   MIN_IP_HASH_SECRET_LENGTH,
+  formsEnv,
   validateOptions,
 } from './options.js'
 export type {

@@ -10,13 +10,13 @@ Conversational approval workflow server for Throughline. Provides the resolver t
 - **HTTP action endpoint** at `/api/approvals/action` that handles email button clicks: verify token → confirmation page → record decision.
 - **Five MCP tools**, handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody:
 
-| Tool | Audit |
-|---|---|
-| `request_approval` | `approval.requested` |
-| `respond_to_approval` | `approval.granted` / `.declined` / `.changes_requested` |
-| `get_approval_status` | none (read-only) |
-| `list_pending_approvals` | none (read-only) |
-| `list_my_requests` | none (read-only) |
+| Tool                     | Audit                                                   |
+| ------------------------ | ------------------------------------------------------- |
+| `request_approval`       | `approval.requested`                                    |
+| `respond_to_approval`    | `approval.granted` / `.declined` / `.changes_requested` |
+| `get_approval_status`    | none (read-only)                                        |
+| `list_pending_approvals` | none (read-only)                                        |
+| `list_my_requests`       | none (read-only)                                        |
 
 ## Installation
 
@@ -72,6 +72,17 @@ export default buildConfig({
 
 The approvals collection sits in the admin sidebar's `Throughline` group by default. Pass `admin: { group: 'Workflow' }` to file it elsewhere, or `admin: { group: false }` to leave it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group).
 
+## Environment
+
+`approvalsEnv` declares what the plugin reads from the environment and refuses to start without — `APPROVAL_TOKEN_SECRET`, 32+ characters, used when `tokenSecret` is omitted. Pass it to `assertEnvironment` from `@forumone/throughline-core` at the top of `payload.config.ts` and a missing secret is reported together with every other missing variable, instead of as this plugin's own error at init. The init check still runs, driven by the same declaration.
+
+```ts
+import { assertEnvironment } from '@forumone/throughline-core'
+import { approvalsEnv } from '@forumone/throughline-approvals'
+
+assertEnvironment(approvalsEnv /*, every other plugin's list, and the site's own */)
+```
+
 ## Wiring with the publishing server
 
 The publishing server's `approvalStep` does not require an `approvalResolver` in its options. When approvalsPlugin is registered, it attaches the resolver to the Payload instance under `Symbol.for('@forumone/throughline/approvals-resolver')`, and publishing's approval step looks it up at publish time.
@@ -86,6 +97,7 @@ If you need a custom resolver (e.g. you store approvals in an external system), 
   This is what lets **autosave and approvals both be on**. The binding used to be `updatedAt`, which moves on every save: an editor fixing a typo while an approver read the request invalidated the approval, and autosave did that every couple of seconds. See the note under `documentContentHash` in `@forumone/throughline-core` for what counts as content — in short, everything except `id`, `createdAt`, `updatedAt`, `_status` and the other storage bookkeeping, at every level of the document.
 
   Both sides must load the document the same way for the hashes to agree; both use `payload.findByID({ collection, id, draft: true })`. A populated relationship and a bare relationship id are different values, so a caller hashing a document fetched at a different depth would match nothing.
+
 - **Action tokens are single-use, 14-day validity.** Once an approver clicks an action link, the token is appended to the request's `consumedTokens` array; reusing it returns an error.
 - **Self-approval is blocked.** The respond_to_approval tool refuses if the caller is the requester.
 - **Group resolution is configurable.** Clients define what "editorial" or "legal" means via the `groupResolver.resolveUsers` callback. Core does not hardcode group membership logic.

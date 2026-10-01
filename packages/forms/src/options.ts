@@ -1,8 +1,9 @@
-import type { McpToolCollector } from '@forumone/throughline-core'
+import { checkEnvValue, type McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
 import type {
   BaseCorePluginOptions,
   CollectionPluginOptions,
+  EnvRequirement,
 } from '@forumone/throughline-plugin-contract'
 
 export type DestinationType = 'email' | 'webhook'
@@ -81,6 +82,24 @@ export const DEFAULT_FORM_SUBMISSIONS_SLUG = 'form-submissions'
 export const DEFAULT_RATE_LIMIT = 5
 export const MIN_IP_HASH_SECRET_LENGTH = 32
 
+const IP_HASH_SECRET_ENV = {
+  name: 'FORMS_IP_HASH_SECRET',
+  minLength: MIN_IP_HASH_SECRET_LENGTH,
+  why:
+    'Keys the hash of submitter IPs used for rate limiting, so raw IPs are never stored; ' +
+    'formsPlugin will not start without it. Generate with `openssl rand -base64 48`.',
+} as const satisfies EnvRequirement
+
+/**
+ * What `formsPlugin` reads from the environment when the matching option is
+ * omitted, and refuses to start without. Hand it to `assertEnvironment` from
+ * `@forumone/throughline-core` so a site reports it with everything else.
+ *
+ * Leave it out if you pass `ipHashSecret` yourself from somewhere other than
+ * `FORMS_IP_HASH_SECRET`.
+ */
+export const formsEnv: readonly EnvRequirement[] = [IP_HASH_SECRET_ENV]
+
 export const DEFAULT_PRIVACY_NOTICE =
   'By submitting this form, the information you provide will be used to respond to your inquiry. ' +
   'We do not sell or share your information with third parties. See our privacy policy for details.'
@@ -140,10 +159,12 @@ export function validateOptions(options: FormsPluginOptions): ResolvedFormsConfi
     }
   }
 
-  const ipHashSecret = options.ipHashSecret ?? process.env['FORMS_IP_HASH_SECRET']
-  if (!ipHashSecret || ipHashSecret.length < MIN_IP_HASH_SECRET_LENGTH) {
+  // The backstop for a site that does not call `assertEnvironment`, driven by
+  // the same declaration it would have passed.
+  const ipHashSecret = options.ipHashSecret ?? process.env[IP_HASH_SECRET_ENV.name]
+  if (ipHashSecret === undefined || checkEnvValue(IP_HASH_SECRET_ENV, ipHashSecret)) {
     throw new Error(
-      `formsPlugin requires \`options.ipHashSecret\` or \`FORMS_IP_HASH_SECRET\` env var (>=${MIN_IP_HASH_SECRET_LENGTH} characters).`,
+      `formsPlugin requires \`options.ipHashSecret\` or \`${IP_HASH_SECRET_ENV.name}\` env var (>=${MIN_IP_HASH_SECRET_LENGTH} characters).`,
     )
   }
 

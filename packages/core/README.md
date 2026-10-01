@@ -9,6 +9,7 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 | Audit              | `./audit`  | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS`                                             |
 | Events             | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                                                               |
 | MCP                | `./mcp`    | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext`, `mcpApiKeyAccess`, `isSignedIn`, `signedIn`, `isMcpApiKeyPrincipal` |
+| Environment        | `./env`    | `assertEnvironment`, `checkEnvValue`, `EnvironmentError`                                                                                                        |
 | Logger             | (main)     | `defaultLogger`, `createNamedLogger`                                                                                                                            |
 | Utils              | (main)     | `documentContentHash`, `sha256Hex`, `formatZodIssues`                                                                                                           |
 | Payload CLI runner | bin        | `throughline-payload` — see [below](#running-the-payload-cli-throughline-payload)                                                                               |
@@ -183,6 +184,27 @@ declare module '@forumone/throughline-core/events' {
 ```
 
 After augmentation, `inngest.send({ name: 'approval/decided', data: { ... } })` is type-checked everywhere.
+
+## Checking the environment
+
+Each plugin that falls back to `process.env` exports what it needs as data — `approvalsEnv`, `emailEnv`, `formsEnv` — and checks the same entries at init. A site passes every list, plus its own variables, to `assertEnvironment` first thing in `payload.config.ts`:
+
+```ts
+import { assertEnvironment } from '@forumone/throughline-core'
+import { approvalsEnv } from '@forumone/throughline-approvals'
+import { emailEnv } from '@forumone/throughline-email'
+
+assertEnvironment(
+  approvalsEnv,
+  emailEnv,
+  { name: 'PAYLOAD_SECRET', minLength: 32, why: 'Signs Payload sessions.' },
+  () => databaseConnectionString(),
+)
+```
+
+It throws once, listing every missing or too-short value with the reason it is needed, under a first line that says `Configuration problem` — instead of each plugin failing on the first thing it finds, one deploy at a time, inside a `next build` stack trace. It never prints a value. A function argument is for a rule that is not "this name, this long": what it throws becomes a line in the report.
+
+`checkEnvValue(requirement, value)` is the one-value check behind it, which a plugin uses for its own init backstop.
 
 ## Document content hashing
 

@@ -61,6 +61,22 @@ Open `.env.local` and set, at minimum:
 - `PAYLOAD_SECRET`, `APPROVAL_TOKEN_SECRET`, `FORMS_IP_HASH_SECRET` — generated above
 - `RESEND_API_KEY` — from your Resend dashboard
 - `EMAIL_FROM_ADDRESS` — must be on a domain verified in Resend
+- `NEXT_PUBLIC_SERVER_URL` — `http://localhost:3000` locally
+
+You don't have to get the list right first time. The first line of
+`apps/web/src/payload.config.ts` calls `assertEnvironment` with every plugin's
+declared requirements plus the site's own, and anything that loads the config
+fails with one error listing every variable still missing or too short, and why
+each is needed:
+
+```
+Configuration problem: 2 environment variables are missing or invalid. …
+
+  - APPROVAL_TOKEN_SECRET is not set. Signs the approve/decline links in approval emails; …
+  - PAYLOAD_SECRET is 12 characters; the minimum is 32. Signs Payload sessions and auth tokens. …
+```
+
+Values are never printed. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
 
 `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` can stay blank for local dev. We'll start the Inngest dev server separately in step 6.
 

@@ -35,7 +35,7 @@ my-site/
 ├── apps/
 │   └── web/                                     # Next.js 16 + Payload 3.83
 │       ├── src/
-│       │   ├── payload.config.ts                # all plugins wired, with TODOs
+│       │   ├── payload.config.ts                # assertEnvironment, then all plugins wired, with TODOs
 │       │   ├── app/
 │       │   │   ├── (frontend)/                  # placeholder home page
 │       │   │   ├── (payload)/                   # admin + REST routes
@@ -45,7 +45,7 @@ my-site/
 │       └── ...
 ├── packages/
 │   └── design-system/                           # reference DS re-export, or placeholder
-├── .env.example                                 # every required secret listed
+├── .env.example                                 # every variable; required ones checked at startup
 ├── pnpm-workspace.yaml
 ├── turbo.json
 ├── tsconfig.json

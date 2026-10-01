@@ -5,6 +5,7 @@ import type { Access, CollectionConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import {
+  assertEnvironment,
   auditPlugin,
   createInngestClient,
   createMcpToolCollector,
@@ -14,20 +15,56 @@ import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
 import {
+  approvalsEnv,
   approvalsPlugin,
   buildActionUrl,
   generateActionToken,
 } from '@forumone/throughline-approvals'
 import { auditQueryPlugin } from '@forumone/throughline-audit'
 import { integrationsPlugin } from '@forumone/throughline-integrations'
-import { emailPlugin } from '@forumone/throughline-email'
-import { formsPlugin } from '@forumone/throughline-forms'
+import { emailEnv, emailPlugin } from '@forumone/throughline-email'
+import { formsEnv, formsPlugin } from '@forumone/throughline-forms'
 import { createTagRevalidationHooks } from '@forumone/throughline-workflows'
 import { cacheTags } from './lib/cache-tags'
 import { databaseConnectionString } from './lib/database'
 {{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-contract'
 import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
 {{/if}}
+
+/*
+Every variable this site needs, checked once and reported together, before any
+plugin runs. Without it each plugin throws on the first thing it finds, in
+registration order, inside `next build`'s "Failed to collect page data" — one
+missing variable per deploy, reading like a build failure.
+
+The plugins' lists are their own declarations of what they refuse to start
+without, so a requirement a plugin adds arrives here with the upgrade. Only the
+site's own variables are written out. A value passed to a plugin as an option
+rather than read from the environment takes that plugin's list out of this call.
+
+Anything that loads this file — `next build`, `payload generate:types`,
+`payload migrate` — needs these set. Where only parsing matters (CI's typecheck
+and type generation), placeholders of the right length do; see
+.github/workflows/ci.yml.
+*/
+assertEnvironment(
+  approvalsEnv,
+  emailEnv,
+  formsEnv,
+  {
+    name: 'PAYLOAD_SECRET',
+    minLength: 32,
+    why: 'Signs Payload sessions and auth tokens. Generate with `openssl rand -base64 48`.',
+  },
+  {
+    name: 'NEXT_PUBLIC_SERVER_URL',
+    why:
+      'The origin approval links are built against, e.g. http://localhost:3000. On a ' +
+      'Vercel preview, set it to https://$VERCEL_URL.',
+  },
+  // Accepts several names (see lib/database.ts), so it is a check, not a name.
+  () => databaseConnectionString(),
+)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -212,7 +249,7 @@ export default buildConfig({
 
     formsPlugin({
       inngest,
-      ipHashSecret: process.env.FORMS_IP_HASH_SECRET!,
+      // ipHashSecret: read from FORMS_IP_HASH_SECRET, checked above.
       // TODO: list every place a form is allowed to send to, and delete the
       // placeholder. The plugin refuses to start with an empty list — the
       // allowlist is the security perimeter — and refuses to deliver anywhere

@@ -114,6 +114,10 @@ The approval-request notifier sends to every approver in `notifiedApprovers`. Ea
 
 Every email renders to both HTML and plaintext from the same React tree (React Email's `render(..., { plainText: true })`). Plaintext is required for accessibility (screen readers), deliverability (spam scores improve dramatically), and for clients that refuse HTML.
 
+## Environment
+
+`emailEnv` declares what the plugin reads from the environment and refuses to start without — `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS`, used when `apiKey` / `fromAddress` are omitted. Pass it to `assertEnvironment` from `@forumone/throughline-core` at the top of `payload.config.ts` so both are reported together with every other missing variable. The plugin's own init check reads the same declaration.
+
 ## Options reference
 
 | Option | Default | Notes |

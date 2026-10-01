@@ -1,8 +1,9 @@
-import type { McpToolCollector } from '@forumone/throughline-core'
+import { checkEnvValue, type McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
 import type {
   BaseCorePluginOptions,
   CollectionPluginOptions,
+  EnvRequirement,
 } from '@forumone/throughline-plugin-contract'
 
 export interface ApproverGroup {
@@ -63,7 +64,25 @@ export interface ApprovalsPluginOptions extends BaseCorePluginOptions, Collectio
   mcpTools?: McpToolCollector
 }
 
-const MIN_TOKEN_SECRET_LENGTH = 32
+const TOKEN_SECRET_ENV = {
+  name: 'APPROVAL_TOKEN_SECRET',
+  minLength: 32,
+  why:
+    'Signs the approve/decline links in approval emails; approvalsPlugin will not start ' +
+    'without it. Generate with `openssl rand -base64 48`. Changing it invalidates links ' +
+    'already sent.',
+} as const satisfies EnvRequirement
+
+/**
+ * What `approvalsPlugin` reads from the environment when the matching option is
+ * omitted, and refuses to start without. Hand it to `assertEnvironment` from
+ * `@forumone/throughline-core` so a site reports it with everything else.
+ *
+ * Leave it out if you pass `tokenSecret` yourself. `NEXT_PUBLIC_SERVER_URL`
+ * (the `publicUrl` fallback) is not here: the plugin does not refuse to start
+ * without it, so it is the site's to require.
+ */
+export const approvalsEnv: readonly EnvRequirement[] = [TOKEN_SECRET_ENV]
 
 /**
  * Validates options at load time and resolves the token secret. Throws with
@@ -81,10 +100,12 @@ export function validateOptions(
   if (!options.inngest) {
     throw new Error('approvalsPlugin requires an Inngest client in options.inngest')
   }
-  const secret = options.tokenSecret ?? process.env['APPROVAL_TOKEN_SECRET']
-  if (!secret || secret.length < MIN_TOKEN_SECRET_LENGTH) {
+  // The backstop for a site that does not call `assertEnvironment`, driven by
+  // the same declaration it would have passed.
+  const secret = options.tokenSecret ?? process.env[TOKEN_SECRET_ENV.name]
+  if (secret === undefined || checkEnvValue(TOKEN_SECRET_ENV, secret)) {
     throw new Error(
-      `approvalsPlugin requires a tokenSecret in options or an APPROVAL_TOKEN_SECRET env var (${MIN_TOKEN_SECRET_LENGTH}+ characters)`,
+      `approvalsPlugin requires a tokenSecret in options or an ${TOKEN_SECRET_ENV.name} env var (${TOKEN_SECRET_ENV.minLength}+ characters)`,
     )
   }
 
