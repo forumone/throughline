@@ -91,7 +91,32 @@ Three structural rules that are non-negotiable:
 - Never replace `incomingConfig.collections`, `endpoints`, or `hooks.*` arrays — always spread the existing value and append.
 - Route prefixes for top-level endpoints MUST NOT include `/api`. Payload's API base (`config.routes.api`, default `/api`) is prepended automatically, so a `path: '/api/my-plugin/webhook'` registers at `/api/api/my-plugin/webhook`.
 - Do not serve an MCP endpoint. Declare your tools as the config is built, bind their handlers at `onInit`, and let the host serve them on one `/api/mcp`.
+- If your plugin declares a collection, accept `admin: { group }` and apply it to every collection you declare — see below.
 - Your plugin must be registered before `mcpPlugin` in the host's array. That is a requirement, not a convention: declaring after it has read the array means no checkboxes, and no checkbox means the tool is denied to every key.
+
+## Admin sidebar group
+
+A plugin that declares a collection extends `CollectionPluginOptions` and spreads `resolveAdminGroup(options.admin)` into each collection's `admin` block. That gives every Throughline collection the same sidebar placement — the `Throughline` group by default, a host-chosen group, or ungrouped for `false` — and leaves the host no reason to reach into your collections from a late-running plugin.
+
+```typescript
+import {
+  type BaseCorePluginOptions,
+  type CollectionPluginOptions,
+  resolveAdminGroup,
+} from '@forumone/throughline-plugin-contract'
+
+export interface MyPluginOptions extends BaseCorePluginOptions, CollectionPluginOptions {
+  // …
+}
+
+const myCollection: CollectionConfig = {
+  slug: 'my-records',
+  admin: { ...resolveAdminGroup(options.admin), useAsTitle: 'title' },
+  fields: [/* … */],
+}
+```
+
+Don't write `group: options.admin?.group` directly: Payload reads `admin.group: false` as "hide from the nav", and the option's `false` means "ungrouped". `resolveAdminGroup` does that translation. See the [plugin-contract reference](../reference/plugin-contract.md#admin-sidebar-group).
 
 ## Options validation
 

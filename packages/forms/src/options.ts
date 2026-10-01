@@ -1,6 +1,9 @@
 import type { McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
-import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
+import type {
+  BaseCorePluginOptions,
+  CollectionPluginOptions,
+} from '@forumone/throughline-plugin-contract'
 
 export type DestinationType = 'email' | 'webhook'
 
@@ -17,7 +20,7 @@ export interface AllowedDestination {
   label: string
 }
 
-export interface FormsPluginOptions extends BaseCorePluginOptions {
+export interface FormsPluginOptions extends BaseCorePluginOptions, CollectionPluginOptions {
   /** Inngest client used to fire `form/submission.received` and friends. */
   inngest: Inngest
   /**

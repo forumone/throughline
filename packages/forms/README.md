@@ -127,6 +127,7 @@ Consent is enforced server-side. A request to `/api/forms/submit` with `consent:
 | `ipHashSecret` | `FORMS_IP_HASH_SECRET` env | Required, ≥32 chars |
 | `formsCollectionSlug` | `'forms'` | |
 | `submissionsCollectionSlug` | `'form-submissions'` | |
+| `admin.group` | `'Throughline'` | Sidebar group for both `forms` and `form-submissions`. `false` leaves them ungrouped. [Reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group) |
 | `routePrefix` | `'/forms'` | Payload prepends `/api`; the public submit endpoint lands at `/api/forms/submit`. It is the only endpoint this plugin serves |
 | `enabled` | `true` | Set to false to no-op |
 

@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { type PluginAdminOptions, resolveAdminGroup } from '@forumone/throughline-plugin-contract'
 
 export interface CreateApprovalsCollectionOptions {
   /** Override the collection slug. Default: 'approvals'. */
@@ -7,6 +8,8 @@ export interface CreateApprovalsCollectionOptions {
   usersSlug?: string
   /** Allowed group slugs from the plugin's `groups` option. Used as the select options on the approverGroups field. */
   groupSlugs: string[]
+  /** Sidebar placement. Default: the `'Throughline'` group; `group: false` leaves it ungrouped. */
+  admin?: PluginAdminOptions
 }
 
 export const DEFAULT_APPROVALS_SLUG = 'approvals'
@@ -26,6 +29,7 @@ export function createApprovalsCollection(
   return {
     slug,
     admin: {
+      ...resolveAdminGroup(options.admin),
       useAsTitle: 'targetTitle',
       defaultColumns: ['targetTitle', 'status', 'requestedBy', 'requestedAt', 'expiresAt'],
       description:

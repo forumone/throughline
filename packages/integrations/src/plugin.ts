@@ -58,6 +58,7 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
       // `requestManualSync` with the `trigger_sync` MCP tool so the two cannot
       // disagree about what a trigger checks or what event it sends.
       endpoints: [createSyncEndpoint({ collectionSlug, inngest: options.inngest })],
+      ...(options.admin ? { admin: options.admin } : {}),
     })
 
     /*

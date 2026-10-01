@@ -76,6 +76,12 @@ describe('auditPlugin', () => {
     expect(writer).toBeDefined()
   })
 
+  it('passes its admin group through to the audit collection', async () => {
+    const final = await Promise.resolve(auditPlugin({ admin: { group: 'Workflow' } })(fakeIncomingConfig()))
+    const audit = (final.collections ?? []).find((c) => c.slug === DEFAULT_AUDIT_SLUG)
+    expect(audit?.admin?.group).toBe('Workflow')
+  })
+
   it('getAuditWriter throws a clear error when audit is not attached', () => {
     expect(() => getAuditWriter({})).toThrow(/Audit writer not found/)
   })

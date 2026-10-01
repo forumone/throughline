@@ -128,6 +128,7 @@ The HMAC is computed over the entire request body (a JSON-stringified envelope o
 | `inngest` | `Inngest` | required | Throws at validate if missing |
 | `integrations` | `Integration[]` | `[]` | Appended to the built-in webhook integration |
 | `collectionSlug` | `string` | `'integrations'` | |
+| `admin.group` | `string \| Record<string, string> \| false` | `'Throughline'` | Sidebar group for the collection. `false` leaves it ungrouped. [Reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group) |
 | `mcpTools` | `McpToolCollector` | — | The host's collector. Without it these five tools are unreachable. This plugin serves no HTTP endpoint of its own and takes no `routePrefix` |
 | `enabled` | `boolean` | `true` | Set to false to no-op |
 | `logger` | `Logger` | `defaultLogger` | |

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline-plugin-contract'
 import { createIntegrationsCollection } from './collection.js'
 import { IntegrationRegistry } from './registry.js'
 import type { Integration } from './types.js'
@@ -131,6 +132,28 @@ describe('createIntegrationsCollection', () => {
     const data = { integrationType: 'webhook', config: { invalid: true } }
     const result = await hook({ data, operation: 'read' as 'create' })
     expect(result).toBe(data)
+  })
+
+  it('sits in the Throughline sidebar group by default', () => {
+    const collection = createIntegrationsCollection({ registry: new IntegrationRegistry() })
+    expect(collection.admin?.group).toBe(DEFAULT_ADMIN_GROUP)
+  })
+
+  it('takes a custom sidebar group', () => {
+    const collection = createIntegrationsCollection({
+      registry: new IntegrationRegistry(),
+      admin: { group: 'Admin' },
+    })
+    expect(collection.admin?.group).toBe('Admin')
+  })
+
+  it('is left ungrouped, not hidden, when group is false', () => {
+    const collection = createIntegrationsCollection({
+      registry: new IntegrationRegistry(),
+      admin: { group: false },
+    })
+    expect(collection.admin).not.toHaveProperty('group')
+    expect(collection.admin?.useAsTitle).toBe('name')
   })
 })
 
