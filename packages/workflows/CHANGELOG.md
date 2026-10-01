@@ -1,5 +1,58 @@
 # @forumone/throughline-workflows
 
+## 0.6.0
+
+### Minor Changes
+
+- c1db470: The approval notifications run on any jobs runner.
+
+  - **email:**
+    - `notifyApprovalRequestJob`, `notifyApprovalDecisionJob` and `notifyApprovalExpiredJob` are the three notifications as runner-neutral jobs. Each takes a resolver for its dependencies.
+    - The `create…Function` factories keep their signatures and their Inngest registration, held by a snapshot written before the port.
+    - `emailJobs(options)` returns all three for a site that hands its jobs to `payloadJobs().plugin(...)`. They find Payload on the job context and the email client on Payload, so `emailPlugin` must be registered too.
+    - `inngest` is now optional on `emailPlugin`. Without it, the plugin registers no Inngest functions, and the site runs `emailJobs` instead.
+  - **workflows:** the job context carries `payload` when the runner has one: always on Payload Jobs, and on Inngest when `inngestJobs(inngest, { payload })` is given it. This is for jobs a plugin declares before Payload exists.
+
+- 52f6ef6: Adds runner-neutral jobs, the first piece of 1.0 P1. This is purely additive: every existing factory still registers its Inngest function directly, exactly as before.
+
+  - `defineJob(definition, handler)` describes a background job once.
+    - The definition holds an `id`, an `on` trigger (`{ event }` or `{ cron }`), and optional `retries`, `concurrency`, `idempotency` (`{ fields, separator? }` over `event.data`) and `onFailure`.
+    - The handler receives `{ event, step, runId, logger }`, where `step` offers `run`, `sleepUntil` and `sendEvent`, and `event.ts` is the send time, for replay-safe arithmetic.
+  - `inngestJobs(inngest, { onFailure? })` runs jobs on Inngest.
+    - `functions(jobs)` gives the array for `serve()`, and `emit()` sends events.
+    - A job registers with the config a hand-written `createFunction` had: the same id and trigger, and idempotency compiled back to the same CEL string. Moving a function onto it changes nothing Inngest can see.
+  - `inngestFunctionConfig` and `inngestIdempotency` expose that config, for tests.
+
+- c278b66: Adds `payloadJobs()`, which runs `defineJob` jobs on Payload's own job queue, so a site can use Throughline's background work without Inngest. This is additive: nothing existing changes.
+
+  - `plugin(jobs)` registers each job as a Payload workflow, with cron jobs on Payload's schedule. `emit()` queues one job per subscriber to an event.
+  - `step.run` is an inline task, so its output is memoized across retries.
+  - `step.sleepUntil` ends the job and queues a continuation with `waitUntil`. The continuation carries every step value, so nothing before the sleep runs again.
+  - Idempotency is kept in a `throughline-job-keys` collection with a unique index, for 24 hours by default. It is a collection of its own because Payload deletes completed jobs. The collection is added only when some job declares idempotency.
+  - `onFailure` runs once, on the final attempt.
+  - `concurrency` becomes "one at a time" for the job, because Payload's control is a per-key lock, not a count. Setting it turns on `enableConcurrencyControl`, which adds a column to `payload-jobs`, so a site adopting this needs a migration.
+  - Something has to run Payload's queue: `jobs.autoRun` on a long-lived server, or a scheduler calling `/api/payload-jobs/run` and `/api/payload-jobs/handle-schedules` on Vercel.
+
+- 6e4edf0: Lets a site run every workflow on Payload Jobs, configured before Payload exists. Additive: every existing call keeps working.
+
+  - `payload` is optional on the job builders for the healthcheck, publish revalidation, scheduled publishing and its backstop, and approval expiry. Without it, a job uses the Payload instance on its run context, so it can be declared in `buildConfig`. `jobPayload()` and `JobOptions` are exported for jobs written the same way. A job with neither throws an error that names it.
+  - `publish` (the scheduled-publish callback) now gets a second argument, `{ payload }`, so it no longer has to close over an instance.
+  - `eventSenderFor(jobs)` returns an Inngest-shaped client that only sends, through a jobs adapter's `emit`. It is for the plugins that take an `inngest` only to announce events (audit, approvals, publishing) on a site with no Inngest. It is transitional, and 1.0 replaces those options with the adapter itself.
+
+- ac92ab4: Every workflow is now also a runner-neutral job, so it runs on `payloadJobs()` as well as on Inngest.
+
+  - `revalidateOnPublishJob`, `executeScheduledPublishesJob`, `publishAtScheduledTimeJob`, `expireStaleApprovalsJob`, `auditEventEchoJob` and `healthcheckJob` take the same options as their `create…Function` factory, without `inngest`.
+  - The factories keep their signatures. Each now registers `inngestJobs(inngest).toFunction(theJob(options))`, and the config it registers is unchanged: a snapshot test written from the old factories holds every id, trigger, idempotency key, concurrency and retry count.
+  - A job may answer several events, as `on: { event: [...] }`, the way `revalidate-on-publish` answers publish, unpublish and rollback.
+  - The job context gains `emit()`, for a send that belongs to the step it sits inside, as when expiring an approval also announces it.
+  - `jobEvents(job)` lists the events a job answers.
+
+### Patch Changes
+
+- Updated dependencies [a8e06fc]
+  - @forumone/throughline-core@0.11.0
+  - @forumone/throughline-publishing@0.11.1
+
 ## 0.5.0
 
 ### Minor Changes

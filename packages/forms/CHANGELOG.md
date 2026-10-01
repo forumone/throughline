@@ -1,5 +1,14 @@
 # @forumone/throughline-forms
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [c1db470]
+- Updated dependencies [a8e06fc]
+  - @forumone/throughline-email@0.4.0
+  - @forumone/throughline-core@0.11.0
+
 ## 0.7.0
 
 ### Minor Changes
