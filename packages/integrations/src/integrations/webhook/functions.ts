@@ -139,11 +139,8 @@ async function deliverEvent({
   }
 
   const success = response.ok
-  await ctx.updateStatus(
-    instance.id,
-    success ? 'success' : 'failed',
-    success ? undefined : `HTTP ${response.status}`,
-  )
+  if (success) await ctx.updateStatus(instance.id, 'success')
+  else await ctx.updateStatus(instance.id, 'failed', `HTTP ${response.status}`)
   await ctx.recordAudit({
     integrationId: WEBHOOK_INTEGRATION_ID,
     instanceName: instance.name,
