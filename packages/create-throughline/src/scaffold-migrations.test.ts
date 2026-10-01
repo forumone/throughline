@@ -53,8 +53,8 @@ describe('scaffolded migration tooling', () => {
       scripts: Record<string, string>
       devDependencies: Record<string, string>
     }
-    expect(web.scripts['migrate']).toBe('PAYLOAD_MIGRATING=1 payload migrate')
-    expect(web.scripts['migrate:create']).toBe('payload migrate:create')
+    expect(web.scripts['migrate']).toBe('PAYLOAD_MIGRATING=1 throughline-payload migrate')
+    expect(web.scripts['migrate:create']).toBe('throughline-payload migrate:create')
     expect(web.scripts['migrate:snapshot']).toBe('tsx scripts/write-migration-snapshot.ts')
     expect(web.scripts['check:migrations']).toBe('tsx scripts/check-migrations.ts')
     for (const [name, script] of Object.entries(web.scripts)) {

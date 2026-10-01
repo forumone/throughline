@@ -17,7 +17,12 @@ On first run, open <http://localhost:3000/admin> and create the initial admin us
 - `pnpm dev` — Next.js dev server on :3000
 - `pnpm build` / `pnpm start` — production build and serve
 - `pnpm db:up` / `pnpm db:down` — bring Postgres up/down via `docker compose`
-- `pnpm payload` — Payload CLI (e.g. `pnpm payload generate:types`, `pnpm payload generate:importmap`)
+- `pnpm payload` — Payload CLI (e.g. `pnpm payload generate:types`, `pnpm payload generate:importmap`),
+  run through `throughline-payload` from `@forumone/throughline-core` so a hung run cannot outlive the
+  shell that started it. It is killed after 5 minutes — set `PAYLOAD_CLI_TIMEOUT_MS` to change that, or
+  `0` to disable it; `migrate` commands have no limit by default.
+- `pnpm payload:reap` — kill any Payload CLI run a killed shell left behind (also done at the start of
+  the next `pnpm payload`). From the repo root: `pnpm payload:reap`.
 
 ## Using your own Postgres
 

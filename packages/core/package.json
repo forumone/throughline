@@ -5,6 +5,9 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "throughline-payload": "./bin/throughline-payload.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -29,6 +32,7 @@
   },
   "files": [
     "dist",
+    "bin/*.mjs",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -37,14 +41,15 @@
     "dev": "tsc -b -w",
     "clean": "rm -rf dist .turbo *.tsbuildinfo",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint src bin",
     "test": "vitest run"
   },
   "keywords": [
     "throughline",
     "payload",
     "mcp",
-    "audit"
+    "audit",
+    "cli"
   ],
   "license": "MIT",
   "repository": {

@@ -11,7 +11,8 @@
     "clean": "rm -rf .next .turbo",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "payload": "payload",
+    "payload": "throughline-payload",
+    "payload:reap": "throughline-payload --reap",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   },

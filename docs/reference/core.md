@@ -36,13 +36,13 @@ import {
 } from '@forumone/throughline-core'
 ```
 
-| Symbol | Purpose |
-| --- | --- |
-| `auditPlugin(options)` | Payload plugin that creates the `audit-log` collection and installs `_status`-blocking hooks |
-| `createAuditCollection(options)` | Returns the `CollectionConfig` for the audit log; usually you let `auditPlugin` create it |
-| `createAuditWriter(payload, options)` | Builder for an `AuditWriter` you can call from custom code |
-| `getAuditWriter(payload)` | Looks up the writer attached by `auditPlugin` |
-| `AUDIT_ACTIONS` | The canonical taxonomy of action strings (`content.created`, `approval.granted`, etc.) |
+| Symbol                                | Purpose                                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `auditPlugin(options)`                | Payload plugin that creates the `audit-log` collection and installs `_status`-blocking hooks |
+| `createAuditCollection(options)`      | Returns the `CollectionConfig` for the audit log; usually you let `auditPlugin` create it    |
+| `createAuditWriter(payload, options)` | Builder for an `AuditWriter` you can call from custom code                                   |
+| `getAuditWriter(payload)`             | Looks up the writer attached by `auditPlugin`                                                |
+| `AUDIT_ACTIONS`                       | The canonical taxonomy of action strings (`content.created`, `approval.granted`, etc.)       |
 
 `AuditPluginOptions`:
 
@@ -87,7 +87,7 @@ One endpoint — `POST /api/mcp` — for every plugin's tools.
 
 **The plugin reads that array at two different moments, for two different things.**
 Once while the config is being built, to generate a per-key checkbox per tool on
-its key collection; and again inside the handler it builds *per request*, to serve
+its key collection; and again inside the handler it builds _per request_, to serve
 them. So a server does two things:
 
 - **declares** its tools' names and descriptions as the config is built. Neither
@@ -105,12 +105,12 @@ anywhere.
 **Hand over the array itself.** A spread or a `.slice()` at config time hands over
 something nobody fills.
 
-| Symbol | Purpose |
-| --- | --- |
-| `createMcpToolCollector(options)` | The array to give `mcpPlugin`, plus `declare()` and `add()` for plugins. Refuses two tools with one name |
-| `collector.unbound` | Tools declared and never bound. Empty once every server has initialised |
-| `toPayloadMcpTool` / `toPayloadMcpTools` | The adapter from an `McpToolDefinition` to the shape `mcpPlugin` takes. `add()` applies it for you |
-| `McpMetaSchema` / `withMeta` | The `_meta` envelope tools use to carry a session id and actor |
+| Symbol                                   | Purpose                                                                                                  |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `createMcpToolCollector(options)`        | The array to give `mcpPlugin`, plus `declare()` and `add()` for plugins. Refuses two tools with one name |
+| `collector.unbound`                      | Tools declared and never bound. Empty once every server has initialised                                  |
+| `toPayloadMcpTool` / `toPayloadMcpTools` | The adapter from an `McpToolDefinition` to the shape `mcpPlugin` takes. `add()` applies it for you       |
+| `McpMetaSchema` / `withMeta`             | The `_meta` envelope tools use to carry a session id and actor                                           |
 
 Mismatches are refused rather than absorbed. A tool built but never declared throws
 at `onInit`, because it would otherwise be denied to every key silently; a tool
@@ -141,7 +141,7 @@ Returns a typed Inngest client. The `CoreEvents` / `FrameworkEvents` types provi
 import { validateBaseEnv, requireEnv, optionalEnv } from '@forumone/throughline-core'
 
 // At app boot:
-validateBaseEnv()  // throws if any required var is missing or malformed
+validateBaseEnv() // throws if any required var is missing or malformed
 
 // Or one-off:
 const apiKey = requireEnv('STRIPE_API_KEY')
@@ -208,9 +208,7 @@ const inngest = createInngestClient({ id: 'my-site' })
 const mcpTools = createMcpToolCollector()
 
 export default buildConfig({
-  collections: [
-    /* your collections */
-  ],
+  collections: [/* your collections */],
   plugins: [
     // auditPlugin first: every other Throughline plugin requires the
     // `audit-log` capability at init and refuses to load without it.
@@ -222,6 +220,28 @@ export default buildConfig({
   /* ... */
 })
 ```
+
+## `throughline-payload` bin
+
+A drop-in for the `payload` binary that cannot outlive the shell that started
+it. Use it for every script that runs the Payload CLI (`payload`,
+`generate:types`, `generate:importmap`, `migrate*`); scaffolded projects
+already do.
+
+```bash
+throughline-payload generate:types   # any Payload CLI arguments
+throughline-payload --reap           # only reap runs a killed shell left behind
+```
+
+|               |                                                                                                                                                                                                                                                       |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Process group | Payload runs in its own group; it is killed as a group, by pid, never by name                                                                                                                                                                         |
+| Signals       | SIGINT, SIGTERM and SIGHUP are forwarded, then SIGKILL after `PAYLOAD_CLI_GRACE_MS` (default 5000)                                                                                                                                                    |
+| Wall clock    | `PAYLOAD_CLI_TIMEOUT_MS`, default 300000; `0` disables. The `migrate` family has none by default. Exits 124 on timeout                                                                                                                                |
+| Orphans       | Each run is recorded in `.payload-cli-pids` at the workspace root (nearest `pnpm-workspace.yaml`, else nearest `package.json`); the next run or `--reap` kills a recorded group whose runner is gone, after checking pid, start time and command line |
+| Resolution    | `payload` is resolved from the current directory (the app), not from core's install                                                                                                                                                                   |
+
+Why it exists, and the exact rules the sweep follows: [core's README](../../packages/core/README.md#running-the-payload-cli-throughline-payload).
 
 ## Related
 

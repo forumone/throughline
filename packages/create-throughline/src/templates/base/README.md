@@ -75,6 +75,16 @@ pnpm dev
 - `pnpm typecheck` — TypeScript check across the monorepo
 - `pnpm lint` — ESLint
 - `pnpm test` — run all package tests
+- `pnpm payload:reap` — kill any Payload CLI run a killed shell left behind (the next Payload command does this too)
+
+Every script that runs the Payload CLI — `payload`, `generate:*`, `migrate*` —
+goes through `throughline-payload` from `@forumone/throughline-core`. pnpm does
+not forward signals to the node process it starts, so a bare `payload` whose
+shell is killed keeps running, and a hung one spins on a core indefinitely. The
+runner gives Payload its own process group, forwards Ctrl-C and friends to it,
+and kills it after five minutes (`PAYLOAD_CLI_TIMEOUT_MS`, `0` to disable;
+`migrate*` has no limit unless you set one). Run the Payload CLI through these
+scripts rather than `npx payload`.
 
 ## Migrations
 

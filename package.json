@@ -14,6 +14,7 @@
     "test": "turbo run test",
     "clean": "turbo run clean",
     "format": "prettier --write .",
+    "payload:reap": "pnpm --filter @forumone/throughline-playground run payload:reap",
     "format:check": "prettier --check .",
     "changeset": "changeset",
     "version": "changeset version",
