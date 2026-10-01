@@ -1,5 +1,90 @@
 # @forumone/create-throughline
 
+## 0.5.0
+
+### Minor Changes
+
+- 006ae30: A missing environment variable is reported together with every other one, in a
+  single error, instead of one plugin at a time.
+
+  The plugins that read the environment at init now declare what they cannot
+  start without, as data: `approvalsEnv` (`APPROVAL_TOKEN_SECRET`, 32+
+  characters), `emailEnv` (`RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`) and `formsEnv`
+  (`FORMS_IP_HASH_SECRET`, 32+ characters). Each is a list of `EnvRequirement`
+  (`{ name, minLength?, why }`), a new type in `plugin-contract`, and each
+  plugin's own init check now reads the same entries, so the two cannot drift.
+  An empty or whitespace-only value now counts as missing in those checks.
+
+  Core exports `assertEnvironment(...checks)`. Call it first in
+  `payload.config.ts` with the plugins' lists and your own variables; it throws
+  one `EnvironmentError` whose first line reads "Configuration problem: N
+  environment variables are missing or invalid", followed by every missing or
+  too-short variable and why it is needed. Values are never printed. An argument
+  can also be a function, for a rule that is not "this name, this long", such as
+  a database URL accepted under several names. `checkEnvValue` is the one-value
+  check behind it, for a plugin's own backstop.
+
+  New projects call `assertEnvironment` at the top of `payload.config.ts` with
+  `approvalsEnv`, `emailEnv`, `formsEnv`, `PAYLOAD_SECRET` (32+ characters),
+  `NEXT_PUBLIC_SERVER_URL` and the database resolver, and `.env.example` marks
+  which variables are checked. An existing site can do the same and delete any
+  hand-kept copy of the plugins' requirements.
+
+- 833c1bd: A scaffolded project ships the rules an agent, or a new developer, needs:
+
+  - **`CLAUDE.md`** covers the layout, the gate in CI's own order, which files are generated and committed, how migrations and snapshots work, and the contract rule for the design system.
+  - **A Stop hook** (`.claude/hooks/gate.sh`) runs typecheck and lint when a session ends with pending changes. It reports, never blocks, and is silenced by `THROUGHLINE_SKIP_GATE=1`.
+
+  The README's project layout now matches what the scaffold generates.
+
+- 549d292: A scaffolded project runs every Payload CLI script — `payload`, `generate:types`, `generate:importmap`, `migrate`, `migrate:create`, `migrate:status` — through core's `throughline-payload`, so a hung run is killed rather than left spinning after its shell dies. It adds `payload:reap` to `apps/web` and the root, and ignores `.payload-cli-pids`.
+- 70385c4: A scaffolded project reports its failures. `apps/web/src/instrumentation.ts` sends unhandled request errors to `ERROR_WEBHOOK_URL` through core's reporter, and warns at boot when that variable is unset. The Inngest route passes `createTerminalFailureHandler` to every framework workflow and `createHealthcheckFailureHandler` to the healthcheck. `payload.config.ts` registers `jobFailuresPlugin`. `.env.example` lists `ERROR_WEBHOOK_URL` as optional.
+
+  A new project's first migration includes the `job-failures` table. An existing project that copies these changes needs `payload migrate:create`.
+
+- c8a86bf: A scaffolded project now starts with tests in `apps/web`:
+
+  - **Vitest.** `vitest.config.ts` loads `payload.config.ts` with placeholder variables and no database. `src/access/anonymousAccess.test.ts` uses `describeAnonymousAccess` to put every collection the project has into an access bucket. `pnpm test` runs it in CI's `fast` job. `check:tested` drops its exception for `apps/web`.
+  - **Playwright smoke pack.** `e2e/` runs against `next start`, or against `E2E_BASE_URL`. It checks the front door, a 404, the admin sign-in screen, and anonymous REST reads. The paths are in `e2e/site.ts`, along with the checks a new project cannot pass yet because it does not serve the routes they test. It runs in CI's `verify` job after the build. The new scripts are `test`, `test:smoke` and `test:smoke:install`.
+  - **`pages` read rule.** The example `pages` collection gains a published-or-signed-in `read` rule. Before, Payload's default refused every anonymous read, so the public site could never read a page.
+
+### Patch Changes
+
+- c8a86bf: The `Divider` contract now declares `decorative` with `defaultValue: true`, matching the component. Before, the default was written only in prose, so a divider added in the CMS started unticked and screen readers announced it.
+- ab623e1: The scaffolded `payload.config.ts` uses core's `mcpApiKeyAccess(isAdmin)` to make the MCP key collection admin-only, replacing the inline override. It now also covers `unlock` and refuses a key principal outright. The scaffold depends on `payload` and `@payloadcms/*` `^3.89.0`.
+- 653817e: Revalidation no longer guesses paths, and covers the changes a publish event never announces.
+
+  - **workflows (breaking)**: `createRevalidateOnPublishFunction` has no built-in URL
+    builders. They mapped `pages` to `/<slug>`, `posts` to `/blog/<slug>` and any other
+    collection to `/<slug>`, so a site whose routes differed revalidated the wrong path
+    without a word. `urlBuilders` is now required; a collection with no entry has its
+    tags dropped and no path revalidated, and the run logs a warning. To keep the old
+    behaviour, pass the old builders:
+
+    ```ts
+    urlBuilders: {
+      pages: (slug) => (slug === 'home' || slug === '' ? '/' : `/${slug}`),
+      posts: (slug) => `/blog/${slug}`,
+    }
+    ```
+
+    and then check them against your routes.
+
+  - **workflows**: `createTagRevalidationHooks` — collection `afterChange` and
+    `afterDelete`, and global `afterChange`, hooks that call
+    `revalidateTag(tag, { expire: 0 })`. Draft saves and autosave drop nothing (via
+    publishing's `isDraftWrite`); an unpublish still does. A hook never throws: outside a
+    Next request (seeds, migrations, the CLI) it logs at `debug`, and any other failure
+    at `error` with the tag and the cause.
+  - **workflows**: `createCacheTags` builds every tag string, so the hooks, the publish
+    workflow (new `cacheTags` option) and cached reads cannot name different tags.
+    Defaults: the bare slug for a collection, `global_<slug>` for a global. Also on the
+    dependency-free `@forumone/throughline-workflows/cache-tags` subpath for frontend code.
+    `@forumone/throughline-publishing` is now a dependency of this package.
+  - **create-throughline**: the scaffold adds `apps/web/src/lib/cache-tags.ts`, attaches
+    the tag hooks to `Pages`, and passes explicit `urlBuilders` and the shared
+    `cacheTags` to the publish workflow.
+
 ## 0.4.0
 
 ### Minor Changes

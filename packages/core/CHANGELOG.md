@@ -1,5 +1,82 @@
 # @forumone/throughline-core
 
+## 0.10.0
+
+### Minor Changes
+
+- 006ae30: A missing environment variable is reported together with every other one, in a
+  single error, instead of one plugin at a time.
+
+  The plugins that read the environment at init now declare what they cannot
+  start without, as data: `approvalsEnv` (`APPROVAL_TOKEN_SECRET`, 32+
+  characters), `emailEnv` (`RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`) and `formsEnv`
+  (`FORMS_IP_HASH_SECRET`, 32+ characters). Each is a list of `EnvRequirement`
+  (`{ name, minLength?, why }`), a new type in `plugin-contract`, and each
+  plugin's own init check now reads the same entries, so the two cannot drift.
+  An empty or whitespace-only value now counts as missing in those checks.
+
+  Core exports `assertEnvironment(...checks)`. Call it first in
+  `payload.config.ts` with the plugins' lists and your own variables; it throws
+  one `EnvironmentError` whose first line reads "Configuration problem: N
+  environment variables are missing or invalid", followed by every missing or
+  too-short variable and why it is needed. Values are never printed. An argument
+  can also be a function, for a rule that is not "this name, this long", such as
+  a database URL accepted under several names. `checkEnvValue` is the one-value
+  check behind it, for a plugin's own backstop.
+
+  New projects call `assertEnvironment` at the top of `payload.config.ts` with
+  `approvalsEnv`, `emailEnv`, `formsEnv`, `PAYLOAD_SECRET` (32+ characters),
+  `NEXT_PUBLIC_SERVER_URL` and the database resolver, and `.env.example` marks
+  which variables are checked. An existing site can do the same and delete any
+  hand-kept copy of the plugins' requirements.
+
+- 549d292: A `throughline-payload` bin: the Payload CLI, run so a hung command cannot outlive the shell that started it. pnpm does not forward signals to the node process it spawns, so a killed shell left `payload generate:types` running, and a hung one spinning on a core indefinitely.
+
+  - Payload runs in its own process group; SIGINT, SIGTERM and SIGHUP are forwarded to the group, then SIGKILL after `PAYLOAD_CLI_GRACE_MS` (default 5s)
+  - a wall clock, `PAYLOAD_CLI_TIMEOUT_MS` (default 5 minutes, `0` disables; none by default for `migrate*`), exits 124
+  - each run is recorded in `.payload-cli-pids` at the workspace root, and the next run — or `throughline-payload --reap` — kills a recorded group whose runner was killed, after checking its pid, start time and command line
+
+- 70385c4: A failed background job has somewhere to be recorded, and core can report errors.
+
+  - **`job-failures` collection.** `jobFailuresPlugin()` from the new `@forumone/throughline-core/observability` subpath adds a read-only `job-failures` collection (admin-only by default) and attaches a writer that never throws; a row it cannot write is logged at `error` with the failure's summary and message. It is deliberately not the audit log: `audit-events` records MCP tool calls, its `mcpServer` column is required and constrained to MCP server names, and a cron that wrote there with any other value was rejected by Payload and silently dropped.
+  - **Error reporting.** `createErrorReporter` / `reportError` post JSON reports to `ERROR_WEBHOOK_URL` (or a URL you pass), with a one-line `text` so a Slack incoming webhook works as-is, a 3-second timeout, and no throw on any failure. `buildRequestErrorReport` shapes what Next's `onRequestError` receives and copies request headers from an allowlist; `authorization`, `cookie`, `x-api-key` and `x-forwarded-for` are never copied. `describeErrorReporting` gives a boot-log sentence for on, off or misconfigured.
+
+  **Migration required.** Registering `jobFailuresPlugin` adds a table (`job_failures`) and an enum (`enum_job_failures_kind`). Run `payload migrate:create` after adding it and commit the migration. The audit collection is unchanged.
+
+- c8a86bf: Adds a `./testing` subpath with `describeAnonymousAccess(config, buckets)`. It registers a vitest suite that checks every collection's `read` rule against an anonymous request, with no database. Every collection in the config, including those added by plugins and by Payload, must be in exactly one bucket:
+
+  - `renderPath`: read by the public site, so an anonymous read must be allowed. A collection with drafts must narrow that read with a query.
+  - `private`: an anonymous read must be refused.
+
+  A collection in no bucket fails, so adding a collection fails until somebody decides where it goes. `checkAnonymousAccess` returns the same findings as a list. `vitest` is an optional peer, and the main entry does not re-export the subpath.
+
+- ab623e1: `mcpApiKeyAccess(isAdmin)` makes `payload-mcp-api-keys`, the key collection `@payloadcms/plugin-mcp` brings, admin-only. Pass it as `mcpPlugin({ overrideApiKeyCollection: mcpApiKeyAccess(isAdmin) })`. It applies the site's admin rule to `read`, `create`, `update`, `delete` and `unlock`, and refuses an MCP key principal before it asks the rule, so a key can never manage keys. It changes `access` and nothing else, so it composes with an override that also sets, say, `admin.group`.
+
+  `isSignedIn(user)` and its `Access` form `signedIn` are a "signed in" check to use instead of `Boolean(req.user)`. They refuse an MCP key document on `req.user`, which Payload before 3.89.0 could put there on any REST route. `isMcpApiKeyPrincipal(user)` and `MCP_API_KEYS_SLUG` are exported for rules that need to tell the two apart directly. None of these affects `/api/mcp`, where a tool runs as the key's user.
+
+- ab623e1: The `payload` peer range moves from `^3.0.0` to `^3.89.0` for every package that has one. **A site on Payload older than 3.89.0 must upgrade Payload before upgrading these packages.**
+
+  Before 3.89.0, the `payload-mcp-api-keys` collection that `@payloadcms/plugin-mcp` adds registered Payload's API-key strategy on every REST route. Any key could then become `req.user` outside `/api/mcp` and pass access rules written as `Boolean(req.user)`. Every Throughline site runs that plugin, so the floor is the same for every package. No package's code changes with this bump.
+
+- 36728c4: Collections that Throughline plugins declare now sit in a `Throughline` group in the admin sidebar, instead of loose at the top of it above every group. That covers `audit-events` (`auditPlugin`), the approvals collection (`approvalsPlugin`), `integrations` (`integrationsPlugin`), and `forms` and `form-submissions` (`formsPlugin`).
+
+  Each of those plugins accepts `admin: { group }`, which applies to every collection it declares:
+
+  - omitted: the `Throughline` group.
+  - a string, or a locale map such as `{ en: 'Workflow', fr: 'Flux' }`: that group.
+  - `false`: ungrouped, in Payload's default "Collections" section. This does not hide the collection, which is what `false` means on a collection's own `admin.group`.
+
+  A site that groups these collections with its own config plugin can pass `admin: { group }` to each plugin and delete that code. `createAuditCollection`, `createApprovalsCollection` and `createIntegrationsCollection` accept the same `admin` option.
+
+  `@forumone/throughline-plugin-contract` exports the shared pieces: `CollectionPluginOptions`, `PluginAdminOptions`, `PluginAdminGroup`, `DEFAULT_ADMIN_GROUP` and `resolveAdminGroup`, the helper a plugin spreads into each collection's `admin` block. `@forumone/throughline-core` re-exports the types.
+
+### Patch Changes
+
+- Updated dependencies [006ae30]
+- Updated dependencies [ab623e1]
+- Updated dependencies [36728c4]
+  - @forumone/throughline-plugin-contract@0.5.0
+
 ## 0.9.1
 
 ### Patch Changes

@@ -1,5 +1,24 @@
 # @forumone/throughline-design-system-payload
 
+## 0.8.0
+
+### Minor Changes
+
+- f8e56bc: A block's alt text falls back to the media library's
+
+  An image's alt field in a block (`imageAlt` beside `image`, or `alt` beside `src` in an image group or row) used to be the only alt the component got, so authors typed a description the media record already had, or left it empty and the image rendered as decorative. Now an empty block alt is filled from the media document's `alt`. A block's own alt still wins when it is filled in.
+
+  Those alt fields are now generated as optional, with a note saying they fall back, and an optional image group no longer demands its alt once the image is chosen. Blocks are stored as JSON, so this changes no columns. The catch: an empty block alt no longer marks an image as decorative.
+
+- c8a86bf: Adds test helpers for a site's generated blocks, on a new `./testing` subpath. `vitest` is an optional peer.
+
+  - `describeBlockInvariants(blocks, options?)` checks two things. First, every generated `validate` must accept the data Payload stores for a newly added block, both with no array rows and with one empty row. Second, every generated checkbox must start at its contract's `defaultValue`, and no generated text field may have a string default. It accepts `generateBlocks` output, or plain blocks together with the manifest.
+  - The `check-block-props` bin takes a manifest, one or more component directories and an optional `--overrides` module. It coerces each contract through `coerceBlock` and compares the resulting prop shapes with the component's `<Name>Args.ts`. It exits non-zero on a mismatch, and also when there were no args files to compare against.
+
+- ab623e1: The `payload` peer range moves from `^3.0.0` to `^3.89.0` for every package that has one. **A site on Payload older than 3.89.0 must upgrade Payload before upgrading these packages.**
+
+  Before 3.89.0, the `payload-mcp-api-keys` collection that `@payloadcms/plugin-mcp` adds registered Payload's API-key strategy on every REST route. Any key could then become `req.user` outside `/api/mcp` and pass access rules written as `Boolean(req.user)`. Every Throughline site runs that plugin, so the floor is the same for every package. No package's code changes with this bump.
+
 ## 0.7.1
 
 ### Patch Changes

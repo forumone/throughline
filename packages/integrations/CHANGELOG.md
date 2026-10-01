@@ -1,5 +1,51 @@
 # @forumone/throughline-integrations
 
+## 0.9.0
+
+### Minor Changes
+
+- 57bebe5: `ctx.updateStatus` no longer clears `lastError` on a run that was not clean, and the types now require a reason for one:
+
+  - `updateStatus(id, 'success')` takes no message and clears `lastError`.
+  - `updateStatus(id, 'partial' | 'failed', message)` requires the message, which replaces `lastError`. A call without one no longer typechecks. Before, a `partial` call with no message wrote `lastError: null`, so the admin showed a partial sync with no reason and lost the previous one. A JavaScript caller that still omits it now leaves `lastError` as it was.
+  - `updateStatus` no longer accepts `'never-run'`.
+  - A call that passes a status and a message that may be `undefined`, such as `updateStatus(id, report ? 'partial' : 'success', report)`, has to be split into two calls or use `statusFromProblems`.
+
+  New helpers for runs that skip some records:
+
+  - `problemReport(problems, { maxLength })` joins one line per problem with `|` into one string for `lastError` and the audit `errorMessage`. It caps the result at 500 characters by default, ending a cut report with the total, e.g. `… (40 problems in all)`. It returns `undefined` for an empty list.
+  - `statusFromProblems(problems)` returns `['success']` for an empty list and `['partial', report]` otherwise, to spread into `updateStatus(id, ...statusFromProblems(problems))`.
+
+  `IntegrationStatusUpdate` is exported for the status and message arguments.
+
+- ab623e1: The `payload` peer range moves from `^3.0.0` to `^3.89.0` for every package that has one. **A site on Payload older than 3.89.0 must upgrade Payload before upgrading these packages.**
+
+  Before 3.89.0, the `payload-mcp-api-keys` collection that `@payloadcms/plugin-mcp` adds registered Payload's API-key strategy on every REST route. Any key could then become `req.user` outside `/api/mcp` and pass access rules written as `Boolean(req.user)`. Every Throughline site runs that plugin, so the floor is the same for every package. No package's code changes with this bump.
+
+- 36728c4: Collections that Throughline plugins declare now sit in a `Throughline` group in the admin sidebar, instead of loose at the top of it above every group. That covers `audit-events` (`auditPlugin`), the approvals collection (`approvalsPlugin`), `integrations` (`integrationsPlugin`), and `forms` and `form-submissions` (`formsPlugin`).
+
+  Each of those plugins accepts `admin: { group }`, which applies to every collection it declares:
+
+  - omitted: the `Throughline` group.
+  - a string, or a locale map such as `{ en: 'Workflow', fr: 'Flux' }`: that group.
+  - `false`: ungrouped, in Payload's default "Collections" section. This does not hide the collection, which is what `false` means on a collection's own `admin.group`.
+
+  A site that groups these collections with its own config plugin can pass `admin: { group }` to each plugin and delete that code. `createAuditCollection`, `createApprovalsCollection` and `createIntegrationsCollection` accept the same `admin` option.
+
+  `@forumone/throughline-plugin-contract` exports the shared pieces: `CollectionPluginOptions`, `PluginAdminOptions`, `PluginAdminGroup`, `DEFAULT_ADMIN_GROUP` and `resolveAdminGroup`, the helper a plugin spreads into each collection's `admin` block. `@forumone/throughline-core` re-exports the types.
+
+### Patch Changes
+
+- Updated dependencies [006ae30]
+- Updated dependencies [549d292]
+- Updated dependencies [70385c4]
+- Updated dependencies [c8a86bf]
+- Updated dependencies [ab623e1]
+- Updated dependencies [ab623e1]
+- Updated dependencies [36728c4]
+  - @forumone/throughline-plugin-contract@0.5.0
+  - @forumone/throughline-core@0.10.0
+
 ## 0.8.5
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @forumone/throughline-reference-ds
 
+## 0.3.7
+
+### Patch Changes
+
+- c8a86bf: The `Divider` contract now declares `decorative` with `defaultValue: true`, matching the component. Before, the default was written only in prose, so a divider added in the CMS started unticked and screen readers announced it.
+
 ## 0.3.6
 
 ### Patch Changes

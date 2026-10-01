@@ -1,5 +1,62 @@
 # @forumone/throughline-workflows
 
+## 0.5.0
+
+### Minor Changes
+
+- ab623e1: The `payload` peer range moves from `^3.0.0` to `^3.89.0` for every package that has one. **A site on Payload older than 3.89.0 must upgrade Payload before upgrading these packages.**
+
+  Before 3.89.0, the `payload-mcp-api-keys` collection that `@payloadcms/plugin-mcp` adds registered Payload's API-key strategy on every REST route. Any key could then become `req.user` outside `/api/mcp` and pass access rules written as `Boolean(req.user)`. Every Throughline site runs that plugin, so the floor is the same for every package. No package's code changes with this bump.
+
+- 653817e: Revalidation no longer guesses paths, and covers the changes a publish event never announces.
+
+  - **workflows (breaking)**: `createRevalidateOnPublishFunction` has no built-in URL
+    builders. They mapped `pages` to `/<slug>`, `posts` to `/blog/<slug>` and any other
+    collection to `/<slug>`, so a site whose routes differed revalidated the wrong path
+    without a word. `urlBuilders` is now required; a collection with no entry has its
+    tags dropped and no path revalidated, and the run logs a warning. To keep the old
+    behaviour, pass the old builders:
+
+    ```ts
+    urlBuilders: {
+      pages: (slug) => (slug === 'home' || slug === '' ? '/' : `/${slug}`),
+      posts: (slug) => `/blog/${slug}`,
+    }
+    ```
+
+    and then check them against your routes.
+
+  - **workflows**: `createTagRevalidationHooks` — collection `afterChange` and
+    `afterDelete`, and global `afterChange`, hooks that call
+    `revalidateTag(tag, { expire: 0 })`. Draft saves and autosave drop nothing (via
+    publishing's `isDraftWrite`); an unpublish still does. A hook never throws: outside a
+    Next request (seeds, migrations, the CLI) it logs at `debug`, and any other failure
+    at `error` with the tag and the cause.
+  - **workflows**: `createCacheTags` builds every tag string, so the hooks, the publish
+    workflow (new `cacheTags` option) and cached reads cannot name different tags.
+    Defaults: the bare slug for a collection, `global_<slug>` for a global. Also on the
+    dependency-free `@forumone/throughline-workflows/cache-tags` subpath for frontend code.
+    `@forumone/throughline-publishing` is now a dependency of this package.
+  - **create-throughline**: the scaffold adds `apps/web/src/lib/cache-tags.ts`, attaches
+    the tag hooks to `Pages`, and passes explicit `urlBuilders` and the shared
+    `cacheTags` to the publish workflow.
+
+- 70385c4: `onTerminalFailure` has a handler to pass it. `createTerminalFailureHandler({ payload })` logs a run that exhausted its retries, writes a `job-failures` row through core's `jobFailuresPlugin` when it is registered, and posts the report to `ERROR_WEBHOOK_URL`. `createHealthcheckFailureHandler({ payload })` does the same for the healthcheck's per-run `onFailure`. Neither throws, because a throwing `onFailure` is retried by Inngest. The terminal handler also works as the `onFailure` of any Inngest function.
+
+  Recording rows needs core's `jobFailuresPlugin` and its migration. Without the plugin, the handlers still log and report.
+
+### Patch Changes
+
+- Updated dependencies [006ae30]
+- Updated dependencies [549d292]
+- Updated dependencies [70385c4]
+- Updated dependencies [c8a86bf]
+- Updated dependencies [ab623e1]
+- Updated dependencies [ab623e1]
+- Updated dependencies [36728c4]
+  - @forumone/throughline-core@0.10.0
+  - @forumone/throughline-publishing@0.11.0
+
 ## 0.4.0
 
 ### Minor Changes

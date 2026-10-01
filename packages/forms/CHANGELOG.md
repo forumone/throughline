@@ -1,5 +1,64 @@
 # @forumone/throughline-forms
 
+## 0.7.0
+
+### Minor Changes
+
+- 006ae30: A missing environment variable is reported together with every other one, in a
+  single error, instead of one plugin at a time.
+
+  The plugins that read the environment at init now declare what they cannot
+  start without, as data: `approvalsEnv` (`APPROVAL_TOKEN_SECRET`, 32+
+  characters), `emailEnv` (`RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`) and `formsEnv`
+  (`FORMS_IP_HASH_SECRET`, 32+ characters). Each is a list of `EnvRequirement`
+  (`{ name, minLength?, why }`), a new type in `plugin-contract`, and each
+  plugin's own init check now reads the same entries, so the two cannot drift.
+  An empty or whitespace-only value now counts as missing in those checks.
+
+  Core exports `assertEnvironment(...checks)`. Call it first in
+  `payload.config.ts` with the plugins' lists and your own variables; it throws
+  one `EnvironmentError` whose first line reads "Configuration problem: N
+  environment variables are missing or invalid", followed by every missing or
+  too-short variable and why it is needed. Values are never printed. An argument
+  can also be a function, for a rule that is not "this name, this long", such as
+  a database URL accepted under several names. `checkEnvValue` is the one-value
+  check behind it, for a plugin's own backstop.
+
+  New projects call `assertEnvironment` at the top of `payload.config.ts` with
+  `approvalsEnv`, `emailEnv`, `formsEnv`, `PAYLOAD_SECRET` (32+ characters),
+  `NEXT_PUBLIC_SERVER_URL` and the database resolver, and `.env.example` marks
+  which variables are checked. An existing site can do the same and delete any
+  hand-kept copy of the plugins' requirements.
+
+- ab623e1: The `payload` peer range moves from `^3.0.0` to `^3.89.0` for every package that has one. **A site on Payload older than 3.89.0 must upgrade Payload before upgrading these packages.**
+
+  Before 3.89.0, the `payload-mcp-api-keys` collection that `@payloadcms/plugin-mcp` adds registered Payload's API-key strategy on every REST route. Any key could then become `req.user` outside `/api/mcp` and pass access rules written as `Boolean(req.user)`. Every Throughline site runs that plugin, so the floor is the same for every package. No package's code changes with this bump.
+
+- 36728c4: Collections that Throughline plugins declare now sit in a `Throughline` group in the admin sidebar, instead of loose at the top of it above every group. That covers `audit-events` (`auditPlugin`), the approvals collection (`approvalsPlugin`), `integrations` (`integrationsPlugin`), and `forms` and `form-submissions` (`formsPlugin`).
+
+  Each of those plugins accepts `admin: { group }`, which applies to every collection it declares:
+
+  - omitted: the `Throughline` group.
+  - a string, or a locale map such as `{ en: 'Workflow', fr: 'Flux' }`: that group.
+  - `false`: ungrouped, in Payload's default "Collections" section. This does not hide the collection, which is what `false` means on a collection's own `admin.group`.
+
+  A site that groups these collections with its own config plugin can pass `admin: { group }` to each plugin and delete that code. `createAuditCollection`, `createApprovalsCollection` and `createIntegrationsCollection` accept the same `admin` option.
+
+  `@forumone/throughline-plugin-contract` exports the shared pieces: `CollectionPluginOptions`, `PluginAdminOptions`, `PluginAdminGroup`, `DEFAULT_ADMIN_GROUP` and `resolveAdminGroup`, the helper a plugin spreads into each collection's `admin` block. `@forumone/throughline-core` re-exports the types.
+
+### Patch Changes
+
+- Updated dependencies [006ae30]
+- Updated dependencies [549d292]
+- Updated dependencies [70385c4]
+- Updated dependencies [c8a86bf]
+- Updated dependencies [ab623e1]
+- Updated dependencies [ab623e1]
+- Updated dependencies [36728c4]
+  - @forumone/throughline-plugin-contract@0.5.0
+  - @forumone/throughline-core@0.10.0
+  - @forumone/throughline-email@0.3.0
+
 ## 0.6.4
 
 ### Patch Changes
