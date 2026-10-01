@@ -11,7 +11,10 @@ export const MANUAL_SYNC_EVENT = 'integration/manual-sync'
 export interface RequestManualSyncDeps {
   payload: Payload
   collectionSlug: string
-  inngest: Inngest
+  /** Sends the manual-sync event, unless `emit` is given. */
+  inngest?: Inngest
+  /** Sends the manual-sync event on a site that runs integrations as jobs. */
+  emit?: (event: { name: string; data: unknown }) => Promise<void>
 }
 
 export interface RequestManualSyncArgs {
@@ -99,7 +102,10 @@ export async function requestManualSync(
   const integrationType = String(doc['integrationType'])
 
   try {
-    await deps.inngest.send({
+    const send = deps.emit ?? ((event) => deps.inngest!.send(event).then(() => undefined))
+    if (!deps.emit && !deps.inngest)
+      throw new Error('No Inngest client or emit to send the manual sync with.')
+    await send({
       name: MANUAL_SYNC_EVENT,
       data: {
         integrationId: integrationType,

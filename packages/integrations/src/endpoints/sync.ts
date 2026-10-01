@@ -4,7 +4,8 @@ import { requestManualSync, type ManualSyncRefusal } from '../sync/manual-sync.j
 
 export interface CreateSyncEndpointDeps {
   collectionSlug: string
-  inngest: Inngest
+  inngest?: Inngest
+  emit?: (event: { name: string; data: unknown }) => Promise<void>
 }
 
 /** Default recorded on the event when the caller supplies no reason of its own. */
@@ -65,7 +66,12 @@ export function createSyncEndpoint(deps: CreateSyncEndpointDeps): Endpoint {
       }
 
       const result = await requestManualSync(
-        { payload: req.payload, collectionSlug: deps.collectionSlug, inngest: deps.inngest },
+        {
+          payload: req.payload,
+          collectionSlug: deps.collectionSlug,
+          ...(deps.inngest ? { inngest: deps.inngest } : {}),
+          ...(deps.emit ? { emit: deps.emit } : {}),
+        },
         {
           instanceId: String(id),
           triggeredBy: req.user.id ?? null,

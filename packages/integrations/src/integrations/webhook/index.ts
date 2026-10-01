@@ -4,7 +4,7 @@ import {
   configFields,
   MIN_SIGNING_SECRET_LENGTH,
 } from './config-fields.js'
-import { createWebhookFunctions, WEBHOOK_INTEGRATION_ID } from './functions.js'
+import { createWebhookFunctions, createWebhookJobs, WEBHOOK_INTEGRATION_ID } from './functions.js'
 import { healthcheck } from './healthcheck.js'
 
 export const webhookIntegration: Integration<WebhookConfig> = {
@@ -47,6 +47,7 @@ export const webhookIntegration: Integration<WebhookConfig> = {
     { event: 'approval/decided', purpose: 'Notify external workflow tools of approval outcomes' },
   ],
   createFunctions: createWebhookFunctions,
+  createJobs: createWebhookJobs,
   healthcheck,
 }
 

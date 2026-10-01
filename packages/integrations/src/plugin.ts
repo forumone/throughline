@@ -7,7 +7,8 @@ import { createIntegrationsCollection } from './collection.js'
 import { createSyncEndpoint } from './endpoints/sync.js'
 import { createStatusWriter } from './sync/status.js'
 import { webhookIntegration } from './integrations/index.js'
-import type { IntegrationContext } from './types.js'
+import type { Integration, IntegrationContext } from './types.js'
+import type { Job, JobContext } from '@forumone/throughline-workflows'
 import {
   INTEGRATIONS_TOOL_DESCRIPTORS,
   createGetIntegrationStatusTool,
@@ -19,6 +20,19 @@ import {
 
 const PLUGIN_ID = '@forumone/throughline-integrations'
 const PLUGIN_VERSION = '0.1.0'
+
+/*
+A site that runs integrations as jobs has no Inngest client, but the context's
+type still promises one, so existing integrations keep compiling. Any use of it
+says what to do instead.
+*/
+const noInngest = new Proxy({} as IntegrationContext['inngest'], {
+  get: () => {
+    throw new Error(
+      'This site runs integrations as jobs and has no Inngest client. Send events with ctx.emit, and give the integration createJobs.',
+    )
+  },
+})
 
 const REGISTRY_SYMBOL = Symbol.for('@forumone/throughline/integrations-registry')
 const CONTEXT_SYMBOL = Symbol.for('@forumone/throughline/integrations-context')
@@ -44,6 +58,15 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
 
     const options = validateOptions(rawOptions)
     const collectionSlug = options.collectionSlug ?? DEFAULT_INTEGRATIONS_SLUG
+    const inngest = options.inngest
+    // `emit` when the site gave one, otherwise Inngest; validateOptions saw to one of them.
+    const emit =
+      options.emit ??
+      (async (event: { name: string; data: unknown }) => {
+        await inngest!.send(event)
+      })
+    // What the manual-sync endpoint and tool send through.
+    const transport = { ...(inngest ? { inngest } : {}), emit }
     const logger = createNamedLogger('integrations', options.logger ?? defaultLogger)
 
     const registry = new IntegrationRegistry()
@@ -58,7 +81,7 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
       // The admin's path to `integration/manual-sync`, sharing
       // `requestManualSync` with the `trigger_sync` MCP tool so the two cannot
       // disagree about what a trigger checks or what event it sends.
-      endpoints: [createSyncEndpoint({ collectionSlug, inngest: options.inngest })],
+      endpoints: [createSyncEndpoint({ collectionSlug, ...transport })],
       ...(options.admin ? { admin: options.admin } : {}),
     })
 
@@ -82,7 +105,8 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
         const auditWriter = getAuditWriter(payload)
 
         const context: IntegrationContext = {
-          inngest: options.inngest,
+          inngest: options.inngest ?? noInngest,
+          emit,
           integrationsCollectionSlug: collectionSlug,
           async loadInstances<Config = Record<string, unknown>>(integrationId: string) {
             const result = await payload.find({
@@ -117,18 +141,24 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
         }
 
         for (const integration of registry.list()) {
-          const fnCount = integration.createFunctions(context).length
-          logger.info('Integration registered', {
-            id: integration.id,
-            inngestFunctions: fnCount,
-          })
+          if (options.inngest) {
+            const fnCount = integration.createFunctions(context).length
+            logger.info('Integration registered', { id: integration.id, inngestFunctions: fnCount })
+          } else if (integration.createJobs) {
+            logger.info('Integration registered', { id: integration.id, runner: 'jobs' })
+          } else {
+            logger.warn(
+              'Integration has no jobs, and this site has no Inngest client, so it will not run',
+              { id: integration.id },
+            )
+          }
         }
 
         const deps = { payload, collectionSlug }
         const tools = [
           createListIntegrationsTool(deps),
           createGetIntegrationStatusTool(deps),
-          createTriggerSyncTool({ ...deps, inngest: options.inngest }),
+          createTriggerSyncTool({ ...deps, ...transport }),
           createTestIntegrationTool({ ...deps, registry }),
           createListIntegrationTypesTool({ registry }),
         ] as unknown as McpToolDefinition[]
@@ -187,6 +217,37 @@ export function getIntegrationRegistry<Fn = unknown>(
   return (payload as Record<symbol, unknown>)[REGISTRY_SYMBOL] as
     | IntegrationRegistry<Fn>
     | undefined
+}
+
+/**
+ * Every registered integration's jobs, for a site whose jobs adapter takes its
+ * jobs while the config is being built (`payloadJobs().plugin(...)`).
+ *
+ * Pass the same `integrations` as `integrationsPlugin`; the built-in webhook is
+ * included, as the plugin includes it. An integration without `createJobs`
+ * contributes nothing here and runs on Inngest only. Each job reads the
+ * integrations context from Payload when it runs, so `integrationsPlugin` must
+ * be registered too.
+ */
+export function integrationsJobs(
+  options: Pick<IntegrationsPluginOptions, 'integrations'> = {},
+): Job[] {
+  const getContext = (job: JobContext): IntegrationContext => {
+    if (!job.payload) {
+      throw new Error(
+        'integrationsJobs: this runner gave the job no Payload instance. Use payloadJobs, or pass `payload` to inngestJobs.',
+      )
+    }
+    const context = getIntegrationContext(job.payload)
+    if (!context) {
+      throw new Error(
+        'integrationsJobs: no integrations context on Payload. Register integrationsPlugin as well.',
+      )
+    }
+    return context
+  }
+  const integrations = [webhookIntegration as unknown as Integration, ...(options.integrations ?? [])]
+  return integrations.flatMap((integration) => integration.createJobs?.(getContext) ?? [])
 }
 
 export function getIntegrationContext(payload: unknown): IntegrationContext | undefined {

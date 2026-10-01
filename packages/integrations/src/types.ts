@@ -1,5 +1,6 @@
 import type { Field } from 'payload'
 import type { Inngest } from 'inngest'
+import type { Job, JobContext } from '@forumone/throughline-workflows'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 
 export type IntegrationCategory =
@@ -94,6 +95,20 @@ export interface Integration<Config = Record<string, unknown>, Fn = unknown> {
    */
   createFunctions: (ctx: IntegrationContext) => Fn[]
   /**
+   * The same work as runner-neutral jobs, for a site on `payloadJobs` (or any
+   * jobs adapter). Optional: an integration without it runs on Inngest only.
+   *
+   * Takes a function rather than a context, because a jobs adapter is handed
+   * its jobs while the config is being built, before the context exists. Call
+   * `getContext(jobContext)` inside the handler. An integration with both
+   * usually derives `createFunctions` from this, as the webhook does:
+   *
+   * ```ts
+   * createFunctions: (ctx) => inngestJobs(ctx.inngest).functions(createJobs(() => ctx)),
+   * ```
+   */
+  createJobs?: (getContext: (job: JobContext) => IntegrationContext) => Job[]
+  /**
    * Optional MCP tools the integration adds to the integrations server. Most
    * integrations need only the five built-in tools; this is for cases where
    * the integration needs its own purpose-built tool (e.g. Salesforce's
@@ -113,7 +128,13 @@ export interface Integration<Config = Record<string, unknown>, Fn = unknown> {
  * integration to internal implementation details.
  */
 export interface IntegrationContext {
+  /**
+   * The Inngest client. On a site that runs integrations as jobs and has no
+   * Inngest, any use of it throws, saying so. Send events with `emit`.
+   */
   inngest: Inngest
+  /** Send an event on whichever runner the site uses. */
+  emit: (event: { name: string; data: unknown }) => Promise<void>
   integrationsCollectionSlug: string
   /** Loads all enabled instances of an integration by id. */
   loadInstances: <Config = Record<string, unknown>>(

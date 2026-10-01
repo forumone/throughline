@@ -1,4 +1,5 @@
 export {
+  integrationsJobs,
   integrationsPlugin,
   getIntegrationRegistry,
   getIntegrationContext,

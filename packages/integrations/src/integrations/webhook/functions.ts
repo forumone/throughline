@@ -1,4 +1,5 @@
 import type { InngestFunction } from 'inngest'
+import { defineJob, inngestJobs, type Job, type JobContext } from '@forumone/throughline-workflows'
 import type { IntegrationContext } from '../../types.js'
 import { hmacSha256Hex } from './hmac.js'
 import type { WebhookConfig } from './config-fields.js'
@@ -22,20 +23,24 @@ export const WEBHOOK_INTEGRATION_ID = 'webhook'
  * instance retries on its own without affecting the others or the
  * publishing pipeline that fired the originating event.
  */
-export function createWebhookFunctions(ctx: IntegrationContext): InngestFunction.Any[] {
-  const deliver = ctx.inngest.createFunction(
+export function createWebhookJobs(getContext: (job: JobContext) => IntegrationContext): Job[] {
+  const deliver = defineJob(
     {
       id: 'webhook-deliver',
       retries: 5,
-      triggers: [
-        { event: 'content/page.published' },
-        { event: 'content/page.unpublished' },
-        { event: 'content/page.rolled_back' },
-        { event: 'form/submission.received' },
-        { event: 'approval/decided' },
-      ],
+      on: {
+        event: [
+          'content/page.published',
+          'content/page.unpublished',
+          'content/page.rolled_back',
+          'form/submission.received',
+          'approval/decided',
+        ],
+      },
     },
-    async ({ event, step }) => {
+    async (job) => {
+      const { event, step } = job
+      const ctx = getContext(job)
       const instances = await step.run('load-webhook-instances', () =>
         ctx.loadInstances<WebhookConfig>(WEBHOOK_INTEGRATION_ID),
       )
@@ -51,12 +56,14 @@ export function createWebhookFunctions(ctx: IntegrationContext): InngestFunction
     },
   )
 
-  const manualTrigger = ctx.inngest.createFunction(
+  const manualTrigger = defineJob(
     {
       id: 'webhook-manual-trigger',
-      triggers: [{ event: 'integration/manual-sync' }],
+      on: { event: 'integration/manual-sync' },
     },
-    async ({ event, step }) => {
+    async (job) => {
+      const { event, step } = job
+      const ctx = getContext(job)
       const data = (event.data ?? {}) as { integrationId?: string; instanceId?: string }
       const targetInstanceId = data.instanceId
       if (!targetInstanceId) return
@@ -81,6 +88,11 @@ export function createWebhookFunctions(ctx: IntegrationContext): InngestFunction
   )
 
   return [deliver, manualTrigger]
+}
+
+/** The same two jobs, registered with Inngest exactly as they always were. */
+export function createWebhookFunctions(ctx: IntegrationContext): InngestFunction.Any[] {
+  return inngestJobs(ctx.inngest).functions(createWebhookJobs(() => ctx))
 }
 
 interface DeliverArgs {
