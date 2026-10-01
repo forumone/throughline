@@ -1,5 +1,25 @@
 # @forumone/throughline-audit
 
+## 0.6.0
+
+### Minor Changes
+
+- ab623e1: The `payload` peer range moves from `^3.0.0` to `^3.89.0` for every package that has one. **A site on Payload older than 3.89.0 must upgrade Payload before upgrading these packages.**
+
+  Before 3.89.0, the `payload-mcp-api-keys` collection that `@payloadcms/plugin-mcp` adds registered Payload's API-key strategy on every REST route. Any key could then become `req.user` outside `/api/mcp` and pass access rules written as `Boolean(req.user)`. Every Throughline site runs that plugin, so the floor is the same for every package. No package's code changes with this bump.
+
+### Patch Changes
+
+- Updated dependencies [006ae30]
+- Updated dependencies [549d292]
+- Updated dependencies [70385c4]
+- Updated dependencies [c8a86bf]
+- Updated dependencies [ab623e1]
+- Updated dependencies [ab623e1]
+- Updated dependencies [36728c4]
+  - @forumone/throughline-plugin-contract@0.5.0
+  - @forumone/throughline-core@0.10.0
+
 ## 0.5.4
 
 ### Patch Changes
