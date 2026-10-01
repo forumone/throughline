@@ -24,7 +24,12 @@ export type {
 export { EnvironmentError, assertEnvironment, checkEnvValue } from './env/index.js'
 export type { EnvValueProblem, EnvironmentCheck } from './env/index.js'
 
-export { createInngestClient } from './events/index.js'
+export {
+  createInngestClient,
+  registersInngestCrons,
+  registrableInngestFunctions,
+  resolveInngestEnv,
+} from './events/index.js'
 export type { CoreEvents, FrameworkEvents, InngestClientOptions } from './events/index.js'
 
 export {
