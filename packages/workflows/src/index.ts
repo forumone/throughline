@@ -24,6 +24,27 @@ export {
   createManifestReachableCheck,
 } from './healthcheck.js'
 
+/*
+Runner-neutral jobs (1.0 P1). Additive: the factories above are unchanged and
+still register Inngest functions directly. See `jobs/types.ts`.
+*/
+export { defineJob, inngestFunctionConfig, inngestIdempotency, inngestJobs } from './jobs/index.js'
+export type {
+  InngestJobsAdapter,
+  InngestJobsOptions,
+  Job,
+  JobContext,
+  JobDefinition,
+  JobEvent,
+  JobHandler,
+  JobIdempotency,
+  JobLogger,
+  JobStep,
+  JobsAdapter,
+  JobTrigger,
+  ReceivedJobEvent,
+} from './jobs/index.js'
+
 export { failureOptions } from './types.js'
 export {
   createHealthcheckFailureHandler,
