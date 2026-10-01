@@ -1,5 +1,8 @@
 import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
+import { defineJob } from './jobs/define.js'
+import { inngestJobs } from './jobs/inngest.js'
+import type { Job } from './jobs/types.js'
 import { defaultCacheTags } from './cache-tags.js'
 import { IMMEDIATE, loadNextCache } from './next-revalidate.js'
 import type { RevalidateFn, RevalidateOnPublishOptions, RevalidatePathsInput } from './types.js'
@@ -23,15 +26,13 @@ import type { RevalidateFn, RevalidateOnPublishOptions, RevalidatePathsInput } f
  * package is safe to install in non-Next.js contexts. Pass `options.revalidate`
  * to use a different cache invalidation strategy.
  */
-export function createRevalidateOnPublishFunction(
-  options: RevalidateOnPublishOptions,
-): InngestFunction.Any {
+export function revalidateOnPublishJob(options: Omit<RevalidateOnPublishOptions, 'inngest'>): Job {
   const urlBuilders = options.urlBuilders
   const cacheTags = options.cacheTags ?? defaultCacheTags
   const collectionTags = options.collectionTags ?? {}
   const revalidate = options.revalidate ?? defaultRevalidate
 
-  return options.inngest.createFunction(
+  return defineJob(
     {
       id: options.id ?? 'revalidate-on-publish',
       retries: 5,
@@ -41,11 +42,9 @@ export function createRevalidateOnPublishFunction(
       so two publishes landing together should not queue behind each other.
       */
       ...failureOptions(options),
-      triggers: [
-        { event: 'content/page.published' },
-        { event: 'content/page.unpublished' },
-        { event: 'content/page.rolled_back' },
-      ],
+      on: {
+        event: ['content/page.published', 'content/page.unpublished', 'content/page.rolled_back'],
+      },
     },
     async ({ event, step, logger }) => {
       const data = (event.data ?? {}) as { collection?: string; slug?: string; id?: string }
@@ -78,6 +77,13 @@ export function createRevalidateOnPublishFunction(
       return { collection, slug, revalidated: true }
     },
   )
+}
+
+/** The same job, registered with Inngest exactly as it always was. */
+export function createRevalidateOnPublishFunction(
+  options: RevalidateOnPublishOptions,
+): InngestFunction.Any {
+  return inngestJobs(options.inngest).toFunction(revalidateOnPublishJob(options))
 }
 
 /**

@@ -2,6 +2,9 @@ import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
 import { getAuditWriter } from '@forumone/throughline-core'
 import type { ExpireStaleApprovalsOptions } from './types.js'
+import { defineJob } from './jobs/define.js'
+import { inngestJobs } from './jobs/inngest.js'
+import type { Job } from './jobs/types.js'
 
 const DEFAULT_SCHEDULE = '0 2 * * *' // daily at 2am UTC
 const DEFAULT_SLUG = 'approvals'
@@ -17,17 +20,19 @@ interface ExpiredApproval {
 /**
  * Cron that finds pending approvals whose `expiresAt` has passed and flips
  * them to `status: 'expired'`. For each expired record it writes an
- * `approval.expired` audit event and fires an `approval/expired` Inngest
- * event so notification workflows (e.g. C11 email) can let the requester
- * know without polling.
+ * `approval.expired` audit event and fires an `approval/expired` event so
+ * notification workflows (e.g. C11 email) can let the requester know without
+ * polling.
+ *
+ * As a runner-neutral job, for `inngestJobs` or `payloadJobs`.
  */
-export function createExpireStaleApprovalsFunction(
-  options: ExpireStaleApprovalsOptions,
-): InngestFunction.Any {
+export function expireStaleApprovalsJob(
+  options: Omit<ExpireStaleApprovalsOptions, 'inngest'>,
+): Job {
   const schedule = options.schedule ?? DEFAULT_SCHEDULE
   const collectionSlug = options.collectionSlug ?? DEFAULT_SLUG
 
-  return options.inngest.createFunction(
+  return defineJob(
     {
       id: options.id ?? 'expire-stale-approvals',
       /*
@@ -42,9 +47,9 @@ export function createExpireStaleApprovalsFunction(
       and the `onFailure` above is what would have said so.
       */
       ...failureOptions(options, 1),
-      triggers: [{ cron: schedule }],
+      on: { cron: schedule },
     },
-    async ({ step, logger }) => {
+    async ({ step, logger, emit }) => {
       const now = new Date().toISOString()
 
       const expired = await step.run('find-expired', async (): Promise<ExpiredApproval[]> => {
@@ -93,7 +98,7 @@ export function createExpireStaleApprovalsFunction(
             approvalRequestId: approval.id,
           })
 
-          await options.inngest.send({
+          await emit({
             name: 'approval/expired',
             data: {
               approvalId: approval.id,
@@ -109,6 +114,13 @@ export function createExpireStaleApprovalsFunction(
       return { expiredCount: expired.length }
     },
   )
+}
+
+/** The same job, registered with Inngest exactly as it always was. */
+export function createExpireStaleApprovalsFunction(
+  options: ExpireStaleApprovalsOptions,
+): InngestFunction.Any {
+  return inngestJobs(options.inngest).toFunction(expireStaleApprovalsJob(options))
 }
 
 function extractRequesterId(value: unknown): string | null {

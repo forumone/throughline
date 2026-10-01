@@ -1,4 +1,4 @@
-export { createRevalidateOnPublishFunction } from './revalidate-on-publish.js'
+export { createRevalidateOnPublishFunction, revalidateOnPublishJob } from './revalidate-on-publish.js'
 export { createTagRevalidationHooks } from './revalidate-tag-hooks.js'
 export type {
   CollectionTagHookOptions,
@@ -14,12 +14,19 @@ readers in frontend code should import it from there.
 */
 export { createCacheTags, defaultCacheTags } from './cache-tags.js'
 export type { CacheTags, CacheTagScheme } from './cache-tags.js'
-export { createExecuteScheduledPublishesFunction } from './execute-scheduled-publishes.js'
-export { createPublishAtScheduledTimeFunction } from './publish-at-scheduled-time.js'
-export { createExpireStaleApprovalsFunction } from './expire-stale-approvals.js'
-export { createAuditEventEchoFunction } from './audit-event-echo.js'
+export {
+  createExecuteScheduledPublishesFunction,
+  executeScheduledPublishesJob,
+} from './execute-scheduled-publishes.js'
+export {
+  createPublishAtScheduledTimeFunction,
+  publishAtScheduledTimeJob,
+} from './publish-at-scheduled-time.js'
+export { createExpireStaleApprovalsFunction, expireStaleApprovalsJob } from './expire-stale-approvals.js'
+export { auditEventEchoJob, createAuditEventEchoFunction } from './audit-event-echo.js'
 export {
   createHealthcheckFunction,
+  healthcheckJob,
   createPayloadReachableCheck,
   createManifestReachableCheck,
 } from './healthcheck.js'
@@ -34,6 +41,7 @@ export {
   inngestIdempotency,
   inngestJobs,
   JOB_KEYS_COLLECTION,
+  jobEvents,
   payloadIdempotencyKey,
   payloadJobs,
 } from './jobs/index.js'

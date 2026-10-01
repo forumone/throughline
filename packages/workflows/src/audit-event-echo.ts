@@ -1,5 +1,8 @@
 import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
+import { defineJob } from './jobs/define.js'
+import { inngestJobs } from './jobs/inngest.js'
+import type { Job } from './jobs/types.js'
 import type { AuditEventEchoOptions } from './types.js'
 
 interface AuditRecordedData {
@@ -27,8 +30,8 @@ const APPROVAL_DECISION_ACTIONS = new Set([
  * Each handler runs in its own `step.run` so a failure in one fan-out
  * does not affect the others.
  */
-export function createAuditEventEchoFunction(options: AuditEventEchoOptions): InngestFunction.Any {
-  return options.inngest.createFunction(
+export function auditEventEchoJob(options: Omit<AuditEventEchoOptions, 'inngest'>): Job {
+  return defineJob(
     {
       id: options.id ?? 'audit-event-echo',
       /*
@@ -37,15 +40,15 @@ export function createAuditEventEchoFunction(options: AuditEventEchoOptions): In
       serialising them would put a queue in front of every audited write.
       */
       ...failureOptions(options),
-      triggers: [{ event: 'audit/event.recorded' }],
+      on: { event: 'audit/event.recorded' },
     },
-    async ({ event, step, logger }) => {
+    async ({ event, step, logger, emit }) => {
       const data = (event.data ?? {}) as AuditRecordedData
       logger.info('Audit event echoed', { action: data.action })
 
       await step.run('handle-approval-requested', async () => {
         if (data.action === 'approval.requested' && data.approvalRequestId) {
-          await options.inngest.send({
+          await emit({
             name: 'notification/send-approval-request',
             data: { approvalId: data.approvalRequestId },
           })
@@ -54,7 +57,7 @@ export function createAuditEventEchoFunction(options: AuditEventEchoOptions): In
 
       await step.run('handle-approval-decided', async () => {
         if (APPROVAL_DECISION_ACTIONS.has(data.action) && data.approvalRequestId) {
-          await options.inngest.send({
+          await emit({
             name: 'notification/send-approval-decision',
             data: { approvalId: data.approvalRequestId, decision: data.action },
           })
@@ -75,4 +78,9 @@ export function createAuditEventEchoFunction(options: AuditEventEchoOptions): In
       }
     },
   )
+}
+
+/** The same job, registered with Inngest exactly as it always was. */
+export function createAuditEventEchoFunction(options: AuditEventEchoOptions): InngestFunction.Any {
+  return inngestJobs(options.inngest).toFunction(auditEventEchoJob(options))
 }

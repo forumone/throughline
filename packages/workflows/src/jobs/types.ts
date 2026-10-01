@@ -19,8 +19,12 @@ options. That keeps this layer free of anything a runner has to supply.
 */
 import type { WorkflowFailureHandler } from '../types.js'
 
-/** What a job reacts to: one named event, or a cron schedule. */
-export type JobTrigger = { event: string } | { cron: string }
+/**
+ * What a job reacts to: a named event, any of several, or a cron schedule.
+ * `revalidate-on-publish` is the case for a list: it answers publish,
+ * unpublish and rollback alike.
+ */
+export type JobTrigger = { event: string | readonly string[] } | { cron: string }
 
 /**
  * Runs of a job with the same key, within the runner's window, collapse into
@@ -90,6 +94,14 @@ export interface JobLogger {
 export interface JobContext<TData = unknown> {
   event: ReceivedJobEvent<TData>
   step: JobStep
+  /**
+   * Send an event now, not as a step of its own. For a send that belongs to
+   * the step it is inside: expiring an approval updates the row, writes the
+   * audit event and announces it in one `step.run`, so a retry repeats all
+   * three together. Outside a step, prefer `step.sendEvent`, which a replay
+   * does not repeat.
+   */
+  emit(event: JobEvent | readonly JobEvent[]): Promise<void>
   /** The runner's id for this run, for logs and failure reports. */
   runId: string
   logger: JobLogger

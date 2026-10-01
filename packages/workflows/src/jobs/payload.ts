@@ -40,6 +40,7 @@ server, or a scheduler hitting `/api/payload-jobs/run` and
 */
 import type { Config, Payload, Plugin } from 'payload'
 import type { WorkflowFailureHandler } from '../types.js'
+import { jobEvents } from './inngest.js'
 import type {
   Job,
   JobContext,
@@ -173,7 +174,7 @@ export function payloadJobs(options: PayloadJobsOptions = {}): PayloadJobsAdapte
     for (const sent of events) {
       const received: ReceivedJobEvent = { name: sent.name, data: sent.data, ts: Date.now() }
       for (const job of registered) {
-        if (!('event' in job.on) || job.on.event !== sent.name) continue
+        if (!jobEvents(job).includes(sent.name)) continue
         const idempotencyKey = payloadIdempotencyKey(job, sent)
         if (idempotencyKey && !(await claim(payload, idempotencyKey))) continue
         await payload.jobs.queue({
@@ -220,6 +221,7 @@ export function payloadJobs(options: PayloadJobsOptions = {}): PayloadJobsAdapte
           event,
           runId: String(running.id),
           logger: jobLogger(req.payload),
+          emit,
           step: {
             run,
             sleepUntil: async (id, until) => {
