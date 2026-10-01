@@ -57,6 +57,44 @@ export type {
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
 export {
+  DEFAULT_JOB_FAILURES_SLUG,
+  DEFAULT_REPORTED_HEADERS,
+  ERROR_WEBHOOK_URL_ENV,
+  JOB_FAILURE_KINDS,
+  NEVER_REPORTED_HEADERS,
+  buildHealthcheckFailureReport,
+  buildJobFailureReport,
+  buildRequestErrorReport,
+  clientPrefix,
+  createErrorReporter,
+  createJobFailureWriter,
+  createJobFailuresCollection,
+  currentDeployment,
+  describeErrorReporting,
+  getJobFailureWriter,
+  jobFailuresPlugin,
+  reportError,
+  summariseReport,
+} from './observability/index.js'
+export type {
+  BuildJobFailureReportInput,
+  BuildRequestErrorReportOptions,
+  ErrorReport,
+  ErrorReporter,
+  ErrorReporterOptions,
+  HealthcheckFailureReport,
+  JobFailureKind,
+  JobFailureReport,
+  JobFailureWriter,
+  JobFailureWriterOptions,
+  JobFailuresCollectionOptions,
+  JobFailuresPluginOptions,
+  ReportDeployment,
+  ReportableHeaders,
+  RequestErrorReport,
+} from './observability/index.js'
+
+export {
   documentContentHash,
   formatZodIssues,
   sha256Hex,

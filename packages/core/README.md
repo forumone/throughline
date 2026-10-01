@@ -4,15 +4,16 @@ The shared plumbing every Throughline server package depends on. Drop it into a 
 
 ## What's inside
 
-| Subsystem          | Subpath    | Role                                                                                                                                                            |
-| ------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Audit              | `./audit`  | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS`                                             |
-| Events             | `./events` | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                                                               |
-| MCP                | `./mcp`    | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext`, `mcpApiKeyAccess`, `isSignedIn`, `signedIn`, `isMcpApiKeyPrincipal` |
-| Environment        | `./env`    | `assertEnvironment`, `checkEnvValue`, `EnvironmentError`                                                                                                        |
-| Logger             | (main)     | `defaultLogger`, `createNamedLogger`                                                                                                                            |
-| Utils              | (main)     | `documentContentHash`, `sha256Hex`, `formatZodIssues`                                                                                                           |
-| Payload CLI runner | bin        | `throughline-payload` — see [below](#running-the-payload-cli-throughline-payload)                                                                               |
+| Subsystem          | Subpath           | Role                                                                                                                                                            |
+| ------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Audit              | `./audit`         | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS`                                             |
+| Events             | `./events`        | `createInngestClient`, `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                                                               |
+| MCP                | `./mcp`           | `createMcpToolCollector`, `toPayloadMcpTools`, `McpMetaSchema`, `withMeta`, `auditContext`, `mcpApiKeyAccess`, `isSignedIn`, `signedIn`, `isMcpApiKeyPrincipal` |
+| Environment        | `./env`           | `assertEnvironment`, `checkEnvValue`, `EnvironmentError`                                                                                                        |
+| Observability      | `./observability` | `jobFailuresPlugin`, `getJobFailureWriter`, `createErrorReporter`, `reportError`, `buildRequestErrorReport`, `describeErrorReporting`                           |
+| Logger             | (main)            | `defaultLogger`, `createNamedLogger`                                                                                                                            |
+| Utils              | (main)            | `documentContentHash`, `sha256Hex`, `formatZodIssues`                                                                                                           |
+| Payload CLI runner | bin               | `throughline-payload` — see [below](#running-the-payload-cli-throughline-payload)                                                                               |
 
 There is no `./auth` any more. It held an MCP key collection, a bearer-token
 authenticator and `createMcpHandler` — a JSON-RPC subset each plugin mounted at its
@@ -73,6 +74,34 @@ The writer is **fire-and-forget**: failures log but never throw. Audit failures 
 ### Sidebar group
 
 The `audit-events` collection sits in the admin sidebar's `Throughline` group by default. `auditPlugin({ inngest, admin: { group: 'Workflow' } })` files it elsewhere; `admin: { group: false }` leaves it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group).
+
+## Job failures and error reporting
+
+The audit log records who did what through an MCP tool. A background job that
+ran out of retries is not that, so it has its own collection:
+`jobFailuresPlugin()` adds `job-failures` and attaches a writer that
+`@forumone/throughline-workflows`' failure handlers find. Adding it to an
+existing site is a schema change — run `payload migrate:create` afterwards.
+
+Error reports go to a webhook, not to a vendor SDK: `reportError` posts JSON to
+`ERROR_WEBHOOK_URL` (a log drain, an alerting endpoint, a Slack incoming
+webhook, a proxy in front of a tracker), with a 3-second timeout, and never
+throws. `buildRequestErrorReport` shapes what Next's `onRequestError` hands
+over, copying request headers from an allowlist — `cookie` and `authorization`
+are never copied.
+
+```typescript
+// instrumentation.ts
+import type { Instrumentation } from 'next'
+import { buildRequestErrorReport, reportError } from '@forumone/throughline-core/observability'
+
+export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  await reportError(buildRequestErrorReport(error, request, context))
+}
+```
+
+`./observability` imports neither Payload nor Inngest at runtime, so it is safe
+in `instrumentation.ts`. See `docs/operations/observability.md`.
 
 ## MCP authentication
 

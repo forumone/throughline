@@ -25,6 +25,14 @@ export {
 } from './healthcheck.js'
 
 export { failureOptions } from './types.js'
+export {
+  createHealthcheckFailureHandler,
+  createTerminalFailureHandler,
+} from './failure-handler.js'
+export type {
+  FailureHandlerOptions,
+  HealthcheckFailureHandlerOptions,
+} from './failure-handler.js'
 
 export type {
   BaseWorkflowOptions,

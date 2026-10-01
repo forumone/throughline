@@ -122,8 +122,8 @@ Provision an Inngest app, set `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` in y
 The framework's stance:
 
 - **Publish itself is synchronous.** It either succeeds or fails before returning. The publish event fires only after the row is in `_status: 'published'`.
-- **Subscribers are best-effort.** A failing subscriber retries; permanent failure lands in a dead-letter queue. The publish itself doesn't roll back.
-- **Failures are surfaced.** Inngest dashboards show every failed run; the audit log records `system/integration-error` events when an integration's worker fails permanently.
+- **Subscribers are best-effort.** A failing subscriber retries; the publish itself doesn't roll back.
+- **Failures are surfaced — if you wire them.** Inngest's dashboard shows every failed run. A run that exhausts its retries is recorded and reported only when its function has a failure handler: `createTerminalFailureHandler` from `@forumone/throughline-workflows`, passed as `onTerminalFailure` to any workflow factory (or as `onFailure` to your own `createFunction`), logs it, writes a `job-failures` row and posts it to `ERROR_WEBHOOK_URL`. The scaffold wires it into every framework workflow. An integration's own failure also writes an `integration.failed` audit row through `ctx.recordAudit`. See [Observability](../operations/observability.md#job-failures).
 
 If a side effect must succeed for the publish to be valid (rare), wire it inline in the Publishing pipeline — the AccessibilityCheck mechanism is one place to do this synchronously. But the design strongly prefers async side effects with visible failures over inline side effects with implicit blocking.
 

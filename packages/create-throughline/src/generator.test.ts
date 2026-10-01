@@ -261,14 +261,33 @@ describe('generate (with reference DS)', () => {
     expect(tags).toContain("from '@forumone/throughline-workflows/cache-tags'")
     expect(tags).toContain('export const cacheTags = createCacheTags(')
     expect(route).toContain("import { cacheTags } from '@/lib/cache-tags'")
-    expect(route).toContain(
-      'createRevalidateOnPublishFunction({ inngest, payload, urlBuilders, cacheTags })',
+    expect(route).toMatch(
+      /createRevalidateOnPublishFunction\(\{\s+inngest,\s+payload,\s+urlBuilders,\s+cacheTags,\s+onTerminalFailure,\s+\}\)/,
     )
     expect(route).toMatch(/const urlBuilders = \{\s+pages:/)
     expect(config).toContain("import { cacheTags } from './lib/cache-tags'")
     expect(config).toContain('createTagRevalidationHooks({ cacheTags })')
     expect(config).toContain('afterChange: [revalidation.afterCollectionChange()]')
     expect(config).toContain('afterDelete: [revalidation.afterCollectionDelete()]')
+  })
+
+  it('routes failures: workflows, healthchecks and request errors', async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
+    expect(route).toContain('const onTerminalFailure = createTerminalFailureHandler({ payload })')
+    expect(route).toContain('onFailure: createHealthcheckFailureHandler({ payload })')
+    // Every framework factory gets the handler: the declaration, then six uses.
+    expect(route.match(/onTerminalFailure[,\s}]/g)?.length).toBe(1 + 6)
+
+    const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
+    expect(config).toContain('jobFailuresPlugin({})')
+
+    const instrumentation = await readFile(join(target, 'apps/web/src/instrumentation.ts'), 'utf-8')
+    expect(instrumentation).toContain('export const onRequestError')
+    expect(instrumentation).toContain("from '@forumone/throughline-core/observability'")
+
+    const env = await readFile(join(target, '.env.example'), 'utf-8')
+    expect(env).toMatch(/^ERROR_WEBHOOK_URL=$/m)
   })
 
   it('puts the project name into the .env file', async () => {

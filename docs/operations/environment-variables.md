@@ -100,6 +100,24 @@ A separate API key for the scheduled-publish workflow. The `createExecuteSchedul
 
 If unset, scheduled publishes can't execute and the cron logs `unauthorized` errors.
 
+## Optional error reporting
+
+```
+ERROR_WEBHOOK_URL               # where error reports are POSTed as JSON
+```
+
+Read by `reportError` in `@forumone/throughline-core/observability`, which the
+scaffold calls from `instrumentation.ts` (unhandled request errors) and from the
+workflow failure handlers (jobs out of retries, failing healthchecks). Any URL
+that accepts a JSON POST: a log drain, an alerting endpoint, a Slack incoming
+webhook, a proxy in front of an error tracker. Each report carries a one-line
+`text`, so Slack needs nothing in between.
+
+Unset means reports reach the log and go no further. That is fine on a laptop
+and almost certainly a mistake in production, so the scaffold's `register()`
+warns at boot when it is unset or not a URL. It is read on every report, not at
+import. See [Observability](observability.md#error-reporting).
+
 ## Optional storage
 
 ```

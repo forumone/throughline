@@ -26,6 +26,7 @@ import { emailEnv, emailPlugin } from '@forumone/throughline-email'
 import { formsEnv, formsPlugin } from '@forumone/throughline-forms'
 import { createTagRevalidationHooks } from '@forumone/throughline-workflows'
 import { cacheTags } from './lib/cache-tags'
+import { jobFailuresPlugin } from '@forumone/throughline-core/observability'
 import { databaseConnectionString } from './lib/database'
 {{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-contract'
 import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
@@ -189,6 +190,11 @@ export default buildConfig({
     // plugin registered after it gets no per-key checkbox, and its tools are
     // denied to every key with no error anywhere.
     auditPlugin({ inngest }),
+
+    // Where a workflow that ran out of retries, or a failing healthcheck, leaves
+    // a row — see the failure handlers in app/api/inngest/route.ts. Not the
+    // audit log: that records who did what through an MCP tool.
+    jobFailuresPlugin({}),
 
     componentsPlugin({
       {{#if useReferenceDs}}manifest: { type: 'object', manifest: designSystemManifest as unknown as Manifest },
