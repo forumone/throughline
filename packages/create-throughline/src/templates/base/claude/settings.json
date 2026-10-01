@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "GATE=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/gate.sh\"; [ -f \"$GATE\" ] && exec bash \"$GATE\" || exit 0",
+            "timeout": 180,
+            "statusMessage": "Running the gate (typecheck + lint)…"
+          }
+        ]
+      }
+    ]
+  }
+}

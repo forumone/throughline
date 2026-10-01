@@ -125,10 +125,14 @@ Each is explained at the top of its script in `scripts/`:
 {{projectName}}/
 ├── apps/
 │   └── web/                  # Next.js + Payload host
-├── packages/
-│   ├── design-system/        # UI components consumed by Components MCP
-│   ├── content/              # Reusable collections + blocks (optional)
-│   └── brand/                # Brand tokens / email theme (optional)
+│       ├── scripts/          # migration tooling, requireTarget
+│       └── src/migrations/   # the only way the schema changes
+├── design-system/            # components + contracts -> the manifest the CMS reads
+├── packages/                 # your own shared packages (optional)
+├── scripts/                  # workspace gates
+├── .claude/                  # agent settings and the Stop-hook gate
+├── .github/                  # CI: fast + verify
+├── CLAUDE.md                 # the rules an agent (or a new developer) needs
 ├── .env.example
 ├── pnpm-workspace.yaml
 ├── turbo.json
