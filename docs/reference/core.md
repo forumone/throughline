@@ -21,6 +21,9 @@ import { createInngestClient } from '@forumone/throughline-core/events'
 import { createMcpToolCollector } from '@forumone/throughline-core/mcp'
 import { reportError, jobFailuresPlugin } from '@forumone/throughline-core/observability'
 import { assertEnvironment } from '@forumone/throughline-core/env'
+
+// test helpers, never re-exported from the main entry
+import { describeAnonymousAccess } from '@forumone/throughline-core/testing'
 ```
 
 The package's main entry re-exports everything; subpath imports are useful for tree-shaking and documenting the dependency surface explicitly.
@@ -260,6 +263,35 @@ import { shallowDiff, generateId } from '@forumone/throughline-core'
 
 - `shallowDiff(a, b)` — used by the audit writer to compute `before`/`after` diffs
 - `generateId()` — id generator (currently nanoid)
+
+## Testing (`./testing`)
+
+Test helpers for a site, on their own subpath because they import `vitest`. `vitest` is an optional peer (`^3 || ^4`), and the main entry never loads it.
+
+### `describeAnonymousAccess(config, buckets, options?)`
+
+Registers a vitest suite that checks each collection's `read` rule against an anonymous request, with no database. `config` is the site's `payload.config.ts` default export (a `SanitizedConfig` or the promise `buildConfig` returns).
+
+```typescript
+interface AnonymousAccessBuckets {
+  renderPath: Record<string, string> // slug -> where a page reads it
+  private: Record<string, string> | string[] // slug -> why (optional)
+  globals?: { renderPath?: Record<string, string>; private?: Record<string, string> | string[] }
+}
+```
+
+- Every collection must be in exactly one bucket, including the ones plugins and Payload add. A collection in no bucket fails, and so does a bucket entry the config does not have. Globals are checked the same way when `globals` is given.
+- A render-path collection's rule must answer `true` or a query. Having no rule fails, because Payload's default needs a user. A collection with `versions.drafts` must answer a query, not a bare `true`.
+- A private collection's rule must not answer `true` or a query. Having no rule passes.
+- A rule that calls `req.payload` throws, because it cannot be checked without a database.
+
+`options.title` names the suite.
+
+### `checkAnonymousAccess(config, buckets): Promise<AccessFinding[]>`
+
+The same checks, returned as a list. Each `AccessFinding` has a `kind` (`unclassified`, `classified-twice`, `not-in-config`, `render-path-refused`, `drafts-unfiltered` or `private-readable`), an `entity`, a `slug` and a `message`.
+
+See [Adding a collection](../guides/adding-a-collection.md#8-put-it-in-the-access-bucket-map) for how a site uses it.
 
 ## Re-exported plugin contract types
 

@@ -120,12 +120,22 @@ const Users: CollectionConfig = {
   ],
 }
 
+// The public site reads with nobody signed in, so a collection it renders needs
+// a read rule that says yes to that. Without one, Payload's default refuses —
+// and the page renders empty rather than erroring. Anonymous readers get a
+// query, so they see published documents only; anybody signed in sees drafts
+// too, which the admin and live preview need. `src/access/anonymousAccess.test.ts`
+// holds every collection to the bucket it is listed in.
+const publishedOrSignedIn: Access = ({ req: { user } }) =>
+  user ? true : { _status: { equals: 'published' } }
+
 // Example Pages collection. Replace this with your real content model;
 // keep the `policy` group on collections that should require approval —
 // the approvals plugin reads that field shape.
 const Pages: CollectionConfig = {
   slug: 'pages',
   admin: { useAsTitle: 'title' },
+  access: { read: publishedOrSignedIn },
   versions: { drafts: true },
   hooks: {
     afterChange: [revalidation.afterCollectionChange()],

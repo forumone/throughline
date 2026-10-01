@@ -26,6 +26,7 @@ These pages are hand-authored. A future docs publishing flow will generate them 
 
 - **[@forumone/throughline-design-contract](design-contract.md)** — manifest schema + lint rules
 - **[@forumone/throughline-reference-ds](reference-ds.md)** — brand-neutral 12-component reference design system
+- **[@forumone/throughline-design-system-payload](design-system-payload.md)** — manifest → Payload blocks → React props, and the block test helpers (private; workspace only)
 
 ## Tooling
 

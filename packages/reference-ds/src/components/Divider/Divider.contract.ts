@@ -26,6 +26,7 @@ export const contract: ComponentContract = {
         name: 'decorative',
         type: 'boolean',
         required: false,
+        defaultValue: true,
         constraints: 'When true (default), the divider is aria-hidden',
       },
     ],
