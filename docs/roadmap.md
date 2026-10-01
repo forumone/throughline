@@ -427,8 +427,8 @@ Gate: the workflow tests pass against both adapters, the playground runs on Payl
     - [x] email: the three approval notifications, plus `emailJobs()` and an optional `inngest` (#215)
     - [x] integrations: `Integration.createJobs`, the webhook, `integrationsJobs()`, and `emit` in place of `inngest` (#216)
     - [x] ~~forms~~ Won't do: forms is not in 1.0 (decision 4)
-- [ ] Playground runs on `payloadJobs`
-- [ ] Measure "publishes on the minute" under `payloadJobs`, and record the result in the spec (it settles decision 3)
+- [x] Playground runs on `payloadJobs`, with an end-to-end test of publish revalidation and scheduled publishing
+- [x] Measure "publishes on the minute" under `payloadJobs`, and record the result in the spec (it settles decision 3): on the minute it lands within a second, and mid-minute it lands on the next tick
 - [ ] Release as 0.x
 - [ ] forumone-2026 adopts `inngestJobs` in production (moving its Inngest environment pinning in), with function ids unchanged and a scheduled publish verified across the deploy
 

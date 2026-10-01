@@ -3,6 +3,7 @@ import type { InngestFunction } from 'inngest'
 import { defineJob } from './jobs/define.js'
 import { inngestJobs } from './jobs/inngest.js'
 import type { Job } from './jobs/types.js'
+import { jobPayload, type JobOptions } from './jobs/options.js'
 import type { ExecuteScheduledPublishesOptions } from './types.js'
 
 const DEFAULT_SCHEDULE = '*/5 * * * *'
@@ -34,7 +35,7 @@ interface DueDoc {
  * failure, say), which is wrong for cron-style work.
  */
 export function executeScheduledPublishesJob(
-  options: Omit<ExecuteScheduledPublishesOptions, 'inngest'>,
+  options: JobOptions<ExecuteScheduledPublishesOptions>,
 ): Job {
   const schedule = options.schedule ?? DEFAULT_SCHEDULE
 
@@ -54,7 +55,12 @@ export function executeScheduledPublishesJob(
       ...failureOptions(options, 1),
       on: { cron: schedule },
     },
-    async ({ step, logger }) => {
+    async ({ step, logger, payload: contextPayload }) => {
+      const payload = jobPayload(
+        options.payload,
+        contextPayload,
+        options.id ?? 'execute-scheduled-publishes',
+      )
       const dueBy = new Date(Date.now() - (options.overdueByMs ?? 0)).toISOString()
       let publishedCount = 0
       let blockedCount = 0
@@ -64,7 +70,7 @@ export function executeScheduledPublishesJob(
         const scheduledField = config.scheduledField ?? 'scheduledPublishAt'
 
         const due = await step.run(`find-due-${config.slug}`, async (): Promise<DueDoc[]> => {
-          const result = await options.payload.find({
+          const result = await payload.find({
             collection: config.slug,
             where: {
               and: [
@@ -98,11 +104,14 @@ export function executeScheduledPublishesJob(
             async (): Promise<'published' | 'blocked' | 'error'> => {
               let result
               try {
-                result = await options.publish({
-                  collection: doc.collection,
-                  id: doc.id,
-                  reasoning: REASONING,
-                })
+                result = await options.publish(
+                  {
+                    collection: doc.collection,
+                    id: doc.id,
+                    reasoning: REASONING,
+                  },
+                  { payload },
+                )
               } catch (error) {
                 logger.error('Scheduled publish threw', {
                   document: doc.title,

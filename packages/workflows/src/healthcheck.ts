@@ -3,6 +3,7 @@ import type { InngestFunction } from 'inngest'
 import { defineJob } from './jobs/define.js'
 import { inngestJobs } from './jobs/inngest.js'
 import type { Job } from './jobs/types.js'
+import { jobPayload, type JobOptions } from './jobs/options.js'
 import type { Payload } from 'payload'
 import type { HealthcheckDefinition, HealthcheckOptions, HealthcheckResult } from './types.js'
 
@@ -16,7 +17,7 @@ const REACHABLE_TIMEOUT_MS = 5_000
  * a `system/healthcheck` Inngest event so external dashboards can
  * observe heartbeats independently of failure routing.
  */
-export function healthcheckJob(options: Omit<HealthcheckOptions, 'inngest'>): Job {
+export function healthcheckJob(options: JobOptions<HealthcheckOptions>): Job {
   const schedule = options.schedule ?? DEFAULT_SCHEDULE
   const onFailure = options.onFailure ?? defaultOnFailure
 
@@ -37,13 +38,14 @@ export function healthcheckJob(options: Omit<HealthcheckOptions, 'inngest'>): Jo
       ...failureOptions(options, 1),
       on: { cron: schedule },
     },
-    async ({ step, logger, emit }) => {
+    async ({ step, logger, emit, payload: contextPayload }) => {
+      const payload = jobPayload(options.payload, contextPayload, options.id ?? 'healthcheck')
       const results: Array<{ name: string; ok: boolean; details?: string }> = []
 
       for (const check of options.checks) {
         const outcome = await step.run(`check-${check.name}`, async () => {
           try {
-            const result = await check.run({ payload: options.payload })
+            const result = await check.run({ payload })
             return { name: check.name, ...result }
           } catch (error) {
             return {

@@ -52,11 +52,14 @@ describe('createPublishAtScheduledTimeFunction', () => {
     const result = await run(scheduled(at))
 
     expect(fakeInngest.sleeps).toEqual([{ name: 'wait-until-due', until: new Date(at) }])
-    expect(publish).toHaveBeenCalledWith({
-      collection: 'posts',
-      id: 'p1',
-      reasoning: 'Scheduled publish executed at its scheduled time',
-    })
+    expect(publish).toHaveBeenCalledWith(
+      {
+        collection: 'posts',
+        id: 'p1',
+        reasoning: 'Scheduled publish executed at its scheduled time',
+      },
+      { payload: expect.anything() },
+    )
     expect(result.outcome).toBe('published')
   })
 
