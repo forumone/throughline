@@ -13,10 +13,13 @@ and `onFailure`, and inside the handler `step.run`, `step.sleepUntil` and
 `step.sendEvent`. An option no runner-neutral job needs is an option every
 adapter would have to fake.
 
-No Payload instance on the context, on purpose. A job that needs one closes
-over it, the way every workflow factory here already takes `payload` in its
-options. That keeps this layer free of anything a runner has to supply.
+A job that is built where Payload already exists closes over it, the way
+every workflow factory here takes `payload` in its options. A job a plugin
+declares while the config is still being built cannot: Payload does not exist
+yet. For those, the context carries `payload` when the runner has one — always
+on Payload Jobs, and on Inngest when `inngestJobs` is given it.
 */
+import type { Payload } from 'payload'
 import type { WorkflowFailureHandler } from '../types.js'
 
 /**
@@ -104,6 +107,12 @@ export interface JobContext<TData = unknown> {
   emit(event: JobEvent | readonly JobEvent[]): Promise<void>
   /** The runner's id for this run, for logs and failure reports. */
   runId: string
+  /**
+   * The Payload instance, when the runner has one: always on Payload Jobs, and
+   * on Inngest when `inngestJobs` was given it. A job that needs Payload and
+   * may run without it should say so rather than guess.
+   */
+  payload?: Payload
   logger: JobLogger
 }
 

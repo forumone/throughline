@@ -2,6 +2,7 @@ import type { CorePlugin } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
 import { createNamedLogger, defaultLogger } from '@forumone/throughline-core'
 import type { InngestFunction } from 'inngest'
+import type { Job, JobContext } from '@forumone/throughline-workflows'
 import { type EmailPluginOptions, validateOptions } from './options.js'
 import { mergeTokens } from './tokens.js'
 import { createEmailClient, type EmailClient } from './client.js'
@@ -9,6 +10,9 @@ import {
   createNotifyApprovalDecisionFunction,
   createNotifyApprovalExpiredFunction,
   createNotifyApprovalRequestFunction,
+  notifyApprovalDecisionJob,
+  notifyApprovalExpiredJob,
+  notifyApprovalRequestJob,
 } from './functions/index.js'
 
 const PLUGIN_ID = '@forumone/throughline-email'
@@ -56,12 +60,16 @@ export const emailPlugin: CorePlugin<EmailPluginOptions> =
           configurable: false,
         })
 
-        const deps = { inngest: options.inngest, payload, client, tokens, options }
-        const functions: InngestFunction.Any[] = [
-          createNotifyApprovalRequestFunction(deps),
-          createNotifyApprovalDecisionFunction(deps),
-          createNotifyApprovalExpiredFunction(deps),
-        ]
+        // With no Inngest client, the site runs these as jobs (`emailJobs`),
+        // and there is nothing to register here.
+        const inngest = options.inngest
+        const functions: InngestFunction.Any[] = inngest
+          ? [
+              createNotifyApprovalRequestFunction({ inngest, payload, client, tokens, options }),
+              createNotifyApprovalDecisionFunction({ inngest, payload, client, tokens, options }),
+              createNotifyApprovalExpiredFunction({ inngest, payload, client, tokens, options }),
+            ]
+          : []
 
         Object.defineProperty(payload, EMAIL_FUNCTIONS_SYMBOL, {
           value: functions,
@@ -84,6 +92,39 @@ export const emailPlugin: CorePlugin<EmailPluginOptions> =
       },
     }
   }
+
+/**
+ * The three notifications as runner-neutral jobs, for a site whose jobs adapter
+ * takes its jobs while the config is being built (`payloadJobs().plugin(...)`).
+ *
+ * Pass the same options as `emailPlugin`, and register `emailPlugin` too: it
+ * creates the email client these jobs send through. Each job finds Payload on
+ * its context at run time, and the client on Payload.
+ */
+export function emailJobs(rawOptions: EmailPluginOptions): Job[] {
+  const { options, brandName } = validateOptions(rawOptions)
+  const tokens = mergeTokens({ ...options.tokens, brandName })
+
+  const resolve = (context: JobContext) => {
+    const payload = context.payload
+    if (!payload) {
+      throw new Error(
+        'emailJobs: this runner gave the job no Payload instance. Use payloadJobs, or pass `payload` to inngestJobs.',
+      )
+    }
+    const client = getEmailClient(payload)
+    if (!client) {
+      throw new Error('emailJobs: no email client on Payload. Register emailPlugin as well.')
+    }
+    return { payload, client, tokens, options }
+  }
+
+  return [
+    notifyApprovalRequestJob(resolve),
+    notifyApprovalDecisionJob(resolve),
+    notifyApprovalExpiredJob(resolve),
+  ]
+}
 
 export function getEmailClient(payload: unknown): EmailClient | undefined {
   return (payload as Record<symbol, unknown>)[EMAIL_CLIENT_SYMBOL] as EmailClient | undefined

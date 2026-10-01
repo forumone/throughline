@@ -1,4 +1,4 @@
-export { emailPlugin, getEmailClient, getEmailFunctions } from './plugin.js'
+export { emailJobs, emailPlugin, getEmailClient, getEmailFunctions } from './plugin.js'
 
 export { createEmailClient } from './client.js'
 export type {
@@ -25,6 +25,14 @@ export {
   createNotifyApprovalRequestFunction,
   createNotifyApprovalDecisionFunction,
   createNotifyApprovalExpiredFunction,
+  notifyApprovalRequestJob,
+  notifyApprovalDecisionJob,
+  notifyApprovalExpiredJob,
+} from './functions/index.js'
+export type {
+  NotifyApprovalRequestJobDeps,
+  NotifyApprovalDecisionJobDeps,
+  NotifyApprovalExpiredJobDeps,
 } from './functions/index.js'
 
 export {

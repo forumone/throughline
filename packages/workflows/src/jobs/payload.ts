@@ -222,6 +222,7 @@ export function payloadJobs(options: PayloadJobsOptions = {}): PayloadJobsAdapte
           runId: String(running.id),
           logger: jobLogger(req.payload),
           emit,
+          payload: req.payload,
           step: {
             run,
             sleepUntil: async (id, until) => {
