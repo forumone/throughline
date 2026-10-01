@@ -19,7 +19,7 @@ import { auditPlugin, createMcpToolCollector } from '@forumone/throughline-core'
 import { auditPlugin } from '@forumone/throughline-core/audit'
 import { createInngestClient } from '@forumone/throughline-core/events'
 import { createMcpToolCollector } from '@forumone/throughline-core/mcp'
-import { validateBaseEnv } from '@forumone/throughline-core/env'
+import { assertEnvironment } from '@forumone/throughline-core/env'
 ```
 
 The package's main entry re-exports everything; subpath imports are useful for tree-shaking and documenting the dependency surface explicitly.
@@ -48,10 +48,10 @@ import {
 
 ```typescript
 interface AuditPluginOptions {
-  inngest?: InngestClient   // optional; if omitted, no events are fired
-  collectionSlug?: string   // default 'audit-log'
-  retainFields?: string[]   // for diff before/after computation
-  admin?: { group?: string | false }  // sidebar group; default 'Throughline', false = ungrouped
+  inngest?: InngestClient // optional; if omitted, no events are fired
+  collectionSlug?: string // default 'audit-log'
+  retainFields?: string[] // for diff before/after computation
+  admin?: { group?: string | false } // sidebar group; default 'Throughline', false = ungrouped
 }
 ```
 
@@ -67,12 +67,12 @@ registers it.
 
 What it does have is two access helpers for a site that registers `mcpPlugin`:
 
-| Symbol | Purpose |
-| --- | --- |
-| `mcpApiKeyAccess(isAdmin)` | An `overrideApiKeyCollection` for `mcpPlugin`. Applies the site's admin rule to `read`, `create`, `update`, `delete` and `unlock` on `payload-mcp-api-keys`, and refuses a key principal first. Changes `access` and nothing else |
-| `isSignedIn(user)` / `signedIn` | A person, not anonymous and not an MCP key document. Use instead of `Boolean(req.user)` |
-| `isMcpApiKeyPrincipal(user)` | `true` for a key document from `payload-mcp-api-keys` on `req.user` |
-| `MCP_API_KEYS_SLUG` | `'payload-mcp-api-keys'` |
+| Symbol                          | Purpose                                                                                                                                                                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mcpApiKeyAccess(isAdmin)`      | An `overrideApiKeyCollection` for `mcpPlugin`. Applies the site's admin rule to `read`, `create`, `update`, `delete` and `unlock` on `payload-mcp-api-keys`, and refuses a key principal first. Changes `access` and nothing else |
+| `isSignedIn(user)` / `signedIn` | A person, not anonymous and not an MCP key document. Use instead of `Boolean(req.user)`                                                                                                                                           |
+| `isMcpApiKeyPrincipal(user)`    | `true` for a key document from `payload-mcp-api-keys` on `req.user`                                                                                                                                                               |
+| `MCP_API_KEYS_SLUG`             | `'payload-mcp-api-keys'`                                                                                                                                                                                                          |
 
 ```typescript
 mcpPlugin({
@@ -154,20 +154,29 @@ const inngest = createInngestClient({ id: 'my-site' })
 
 Returns a typed Inngest client. The `CoreEvents` / `FrameworkEvents` types provide autocomplete for `inngest.send(...)`.
 
-## Env helpers
+## Environment
 
 ```typescript
-import { validateBaseEnv, requireEnv, optionalEnv } from '@forumone/throughline-core'
+import { assertEnvironment } from '@forumone/throughline-core'
+import { approvalsEnv } from '@forumone/throughline-approvals'
+import { emailEnv } from '@forumone/throughline-email'
+import { formsEnv } from '@forumone/throughline-forms'
 
-// At app boot:
-validateBaseEnv() // throws if any required var is missing or malformed
-
-// Or one-off:
-const apiKey = requireEnv('STRIPE_API_KEY')
-const optional = optionalEnv('OPTIONAL_FLAG')
+// First thing in payload.config.ts, at module scope:
+assertEnvironment(
+  approvalsEnv,
+  emailEnv,
+  formsEnv,
+  { name: 'PAYLOAD_SECRET', minLength: 32, why: 'Signs Payload sessions.' },
+  () => databaseConnectionString(), // a rule that is not "this name, this long"
+)
 ```
 
-`validateBaseEnv` validates the variables Throughline core depends on. For your own variables, use `requireEnv` / `optionalEnv` or write a thin wrapper module — see [Environment variables](../operations/environment-variables.md).
+- `assertEnvironment(...checks)` — checks every requirement against `process.env` and throws one `EnvironmentError` listing every missing or too-short value with its `why`. Its first line reads `Configuration problem: N environment variables are missing or invalid.` Values are never printed; a short one is reported by length. Each argument is an `EnvRequirement`, a list of them (a plugin's declaration), or a function whose thrown message becomes a problem line. A name listed twice is reported once, against the strictest `minLength`.
+- `EnvironmentError` — `problems: readonly string[]`, one line per problem.
+- `checkEnvValue(requirement, value)` — the single-value check a plugin runs at init on `options.x ?? process.env[name]`, so its backstop and its declaration cannot disagree. Returns `{ kind: 'missing' }`, `{ kind: 'too-short', length, minLength }` or `undefined`. Empty and whitespace-only count as missing.
+
+`EnvRequirement` is defined in `@forumone/throughline-plugin-contract` and re-exported here. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
 
 ## Logger
 
@@ -202,6 +211,7 @@ import type {
   AuthenticatedUser,
   CollectionPluginOptions,
   CorePlugin,
+  EnvRequirement,
   Logger,
   McpToolContext,
   McpToolDefinition,

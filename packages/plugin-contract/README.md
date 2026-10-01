@@ -9,6 +9,7 @@ Shared type contracts every Throughline core plugin satisfies, plus the cross-pl
 - `CollectionPluginOptions`, `PluginAdminOptions`, `DEFAULT_ADMIN_GROUP`, `resolveAdminGroup` — the `admin: { group }` option every plugin that declares a collection accepts, its `'Throughline'` default, and the helper that turns it into a collection's `admin.group` (see below)
 - `McpToolDefinition`, `McpToolContext`, `McpMeta` — the MCP tool surface
 - `AuthenticatedUser` — the actor a tool handler receives
+- `EnvRequirement` — `{ name, minLength?, why }`: one environment variable a plugin cannot start without, as data. A plugin exports a list of them as `<plugin>Env` (`approvalsEnv`), and a site passes the lists to `assertEnvironment` from `@forumone/throughline-core`
 - `getPluginRegistry` — the runtime registry plugins use to announce themselves and check for sibling plugins
 - `examplePlugin` — a reference implementation showing the exact shape every future plugin follows
 

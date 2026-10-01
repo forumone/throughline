@@ -15,6 +15,7 @@ Peer dependencies: `payload@^3.89.0`, `inngest@^4.0.0`. Depends on `@forumone/th
 ```typescript
 import {
   approvalsPlugin,
+  approvalsEnv,
   createApprovalsCollection,
   attachApprovalResolver,
   createApprovalResolver,
@@ -40,6 +41,10 @@ import type {
   VerifyResult,
 } from '@forumone/throughline-approvals'
 ```
+
+## `approvalsEnv`
+
+The environment `approvalsPlugin` refuses to start without when `tokenSecret` is omitted: `APPROVAL_TOKEN_SECRET`, at least 32 characters. Pass it to `assertEnvironment` from core so it is reported with everything else; the plugin's init check reads the same declaration. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
 
 ## `approvalsPlugin(options)`
 

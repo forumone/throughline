@@ -4,6 +4,8 @@ Every variable a Throughline project reads, grouped by feature, with how to gene
 
 The CLI scaffolder writes a complete `.env.example` for new projects. This page is the reference for what each variable does and what happens if it's missing or wrong.
 
+Every variable a site cannot start without is checked once, at the top of `payload.config.ts`, and reported together — see [Checking everything at startup](#checking-everything-at-startup).
+
 ## Required core
 
 ```
@@ -12,11 +14,11 @@ PAYLOAD_SECRET                  # 48+ random bytes; signs Payload sessions
 NEXT_PUBLIC_SERVER_URL          # https://your-domain.com (or http://localhost:3000)
 ```
 
-| Variable                 | Generate / obtain                       | Missing?                                           |
-| ------------------------ | --------------------------------------- | -------------------------------------------------- |
-| `DATABASE_URI`           | From Neon / Supabase / your DB provider | Payload fails to boot                              |
-| `PAYLOAD_SECRET`         | `openssl rand -base64 48`               | Payload fails to boot; sessions can't be signed    |
-| `NEXT_PUBLIC_SERVER_URL` | Your deployed domain                    | Webhooks, email links, Inngest serve URL all break |
+| Variable                 | Generate / obtain                                                                         | Missing?                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URI`           | From Neon / Supabase / your DB provider (or the Vercel–Neon integration's `DATABASE_URL`) | Reported by `assertEnvironment` in the scaffold                                                                       |
+| `PAYLOAD_SECRET`         | `openssl rand -base64 48`                                                                 | Reported by `assertEnvironment` in the scaffold, as is one under 32 characters                                        |
+| `NEXT_PUBLIC_SERVER_URL` | Your deployed domain                                                                      | Reported by `assertEnvironment` in the scaffold. Unchecked, webhooks, email links and the Inngest serve URL all break |
 
 `NEXT_PUBLIC_SERVER_URL` ends up in:
 
@@ -47,7 +49,7 @@ EMAIL_FROM_NAME                 # display name; e.g. "Acme Climate"
 EMAIL_REPLY_TO                  # optional; defaults to FROM_ADDRESS
 ```
 
-Without `RESEND_API_KEY`, the Email plugin's workers throw on first send and the audit log records `email.send-failed`. Approval workflows still queue requests, but no email reaches approvers.
+`RESEND_API_KEY` and `EMAIL_FROM_ADDRESS` are declared in `emailEnv`. Without either (and without the matching `apiKey` / `fromAddress` option), the Email plugin refuses to start. A key that is set but wrong is only found on first send, when the worker fails and the audit log records `email.send-failed`.
 
 ## Approval tokens
 
@@ -59,7 +61,7 @@ Generate: `openssl rand -base64 48`.
 
 This signs the URLs in approval emails. If it changes after emails are sent, those URLs become invalid. Rotate carefully — ideally only when a key is suspected of leaking.
 
-Missing? The Approvals plugin fails to boot.
+Missing or shorter than 32 characters? The Approvals plugin refuses to start. Declared in `approvalsEnv`.
 
 ## Forms
 
@@ -71,7 +73,7 @@ Generate: `openssl rand -base64 48`.
 
 The Forms plugin hashes submitter IPs (rather than storing them raw) for spam-rate-limiting. The HMAC means a hash is reversible only with this key. Treat it as a secret.
 
-Missing or shorter than 32 chars? The Forms plugin fails to boot.
+Missing or shorter than 32 chars? The Forms plugin refuses to start. Declared in `formsEnv`.
 
 ## MCP keys are not environment variables
 
@@ -163,23 +165,102 @@ Never commit `.env.local`. The CLI scaffolder includes it in `.gitignore`; if yo
 
 Next.js loads `.env.local` over `.env.development` over `.env`. Throughline doesn't add anything to that — standard Next.js behavior. The Payload config reads `process.env.X` directly; there's no wrapper that injects defaults. If a value isn't in the environment, it's `undefined` at runtime.
 
-## Validating
+## Checking everything at startup
 
-The Core package exports `validateEnv(spec)` that you can call at app boot to fail fast on missing vars:
+A plugin that reads a variable at init used to be the only thing that checked
+it, and it threw on the first problem it found, in registration order. A deploy
+missing four variables failed four times, each time as a stack trace inside
+`next build`'s "Failed to collect page data" that named a plugin rather than the
+variable.
+
+Now each plugin that falls back to `process.env` declares what it cannot start
+without, as data, and a site checks all of it at once.
+
+### What the plugins declare
+
+| Export                                                | Variable                | Minimum length | Used when                 |
+| ----------------------------------------------------- | ----------------------- | -------------- | ------------------------- |
+| `approvalsEnv` from `@forumone/throughline-approvals` | `APPROVAL_TOKEN_SECRET` | 32             | `tokenSecret` is omitted  |
+| `emailEnv` from `@forumone/throughline-email`         | `RESEND_API_KEY`        | —              | `apiKey` is omitted       |
+| `emailEnv`                                            | `EMAIL_FROM_ADDRESS`    | —              | `fromAddress` is omitted  |
+| `formsEnv` from `@forumone/throughline-forms`         | `FORMS_IP_HASH_SECRET`  | 32             | `ipHashSecret` is omitted |
+
+No other plugin refuses to start over a variable: core, publishing, workflows,
+integrations, components and audit read nothing they require. Each entry is an
+`EnvRequirement` (`{ name, minLength?, why }`, from
+`@forumone/throughline-plugin-contract`), and the plugin's own init check is
+driven by the same entry, so the declaration and the check cannot drift. Each
+plugin's tests assert that — with only the declared variables set it starts,
+and without any one of them it refuses. A site that passes the value as an
+option instead leaves that plugin's list out.
+
+### `assertEnvironment`
+
+`assertEnvironment` from `@forumone/throughline-core` takes the plugins' lists
+and the site's own variables, and throws one `EnvironmentError` listing every
+missing or too-short value, each with why it is needed. The scaffold calls it
+first in `apps/web/src/payload.config.ts`, at module scope, so it runs before
+any plugin can fail on its own narrower check:
 
 ```typescript
-// apps/web/src/env.ts
-import { validateEnv } from '@forumone/throughline-core/env'
+import { assertEnvironment } from '@forumone/throughline-core'
+import { approvalsEnv } from '@forumone/throughline-approvals'
+import { emailEnv } from '@forumone/throughline-email'
+import { formsEnv } from '@forumone/throughline-forms'
+import { databaseConnectionString } from './lib/database'
 
-export const env = validateEnv({
-  DATABASE_URI: { required: true },
-  PAYLOAD_SECRET: { required: true, minLength: 24 },
-  NEXT_PUBLIC_SERVER_URL: { required: true, format: 'url' },
-  RESEND_API_KEY: { required: true },
-  // …
-})
+assertEnvironment(
+  approvalsEnv,
+  emailEnv,
+  formsEnv,
+  {
+    name: 'PAYLOAD_SECRET',
+    minLength: 32,
+    why: 'Signs Payload sessions and auth tokens. Generate with `openssl rand -base64 48`.',
+  },
+  {
+    name: 'NEXT_PUBLIC_SERVER_URL',
+    why: 'The origin approval links are built against. On a Vercel preview, set it to https://$VERCEL_URL.',
+  },
+  // Several names are accepted (see lib/database.ts), so this is a check, not a name.
+  () => databaseConnectionString(),
+)
 ```
 
-Then import `env` from this module everywhere. Missing or malformed values throw at boot rather than at first use.
+A failure reads:
 
-The scaffold doesn't wire this by default — different teams want different strictness levels. Wire it when you've stabilized your env list.
+```
+Configuration problem: 3 environment variables are missing or invalid. This is not a code or build failure; nothing will start until they are set.
+
+  - APPROVAL_TOKEN_SECRET is not set. Signs the approve/decline links in approval emails; approvalsPlugin will not start without it. …
+  - PAYLOAD_SECRET is 12 characters; the minimum is 32. Signs Payload sessions and auth tokens. …
+  - No database connection string. Set DATABASE_URI, or connect a Neon database in Vercel — …
+
+Set each in the environment this process runs in (.env locally, your host's settings when deployed). …
+```
+
+The rules:
+
+- Each argument is an `EnvRequirement`, a list of them, or a function. A
+  function is for a rule that is not "this name, this long" — the database URL,
+  which may arrive under several names, or "a Blob token on Vercel". Whatever it
+  throws becomes a line of the report, so it must not include the value either.
+- Empty and whitespace-only count as not set.
+- Values are never printed. A too-short value is reported by its length.
+- A name listed twice (by a plugin and by the site, say) is reported once,
+  against the strictest `minLength`.
+
+Add a variable to the site's part of the call when you add one the site cannot
+start without, and to `.env.example`, CI's placeholders and `turbo.json`'s
+`tasks.build.env` with it.
+
+### When the environment is legitimately absent
+
+Anything that loads `payload.config.ts` runs the check: `next build`,
+`payload generate:types`, `payload generate:importmap`, `payload migrate`. That
+was already true — the plugins' own checks and the database resolver ran at the
+same moment — so the call adds no new place where variables are needed, only
+two names (`PAYLOAD_SECRET` and `NEXT_PUBLIC_SERVER_URL`) that used to fail
+later or not at all. Where only parsing matters, such as CI's typecheck and
+type generation, placeholders of the right length are enough; the scaffold's
+`.github/workflows/ci.yml` sets them.

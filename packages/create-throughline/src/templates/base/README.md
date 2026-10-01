@@ -30,7 +30,13 @@ openssl rand -base64 48
 #    - APPROVAL_TOKEN_SECRET        — generated above
 #    - FORMS_IP_HASH_SECRET         — generated above
 #    - RESEND_API_KEY               — from Resend dashboard
+#    - EMAIL_FROM_ADDRESS           — a verified sender on your Resend domain
 #    - INNGEST_EVENT_KEY/SIGNING    — from Inngest (optional in local dev)
+#
+#    Anything missing or too short is reported all at once, in one error that
+#    starts "Configuration problem", by the assertEnvironment call at the top
+#    of apps/web/src/payload.config.ts — the first command that loads the
+#    config (step 5) tells you everything left to fill in.
 
 # 5. Create and apply the first migration. The config sets `push: false`, so
 #    migrations are the only way the schema changes, from the first table on.

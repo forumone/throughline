@@ -1,5 +1,6 @@
+import { checkEnvValue } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
-import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
+import type { BaseCorePluginOptions, EnvRequirement } from '@forumone/throughline-plugin-contract'
 import type { EmailBrandTokens } from './tokens.js'
 
 export type ApprovalActionKind = 'approve' | 'decline' | 'changes' | 'discuss'
@@ -66,6 +67,26 @@ export interface EmailPluginOptions extends BaseCorePluginOptions {
 
 export const DEFAULT_APPROVALS_COLLECTION_SLUG = 'approvals'
 
+const API_KEY_ENV = {
+  name: 'RESEND_API_KEY',
+  why: 'Sends approval and form notification email through Resend; emailPlugin will not start without it.',
+} as const satisfies EnvRequirement
+
+const FROM_ADDRESS_ENV = {
+  name: 'EMAIL_FROM_ADDRESS',
+  why: 'The From address on every email. It must be a verified sender on your Resend domain.',
+} as const satisfies EnvRequirement
+
+/**
+ * What `emailPlugin` reads from the environment when the matching option is
+ * omitted, and refuses to start without. Hand it to `assertEnvironment` from
+ * `@forumone/throughline-core` so a site reports it with everything else.
+ *
+ * Leave it out if you pass `apiKey` and `fromAddress` yourself. The optional
+ * `EMAIL_FROM_NAME` and `EMAIL_REPLY_TO` are not requirements.
+ */
+export const emailEnv: readonly EnvRequirement[] = [API_KEY_ENV, FROM_ADDRESS_ENV]
+
 export interface ResolvedEmailEnv {
   apiKey: string
   fromAddress: string
@@ -86,14 +107,16 @@ export function validateOptions(options: EmailPluginOptions): {
   if (!options.inngest) {
     throw new Error('emailPlugin requires an Inngest client (`options.inngest`).')
   }
-  const apiKey = options.apiKey ?? process.env['RESEND_API_KEY']
-  if (!apiKey) {
-    throw new Error('emailPlugin requires `options.apiKey` or the RESEND_API_KEY env var.')
+  // The backstop for a site that does not call `assertEnvironment`, driven by
+  // the same declarations it would have passed.
+  const apiKey = options.apiKey ?? process.env[API_KEY_ENV.name]
+  if (apiKey === undefined || checkEnvValue(API_KEY_ENV, apiKey)) {
+    throw new Error(`emailPlugin requires \`options.apiKey\` or the ${API_KEY_ENV.name} env var.`)
   }
-  const fromAddress = options.fromAddress ?? process.env['EMAIL_FROM_ADDRESS']
-  if (!fromAddress) {
+  const fromAddress = options.fromAddress ?? process.env[FROM_ADDRESS_ENV.name]
+  if (fromAddress === undefined || checkEnvValue(FROM_ADDRESS_ENV, fromAddress)) {
     throw new Error(
-      'emailPlugin requires `options.fromAddress` or the EMAIL_FROM_ADDRESS env var.',
+      `emailPlugin requires \`options.fromAddress\` or the ${FROM_ADDRESS_ENV.name} env var.`,
     )
   }
   if (typeof options.resolveApprover !== 'function' || typeof options.resolveRequester !== 'function') {

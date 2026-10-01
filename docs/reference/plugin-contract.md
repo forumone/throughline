@@ -186,6 +186,18 @@ interface Logger {
 
 The minimal logger interface. Throughline core ships one (`defaultLogger`) but any logger satisfying this shape works.
 
+### `EnvRequirement`
+
+```typescript
+interface EnvRequirement {
+  readonly name: string        // e.g. 'APPROVAL_TOKEN_SECRET'
+  readonly minLength?: number  // for secrets, where short is as bad as missing
+  readonly why: string         // what it is for and how to get one; printed beside the name
+}
+```
+
+One environment variable a plugin refuses to start without, as data. A plugin that reads `process.env` at init exports its list next to its factory, named for it — `approvalsPlugin` / `approvalsEnv` — and checks the same entries at init with `checkEnvValue` from core. A site hands the lists to `assertEnvironment` (see [core](core.md#environment)), which reports every problem at once. The list describes the environment *fallback*: a site that passes the value as an option leaves that list out.
+
 ## Patterns
 
 The `src/example-plugin-pattern.ts` file in this package shows a worked plugin example using only contract types. When in doubt, copy from there.

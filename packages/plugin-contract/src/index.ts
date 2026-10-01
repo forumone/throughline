@@ -39,5 +39,6 @@ export type CorePlugin<Options extends BaseCorePluginOptions = BaseCorePluginOpt
 ) => Plugin
 
 export * from './admin.js'
+export * from './env.js'
 export * from './mcp.js'
 export * from './registry.js'

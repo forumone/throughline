@@ -15,6 +15,7 @@ Peer dependencies: `payload@^3.89.0`, `inngest@^4.0.0`. Depends on `@forumone/th
 ```typescript
 import {
   emailPlugin,
+  emailEnv,
   getEmailClient,
   getEmailFunctions,
   createEmailClient,
@@ -79,6 +80,10 @@ The plugin:
 - Validates env vars at boot (fails loudly on missing `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`)
 - Constructs an `EmailClient` and exposes it via `getEmailClient(payload)` (Symbol-keyed)
 - Constructs three Inngest functions and exposes them via `getEmailFunctions(payload)` for the Inngest endpoint to register
+
+## `emailEnv`
+
+The environment `emailPlugin` refuses to start without when `apiKey` / `fromAddress` are omitted: `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS`. Pass it to `assertEnvironment` from core so they are reported with everything else; the plugin's init check reads the same declaration. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
 
 ## `EmailClient`
 

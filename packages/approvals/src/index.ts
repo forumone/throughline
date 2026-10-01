@@ -1,4 +1,5 @@
 export { approvalsPlugin } from './plugin.js'
+export { approvalsEnv } from './options.js'
 
 export type {
   ApprovalsPluginOptions,

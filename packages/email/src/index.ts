@@ -12,7 +12,7 @@ export type {
 export { defaultTokens, mergeTokens } from './tokens.js'
 export type { EmailBrandTokens } from './tokens.js'
 
-export { DEFAULT_APPROVALS_COLLECTION_SLUG, validateOptions } from './options.js'
+export { DEFAULT_APPROVALS_COLLECTION_SLUG, emailEnv, validateOptions } from './options.js'
 export type {
   ApprovalActionKind,
   BuildActionUrlArgs,
