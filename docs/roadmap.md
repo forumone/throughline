@@ -418,9 +418,9 @@ Gate: forumone-2026 pins a released 0.x, and #166 is closed.
 
 Gate: the workflow tests pass against both adapters, the playground runs on Payload Jobs, and forumone-2026 runs `inngestJobs` in production with its function ids unchanged. Additive only: nothing merged may break the site's imports, options or schema.
 
-- [ ] `defineJob`, `emit`, and a `step` with `run`, `sleepUntil` and `sendEvent`, in `@forumone/throughline-workflows`
-- [ ] `inngestJobs(client)` adapter, keeping today's function ids
-- [ ] `payloadJobs()` adapter, with a per-minute Vercel cron or `autoRun`
+- [x] `defineJob`, `emit`, and a `step` with `run`, `sleepUntil` and `sendEvent`, in `@forumone/throughline-workflows` (#211)
+- [x] `inngestJobs(client)` adapter, keeping today's function ids (#211)
+- [x] `payloadJobs()` adapter, with a per-minute Vercel cron or `autoRun` (#213)
 - [ ] Move failure handling (the `job-failures` writer, error reporting) into the adapter layer
 - [ ] Port every workflow and plugin job to `defineJob`; run the workflow tests against both adapters
 - [ ] Playground runs on `payloadJobs`

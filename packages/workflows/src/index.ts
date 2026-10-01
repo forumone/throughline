@@ -28,10 +28,20 @@ export {
 Runner-neutral jobs (1.0 P1). Additive: the factories above are unchanged and
 still register Inngest functions directly. See `jobs/types.ts`.
 */
-export { defineJob, inngestFunctionConfig, inngestIdempotency, inngestJobs } from './jobs/index.js'
+export {
+  defineJob,
+  inngestFunctionConfig,
+  inngestIdempotency,
+  inngestJobs,
+  JOB_KEYS_COLLECTION,
+  payloadIdempotencyKey,
+  payloadJobs,
+} from './jobs/index.js'
 export type {
   InngestJobsAdapter,
   InngestJobsOptions,
+  PayloadJobsAdapter,
+  PayloadJobsOptions,
   Job,
   JobContext,
   JobDefinition,
