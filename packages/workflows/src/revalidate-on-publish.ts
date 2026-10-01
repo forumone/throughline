@@ -2,6 +2,7 @@ import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
 import { defineJob } from './jobs/define.js'
 import { inngestJobs } from './jobs/inngest.js'
+import type { JobOptions } from './jobs/options.js'
 import type { Job } from './jobs/types.js'
 import { defaultCacheTags } from './cache-tags.js'
 import { IMMEDIATE, loadNextCache } from './next-revalidate.js'
@@ -26,7 +27,7 @@ import type { RevalidateFn, RevalidateOnPublishOptions, RevalidatePathsInput } f
  * package is safe to install in non-Next.js contexts. Pass `options.revalidate`
  * to use a different cache invalidation strategy.
  */
-export function revalidateOnPublishJob(options: Omit<RevalidateOnPublishOptions, 'inngest'>): Job {
+export function revalidateOnPublishJob(options: JobOptions<RevalidateOnPublishOptions>): Job {
   const urlBuilders = options.urlBuilders
   const cacheTags = options.cacheTags ?? defaultCacheTags
   const collectionTags = options.collectionTags ?? {}

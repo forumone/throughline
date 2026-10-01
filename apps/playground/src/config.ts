@@ -24,7 +24,7 @@ import {
 } from '@forumone/throughline-workflows'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { Manifest } from '@forumone/throughline-design-contract'
-import type { Access, CollectionConfig, Config, DatabaseAdapterResult, Payload } from 'payload'
+import type { Access, CollectionConfig, Config, Payload } from 'payload'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -116,7 +116,7 @@ async function publishScheduled(
 }
 
 export interface PlaygroundConfigOptions {
-  db: DatabaseAdapterResult
+  db: Config['db']
   /**
    * Run the job queue every minute in-process. Off in tests, which drive the
    * queue themselves.

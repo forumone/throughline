@@ -66,7 +66,7 @@ describe('the playground on Payload Jobs', () => {
     const id = await draftPage('about')
     const outcome = await getPublishingService(payload).publish({
       collection: 'pages',
-      id,
+      id: String(id),
       actor: { apiKeyName: 'test', channel: 'mcp' },
       meta: { reasoning: 'test' },
     })
