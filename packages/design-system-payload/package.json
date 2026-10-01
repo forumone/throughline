@@ -15,6 +15,7 @@
     "check-block-props": "./bin/check-block-props.mjs"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run"

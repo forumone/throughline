@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { pairedAltFields } from '../altText'
 import { fieldOverride, type Overrides } from '../overrides'
 import type { ContentField } from '../generate/fields'
 
@@ -141,6 +142,9 @@ function responsiveProps(imageProp: string): { srcSet: string; sizes: string } {
  * Every field but an image is one key. An image is up to three, which is why
  * this exists rather than the three call sites each putting a single returned
  * value.
+ *
+ * Returns the media document an image resolved to, so `putFields` can fall back
+ * to its alt.
  */
 function putField(
   target: Record<string, unknown>,
@@ -149,9 +153,9 @@ function putField(
   value: unknown,
   ctx: CoerceContext,
   path: string,
-): void {
+): MediaLike | undefined {
   const override = fieldOverride(ctx.overrides, component, path)
-  if (override?.omit) return
+  if (override?.omit) return undefined
 
   // The one name mismatch in the system — ArticleBody's `body` is the
   // component's `children` — declared in the overrides so the generator and
@@ -160,12 +164,12 @@ function putField(
 
   if (field.type === 'image' && override?.as !== 'icon' && value !== undefined && value !== null) {
     const media = ctx.resolveMedia(value, { component, path })
-    if (!media?.url) return
+    if (!media?.url) return undefined
     const responsive = responsiveProps(name)
     put(target, name, media.url)
     put(target, responsive.srcSet, media.srcSet)
     put(target, responsive.sizes, media.sizes)
-    return
+    return media
   }
 
   /*
@@ -181,12 +185,50 @@ function putField(
     value !== null
   ) {
     const media = ctx.resolveMedia(value, { component, path })
-    if (!media?.url) return
+    if (!media?.url) return undefined
     put(target, name, media.url)
-    return
+    return undefined
   }
 
   put(target, name, coerceField(component, field, value, ctx, path))
+  return undefined
+}
+
+/**
+ * Writes a block's, group's or row's fields into `target`, then fills each
+ * empty alt beside an image from the image's media document.
+ *
+ * After the loop rather than inside it, because the alt field may come before
+ * or after its image, and an empty one written later would overwrite the
+ * fallback. Only an alt the contract declares is filled — a component with no
+ * alt prop beside an image is not handed one. See `altText.ts`.
+ */
+function putFields(
+  target: Record<string, unknown>,
+  component: string,
+  fields: readonly ContentField[],
+  source: Record<string, unknown>,
+  ctx: CoerceContext,
+  parentPath?: string,
+): void {
+  const pathOf = (name: string) => (parentPath ? `${parentPath}.${name}` : name)
+  const resolved = new Map<string, MediaLike>()
+
+  for (const field of fields) {
+    const media = putField(target, component, field, source[field.name], ctx, pathOf(field.name))
+    if (media) resolved.set(field.name, media)
+  }
+
+  for (const [image, alt] of pairedAltFields(fields)) {
+    const fallback = resolved.get(image)?.alt?.trim()
+    if (!fallback) continue
+    const override = fieldOverride(ctx.overrides, component, pathOf(alt))
+    if (override?.omit) continue
+    const name = override?.propName ?? alt
+    const own = target[name]
+    if (typeof own === 'string' && own.trim() !== '') continue
+    target[name] = fallback
+  }
 }
 
 /** One component's block data, as props. */
@@ -197,11 +239,7 @@ export function coerceBlock(
   ctx: CoerceContext,
 ): Record<string, unknown> {
   const props: Record<string, unknown> = {}
-
-  for (const field of fields) {
-    putField(props, component, field, data[field.name], ctx, field.name)
-  }
-
+  putFields(props, component, fields, data, ctx)
   return props
 }
 
@@ -266,9 +304,7 @@ function coerceField(
       if (isEmptyValue(value)) return undefined
       const nested = value as Record<string, unknown>
       const out: Record<string, unknown> = {}
-      for (const child of field.of) {
-        putField(out, component, child, nested[child.name], ctx, `${path}.${child.name}`)
-      }
+      putFields(out, component, field.of, nested, ctx, path)
       return Object.keys(out).length > 0 ? out : undefined
     }
 
@@ -312,9 +348,7 @@ function coerceField(
       return value.map(row => {
         const source = row as Record<string, unknown>
         const out: Record<string, unknown> = {}
-        for (const child of field.of ?? []) {
-          putField(out, component, child, source[child.name], ctx, `${path}.${child.name}`)
-        }
+        putFields(out, component, field.of ?? [], source, ctx, path)
         // `id` is Payload's row key. The component has no such prop, and React
         // would pass it straight through to the DOM.
         return out

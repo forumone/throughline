@@ -1,5 +1,6 @@
 import { groupOf } from '@forumone/throughline-design-contract'
 import type { Block, Field } from 'payload'
+import { withAltFallback } from '../altText'
 import type { Overrides } from '../overrides'
 import { toPayloadField, type ContentField, type FieldContext } from './fields'
 import { blockGuidance, humanize } from './guidance'
@@ -96,9 +97,11 @@ export function generateBlock(component: ManifestComponent, options: GenerateOpt
   }
 
   // Arranged for an author to read — pairs grouped, settings behind a
-  // disclosure. Presentational only; see `./layout.ts`.
-  const generated = component.content.fields.map(field => toPayloadField(field, ctx))
-  const fields = arrange(component.content.fields, generated, { disclose: true })
+  // disclosure. Presentational only; see `./layout.ts`. An alt beside its image
+  // falls back to the media's, so it is generated optional; see `../altText.ts`.
+  const contract = withAltFallback(component.content.fields)
+  const generated = contract.map(field => toPayloadField(field, ctx))
+  const fields = arrange(contract, generated, { disclose: true })
 
   const preview = options.resolvePreview?.(component.name) ?? null
   const guidance = blockGuidance(component.intent, Object.keys(options.manifest.components))
