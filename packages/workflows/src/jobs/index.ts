@@ -1,6 +1,8 @@
 export { defineJob } from './define.js'
 export { inngestFunctionConfig, inngestIdempotency, inngestJobs } from './inngest.js'
 export type { InngestJobsAdapter, InngestJobsOptions } from './inngest.js'
+export { JOB_KEYS_COLLECTION, payloadIdempotencyKey, payloadJobs } from './payload.js'
+export type { PayloadJobsAdapter, PayloadJobsOptions } from './payload.js'
 export type {
   Job,
   JobContext,
