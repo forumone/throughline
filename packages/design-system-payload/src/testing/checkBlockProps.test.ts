@@ -155,10 +155,68 @@ describe('the check-block-props bin', () => {
   it('exits 2 with usage when it is not told where to look', () => {
     expect(run('manifest.json').status).toBe(2)
     expect(parseArgs(['m.json', 'a', '--overrides'])).toMatch(/needs a module path/)
-    expect(parseArgs(['m.json', 'a', 'b', '--overrides', 'o.ts'])).toEqual({
+    expect(parseArgs(['m.json', 'a', '--tsconfig'])).toMatch(/needs a file path/)
+    expect(parseArgs(['m.json', 'a', 'b', '--overrides', 'o.ts', '--tsconfig', 't.json'])).toEqual({
       manifest: 'm.json',
       componentDirs: ['a', 'b'],
       overrides: 'o.ts',
+      tsconfig: 't.json',
     })
+  })
+})
+
+/*
+forumone-2026's design system, which the bin could not load (#207): an args file
+written in TSX with the automatic runtime, beside a component whose module
+imports a CSS module. The fixture sits under the package root rather than the OS
+temp dir so `react/jsx-runtime` resolves from this package's node_modules, as it
+would from a design system's own.
+*/
+describe('the check-block-props bin, on TSX args and CSS modules', () => {
+  const here = path.dirname(fileURLToPath(import.meta.url))
+  const bin = path.resolve(here, '../../bin/check-block-props.mjs')
+  let dir: string
+
+  const panel: ContentField[] = [
+    { name: 'heading', type: 'text', required: true },
+    { name: 'body', type: 'richtext', required: false },
+  ]
+
+  beforeAll(async () => {
+    dir = await mkdtemp(path.join(here, '../../.tmp-check-block-props-'))
+    await writeFile(
+      path.join(dir, 'manifest.json'),
+      JSON.stringify({ components: { Panel: { content: { fields: panel } } } }),
+    )
+    await writeFile(
+      path.join(dir, 'tsconfig.app.json'),
+      JSON.stringify({ compilerOptions: { jsx: 'react-jsx', module: 'esnext' } }),
+    )
+    await mkdir(path.join(dir, 'components/Panel'), { recursive: true })
+    await writeFile(path.join(dir, 'components/Panel/panel.module.css'), '.body { margin: 0 }\n')
+    await writeFile(
+      path.join(dir, 'components/Panel/Panel.tsx'),
+      `import styles from './panel.module.css'\nexport const bodyClass = styles.body\n`,
+    )
+    await writeFile(
+      path.join(dir, 'components/Panel/panelArgs.tsx'),
+      `import { bodyClass } from './Panel'\n` +
+        `const args = { heading: 'Heading', body: <p className={bodyClass}>Some text</p> }\n` +
+        `export default args\n`,
+    )
+  })
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('compiles TSX with the named tsconfig and stubs the stylesheet', () => {
+    const result = spawnSync(
+      process.execPath,
+      [bin, 'manifest.json', 'components', '--tsconfig', 'tsconfig.app.json'],
+      { cwd: dir, encoding: 'utf8', timeout: 60_000 },
+    )
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.stderr).toContain('1 checked')
   })
 })

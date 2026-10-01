@@ -10,25 +10,31 @@ import {
   type PropsManifest,
 } from './checkBlockProps'
 
-const USAGE = `Usage: check-block-props <manifest.json> <components-dir> [<components-dir>...] [--overrides <module>]
+const USAGE = `Usage: check-block-props <manifest.json> <components-dir> [<components-dir>...] [--overrides <module>] [--tsconfig <file>]
 
   manifest.json    the design system's built manifest
   components-dir   a directory holding one directory per component, each with a
                    <Name>Args.ts default-exporting props that satisfy <Name>Props.
                    Give several for a design system split across layers.
   --overrides      a module exporting the site's Overrides, as \`overrides\` or
-                   default — the same object the generator and renderer use.`
+                   default — the same object the generator and renderer use.
+  --tsconfig       the tsconfig that compiles the args files, for its \`jsx\`
+                   setting — e.g. a design system's tsconfig.app.json. Read by
+                   the bin before anything loads; stylesheets are stubbed.`
 
 export interface CliArgs {
   manifest: string
   componentDirs: string[]
   overrides?: string
+  /** Applied by the bin when it registers tsx; recorded here so it parses. */
+  tsconfig?: string
 }
 
 /** Parse argv, or return the reason it cannot be. */
 export function parseArgs(argv: readonly string[]): CliArgs | string {
   const positional: string[] = []
   let overrides: string | undefined
+  let tsconfig: string | undefined
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]!
     if (arg === '--help' || arg === '-h') return USAGE
@@ -38,12 +44,23 @@ export function parseArgs(argv: readonly string[]): CliArgs | string {
       index += 1
       continue
     }
+    if (arg === '--tsconfig') {
+      tsconfig = argv[index + 1]
+      if (!tsconfig) return `--tsconfig needs a file path.\n\n${USAGE}`
+      index += 1
+      continue
+    }
     if (arg.startsWith('--')) return `Unknown option ${arg}.\n\n${USAGE}`
     positional.push(arg)
   }
   const [manifest, ...componentDirs] = positional
   if (!manifest || componentDirs.length === 0) return USAGE
-  return { manifest, componentDirs, ...(overrides ? { overrides } : {}) }
+  return {
+    manifest,
+    componentDirs,
+    ...(overrides ? { overrides } : {}),
+    ...(tsconfig ? { tsconfig } : {}),
+  }
 }
 
 async function loadOverrides(file: string): Promise<Overrides> {
