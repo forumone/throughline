@@ -420,7 +420,7 @@ Gate: the workflow tests pass against both adapters, the playground runs on Payl
 
 - [x] `defineJob`, `emit`, and a `step` with `run`, `sleepUntil` and `sendEvent`, in `@forumone/throughline-workflows` (#211)
 - [x] `inngestJobs(client)` adapter, keeping today's function ids (#211)
-- [ ] `payloadJobs()` adapter, with a per-minute Vercel cron or `autoRun`
+- [x] `payloadJobs()` adapter, with a per-minute Vercel cron or `autoRun` (#213)
 - [ ] Move failure handling (the `job-failures` writer, error reporting) into the adapter layer
 - [ ] Port every workflow and plugin job to `defineJob`; run the workflow tests against both adapters
 - [ ] Playground runs on `payloadJobs`
