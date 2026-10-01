@@ -54,7 +54,8 @@ export function inngestFunctionConfig(
     ...(job.concurrency !== undefined ? { concurrency: job.concurrency } : {}),
     ...(job.idempotency ? { idempotency: inngestIdempotency(job.idempotency) } : {}),
     ...(onFailure ? { onFailure } : {}),
-    triggers: ['event' in job.on ? { event: job.on.event } : { cron: job.on.cron }],
+    triggers:
+      'event' in job.on ? jobEvents(job).map((event) => ({ event })) : [{ cron: job.on.cron }],
   }
 }
 
@@ -69,8 +70,14 @@ interface InngestHandlerArgs {
   logger: JobLogger
 }
 
+/** The event names a job answers, as a list. Empty for a cron job. */
+export function jobEvents(job: Job): readonly string[] {
+  if (!('event' in job.on)) return []
+  return typeof job.on.event === 'string' ? [job.on.event] : job.on.event
+}
+
 /** Inngest's handler arguments, as a job's context. */
-function toContext(args: InngestHandlerArgs): JobContext {
+function toContext(args: InngestHandlerArgs, emit: JobContext['emit']): JobContext {
   return {
     event: {
       name: args.event.name,
@@ -88,6 +95,7 @@ function toContext(args: InngestHandlerArgs): JobContext {
     },
     runId: args.runId ?? 'unknown',
     logger: args.logger,
+    emit,
   }
 }
 
@@ -103,13 +111,16 @@ export function inngestJobs(
   inngest: Inngest,
   options: InngestJobsOptions = {},
 ): InngestJobsAdapter {
+  const emit = async (event: JobEvent | readonly JobEvent[]): Promise<void> => {
+    await inngest.send(Array.isArray(event) ? [...event] : (event as JobEvent))
+  }
   const toFunction = (job: Job): InngestFunction.Any =>
     (
       inngest.createFunction as unknown as (
         config: Record<string, unknown>,
         handler: (args: InngestHandlerArgs) => Promise<unknown>,
       ) => InngestFunction.Any
-    )(inngestFunctionConfig(job, options), (args) => job.handler(toContext(args)))
+    )(inngestFunctionConfig(job, options), (args) => job.handler(toContext(args, emit)))
 
   return {
     runner: 'inngest',
@@ -122,8 +133,6 @@ export function inngestJobs(
       }
       return jobs.map(toFunction)
     },
-    emit: async (event: JobEvent | readonly JobEvent[]) => {
-      await inngest.send(Array.isArray(event) ? [...event] : (event as JobEvent))
-    },
+    emit,
   }
 }

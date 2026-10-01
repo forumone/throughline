@@ -1,5 +1,8 @@
 import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
+import { defineJob } from './jobs/define.js'
+import { inngestJobs } from './jobs/inngest.js'
+import type { Job } from './jobs/types.js'
 import type { ExecuteScheduledPublishesOptions } from './types.js'
 
 const DEFAULT_SCHEDULE = '*/5 * * * *'
@@ -30,12 +33,12 @@ interface DueDoc {
  * Throwing would retry indefinitely on a permanent error (a composition
  * failure, say), which is wrong for cron-style work.
  */
-export function createExecuteScheduledPublishesFunction(
-  options: ExecuteScheduledPublishesOptions,
-): InngestFunction.Any {
+export function executeScheduledPublishesJob(
+  options: Omit<ExecuteScheduledPublishesOptions, 'inngest'>,
+): Job {
   const schedule = options.schedule ?? DEFAULT_SCHEDULE
 
-  return options.inngest.createFunction(
+  return defineJob(
     {
       id: options.id ?? 'execute-scheduled-publishes',
       /*
@@ -49,7 +52,7 @@ export function createExecuteScheduledPublishesFunction(
       and a run that does find something is the only one that needs to.
       */
       ...failureOptions(options, 1),
-      triggers: [{ cron: schedule }],
+      on: { cron: schedule },
     },
     async ({ step, logger }) => {
       const dueBy = new Date(Date.now() - (options.overdueByMs ?? 0)).toISOString()
@@ -129,4 +132,11 @@ export function createExecuteScheduledPublishesFunction(
       return { publishedCount, blockedCount }
     },
   )
+}
+
+/** The same job, registered with Inngest exactly as it always was. */
+export function createExecuteScheduledPublishesFunction(
+  options: ExecuteScheduledPublishesOptions,
+): InngestFunction.Any {
+  return inngestJobs(options.inngest).toFunction(executeScheduledPublishesJob(options))
 }

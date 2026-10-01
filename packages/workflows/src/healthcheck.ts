@@ -1,5 +1,8 @@
 import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
+import { defineJob } from './jobs/define.js'
+import { inngestJobs } from './jobs/inngest.js'
+import type { Job } from './jobs/types.js'
 import type { Payload } from 'payload'
 import type { HealthcheckDefinition, HealthcheckOptions, HealthcheckResult } from './types.js'
 
@@ -13,11 +16,11 @@ const REACHABLE_TIMEOUT_MS = 5_000
  * a `system/healthcheck` Inngest event so external dashboards can
  * observe heartbeats independently of failure routing.
  */
-export function createHealthcheckFunction(options: HealthcheckOptions): InngestFunction.Any {
+export function healthcheckJob(options: Omit<HealthcheckOptions, 'inngest'>): Job {
   const schedule = options.schedule ?? DEFAULT_SCHEDULE
   const onFailure = options.onFailure ?? defaultOnFailure
 
-  return options.inngest.createFunction(
+  return defineJob(
     {
       id: options.id ?? 'healthcheck',
       /*
@@ -32,9 +35,9 @@ export function createHealthcheckFunction(options: HealthcheckOptions): InngestF
       answer different questions — see the note on `failureOptions`.
       */
       ...failureOptions(options, 1),
-      triggers: [{ cron: schedule }],
+      on: { cron: schedule },
     },
-    async ({ step, logger }) => {
+    async ({ step, logger, emit }) => {
       const results: Array<{ name: string; ok: boolean; details?: string }> = []
 
       for (const check of options.checks) {
@@ -68,7 +71,7 @@ export function createHealthcheckFunction(options: HealthcheckOptions): InngestF
       }
 
       await step.run('emit-heartbeat', async () => {
-        await options.inngest.send({
+        await emit({
           name: 'system/healthcheck',
           data: {
             source: 'workflow',
@@ -85,6 +88,11 @@ export function createHealthcheckFunction(options: HealthcheckOptions): InngestF
       return { results, failureCount: failures.length }
     },
   )
+}
+
+/** The same job, registered with Inngest exactly as it always was. */
+export function createHealthcheckFunction(options: HealthcheckOptions): InngestFunction.Any {
+  return inngestJobs(options.inngest).toFunction(healthcheckJob(options))
 }
 
 async function defaultOnFailure(failures: Array<{ name: string; details?: string }>): Promise<void> {

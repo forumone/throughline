@@ -24,10 +24,11 @@ export function defineJob<TData = unknown, TResult = unknown>(
     )
   }
   const on = definition.on as { event?: unknown; cron?: unknown }
-  const triggers = ['event', 'cron'].filter(
-    (key) => typeof on[key as 'event' | 'cron'] === 'string',
-  )
-  if (triggers.length !== 1) {
+  const hasEvent =
+    typeof on.event === 'string' ||
+    (Array.isArray(on.event) && on.event.length > 0 && on.event.every((e) => typeof e === 'string'))
+  const hasCron = typeof on.cron === 'string'
+  if (hasEvent === hasCron) {
     throw new Error(`Job "${definition.id}" needs exactly one of \`on.event\` or \`on.cron\`.`)
   }
   if (definition.idempotency && definition.idempotency.fields.length === 0) {

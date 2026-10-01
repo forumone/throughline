@@ -1,6 +1,7 @@
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { buildConfig, getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { auditEventEchoJob } from '../audit-event-echo.js'
 import { defineJob } from './define.js'
 import { payloadJobs } from './payload.js'
 
@@ -63,6 +64,19 @@ const failing = defineJob({ id: 'failing', on: { event: 'test/fail' }, retries: 
   throw new Error('always')
 })
 
+/*
+A ported workflow, run here rather than on Inngest: the audit echo sends from
+inside its steps through the context's emit, which on this adapter queues the
+subscriber.
+*/
+const echoed: unknown[] = []
+const approvalRequests = defineJob<{ approvalId: string }>(
+  { id: 'approval-requests', on: { event: 'notification/send-approval-request' } },
+  async ({ event }) => {
+    echoed.push(event.data)
+  },
+)
+
 const nightly = defineJob(
   { id: 'nightly', on: { cron: '0 2 * * *' }, concurrency: 1 },
   async () => undefined,
@@ -75,7 +89,19 @@ beforeAll(async () => {
     secret: 'integration-secret-integration-secret',
     db: sqliteAdapter({ client: { url: ':memory:' } }),
     collections: [],
-    plugins: [jobs.plugin([greet, once, sleeper, relay, relayed, failing, nightly])],
+    plugins: [
+      jobs.plugin([
+        greet,
+        once,
+        sleeper,
+        relay,
+        relayed,
+        failing,
+        nightly,
+        auditEventEchoJob({}),
+        approvalRequests,
+      ]),
+    ],
     typescript: { outputFile: '/dev/null' },
     logger: { options: { level: 'silent' } },
   })
@@ -172,6 +198,16 @@ describe('payloadJobs', () => {
     ]
     expect(args.error.message).toBe('always')
     expect(args.event.data.function_id).toBe('failing')
+  })
+
+  it('runs a ported workflow, whose in-step sends reach their subscribers', async () => {
+    await jobs.emit({
+      name: 'audit/event.recorded',
+      data: { action: 'approval.requested', approvalRequestId: 'ap-1' },
+    })
+    await runQueue()
+    await runQueue()
+    expect(echoed).toEqual([{ approvalId: 'ap-1' }])
   })
 
   it('registers a cron job on its schedule, and turns on concurrency control for it', () => {

@@ -1,5 +1,8 @@
 import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
+import { defineJob } from './jobs/define.js'
+import { inngestJobs } from './jobs/inngest.js'
+import type { Job } from './jobs/types.js'
 import type { PublishAtScheduledTimeOptions, ScheduledCollectionConfig } from './types.js'
 
 const SCHEDULED_EVENT = 'content/page.scheduled'
@@ -49,13 +52,13 @@ type Outcome =
  * composition / accessibility / approval checks as an interactive one, and a
  * refusal is logged, not retried.
  */
-export function createPublishAtScheduledTimeFunction(
-  options: PublishAtScheduledTimeOptions,
-): InngestFunction.Any {
+export function publishAtScheduledTimeJob(
+  options: Omit<PublishAtScheduledTimeOptions, 'inngest'>,
+): Job {
   const maxSleepMs = options.maxSleepMs ?? DEFAULT_MAX_SLEEP_MS
   const collections = new Map(options.collections.map((c) => [c.slug, c]))
 
-  return options.inngest.createFunction(
+  return defineJob(
     {
       id: options.id ?? 'publish-at-scheduled-time',
       /*
@@ -65,9 +68,9 @@ export function createPublishAtScheduledTimeFunction(
       Inngest keeps this key for 24 hours, and a relay is six days after the
       event that started its leg, so a relay is never mistaken for a duplicate.
       */
-      idempotency: 'event.data.collection + ":" + event.data.id + ":" + event.data.scheduledFor',
+      idempotency: { fields: ['collection', 'id', 'scheduledFor'] },
       ...failureOptions(options),
-      triggers: [{ event: SCHEDULED_EVENT }],
+      on: { event: SCHEDULED_EVENT },
     },
     async ({ event, step, logger }): Promise<Outcome> => {
       const data = event.data as Partial<ScheduledEventData>
@@ -145,6 +148,13 @@ export function createPublishAtScheduledTimeFunction(
   )
 }
 
+/** The same job, registered with Inngest exactly as it always was. */
+export function createPublishAtScheduledTimeFunction(
+  options: PublishAtScheduledTimeOptions,
+): InngestFunction.Any {
+  return inngestJobs(options.inngest).toFunction(publishAtScheduledTimeJob(options))
+}
+
 /**
  * Whether the document's latest version still carries this schedule.
  *
@@ -153,7 +163,7 @@ export function createPublishAtScheduledTimeFunction(
  * touched, so a read without it would see a document with no schedule at all.
  */
 async function isStillScheduled(
-  options: PublishAtScheduledTimeOptions,
+  options: Pick<PublishAtScheduledTimeOptions, 'payload'>,
   config: ScheduledCollectionConfig,
   request: ScheduledEventData,
 ): Promise<boolean> {
