@@ -14,7 +14,8 @@
     "payload": "throughline-payload",
     "payload:reap": "throughline-payload --reap",
     "db:up": "docker compose up -d",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "test": "vitest run"
   },
   "dependencies": {
     "@forumone/throughline-approvals": "workspace:*",
@@ -26,6 +27,7 @@
     "@forumone/throughline-plugin-contract": "workspace:*",
     "@forumone/throughline-publishing": "workspace:*",
     "@forumone/throughline-reference-ds": "workspace:*",
+    "@forumone/throughline-workflows": "workspace:*",
     "@payloadcms/db-postgres": "^3.83.0",
     "@payloadcms/next": "^3.83.0",
     "@payloadcms/plugin-mcp": "3.90.2",
@@ -40,10 +42,12 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
+    "@payloadcms/db-sqlite": "^3.83.0",
     "@types/node": "^20.17.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "eslint": "^10.11.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.10"
   }
 }

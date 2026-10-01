@@ -3,6 +3,7 @@ import type { InngestFunction } from 'inngest'
 import { defineJob } from './jobs/define.js'
 import { inngestJobs } from './jobs/inngest.js'
 import type { Job } from './jobs/types.js'
+import { jobPayload, type JobOptions } from './jobs/options.js'
 import type { PublishAtScheduledTimeOptions, ScheduledCollectionConfig } from './types.js'
 
 const SCHEDULED_EVENT = 'content/page.scheduled'
@@ -53,7 +54,7 @@ type Outcome =
  * refusal is logged, not retried.
  */
 export function publishAtScheduledTimeJob(
-  options: Omit<PublishAtScheduledTimeOptions, 'inngest'>,
+  options: JobOptions<PublishAtScheduledTimeOptions>,
 ): Job {
   const maxSleepMs = options.maxSleepMs ?? DEFAULT_MAX_SLEEP_MS
   const collections = new Map(options.collections.map((c) => [c.slug, c]))
@@ -72,7 +73,8 @@ export function publishAtScheduledTimeJob(
       ...failureOptions(options),
       on: { event: SCHEDULED_EVENT },
     },
-    async ({ event, step, logger }): Promise<Outcome> => {
+    async ({ event, step, logger, payload: contextPayload }): Promise<Outcome> => {
+      const payload = jobPayload(options.payload, contextPayload, options.id ?? 'publish-at-scheduled-time')
       const data = event.data as Partial<ScheduledEventData>
       const config = data.collection ? collections.get(data.collection) : undefined
       const target = typeof data.scheduledFor === 'string' ? Date.parse(data.scheduledFor) : NaN
@@ -98,7 +100,7 @@ export function publishAtScheduledTimeJob(
         // Only relay a schedule that still stands, or a cancelled one would
         // keep re-sending itself every six days until its date came round.
         const current = await step.run('check-still-scheduled', () =>
-          isStillScheduled(options, config, request),
+          isStillScheduled({ payload }, config, request),
         )
         if (!current) return { outcome: 'superseded' }
 
@@ -109,7 +111,7 @@ export function publishAtScheduledTimeJob(
       await step.sleepUntil('wait-until-due', new Date(target))
 
       const due = await step.run('check-still-scheduled', () =>
-        isStillScheduled(options, config, request),
+        isStillScheduled({ payload }, config, request),
       )
       if (!due) {
         logger.info('Scheduled publish superseded', request)
@@ -122,7 +124,7 @@ export function publishAtScheduledTimeJob(
             collection: config.slug,
             id: request.id,
             reasoning: REASONING,
-          })
+          }, { payload })
           if (!result.published) {
             logger.warn('Scheduled publish blocked by policy', {
               ...request,

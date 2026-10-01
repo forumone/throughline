@@ -222,7 +222,11 @@ export interface ExecuteScheduledPublishesOptions extends BaseWorkflowOptions {
    * right, and returned 401 rather than publishing anything if the deployment
    * URL sat behind access protection.
    */
-  publish: (request: ScheduledPublishRequest) => Promise<ScheduledPublishResult>
+  publish: (
+    request: ScheduledPublishRequest,
+    /** The Payload the job runs against, for a callback declared before Payload exists. */
+    context: { payload: Payload },
+  ) => Promise<ScheduledPublishResult>
   /**
    * Leave a document alone until it is this many milliseconds past its time.
    * Default: 0.
@@ -244,7 +248,11 @@ export interface PublishAtScheduledTimeOptions extends BaseWorkflowOptions {
    */
   collections: ScheduledCollectionConfig[]
   /** How to publish one document. The same contract, and the same warning, as `ExecuteScheduledPublishesOptions.publish`. */
-  publish: (request: ScheduledPublishRequest) => Promise<ScheduledPublishResult>
+  publish: (
+    request: ScheduledPublishRequest,
+    /** The Payload the job runs against, for a callback declared before Payload exists. */
+    context: { payload: Payload },
+  ) => Promise<ScheduledPublishResult>
   /**
    * The longest single sleep, in milliseconds. A schedule further out is
    * reached by relaying the event. Default: six days — Inngest's free plan caps

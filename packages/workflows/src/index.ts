@@ -37,6 +37,8 @@ still register Inngest functions directly. See `jobs/types.ts`.
 */
 export {
   defineJob,
+  eventSenderFor,
+  jobPayload,
   inngestFunctionConfig,
   inngestIdempotency,
   inngestJobs,
@@ -46,6 +48,7 @@ export {
   payloadJobs,
 } from './jobs/index.js'
 export type {
+  JobOptions,
   InngestJobsAdapter,
   InngestJobsOptions,
   PayloadJobsAdapter,

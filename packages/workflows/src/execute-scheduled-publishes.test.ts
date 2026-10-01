@@ -49,11 +49,15 @@ describe('createExecuteScheduledPublishesFunction', () => {
     })) as { publishedCount: number; blockedCount: number }
 
     expect(publish).toHaveBeenCalledTimes(1)
-    expect(publish).toHaveBeenCalledWith({
-      collection: 'pages',
-      id: 'p1',
-      reasoning: 'Scheduled publish executed by workflow cron',
-    })
+    expect(publish).toHaveBeenCalledWith(
+      {
+        collection: 'pages',
+        id: 'p1',
+        reasoning: 'Scheduled publish executed by workflow cron',
+      },
+      // The Payload the job ran against, for a callback declared before it existed.
+      { payload: expect.anything() },
+    )
     expect(result.publishedCount).toBe(1)
   })
 
@@ -201,6 +205,6 @@ describe('createExecuteScheduledPublishesFunction', () => {
     })
 
     expect(publish).toHaveBeenCalledTimes(1)
-    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }))
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }), expect.anything())
   })
 })

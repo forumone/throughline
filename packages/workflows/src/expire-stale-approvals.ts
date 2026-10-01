@@ -5,6 +5,7 @@ import type { ExpireStaleApprovalsOptions } from './types.js'
 import { defineJob } from './jobs/define.js'
 import { inngestJobs } from './jobs/inngest.js'
 import type { Job } from './jobs/types.js'
+import { jobPayload, type JobOptions } from './jobs/options.js'
 
 const DEFAULT_SCHEDULE = '0 2 * * *' // daily at 2am UTC
 const DEFAULT_SLUG = 'approvals'
@@ -27,7 +28,7 @@ interface ExpiredApproval {
  * As a runner-neutral job, for `inngestJobs` or `payloadJobs`.
  */
 export function expireStaleApprovalsJob(
-  options: Omit<ExpireStaleApprovalsOptions, 'inngest'>,
+  options: JobOptions<ExpireStaleApprovalsOptions>,
 ): Job {
   const schedule = options.schedule ?? DEFAULT_SCHEDULE
   const collectionSlug = options.collectionSlug ?? DEFAULT_SLUG
@@ -49,11 +50,12 @@ export function expireStaleApprovalsJob(
       ...failureOptions(options, 1),
       on: { cron: schedule },
     },
-    async ({ step, logger, emit }) => {
+    async ({ step, logger, emit, payload: contextPayload }) => {
+      const payload = jobPayload(options.payload, contextPayload, options.id ?? 'expire-stale-approvals')
       const now = new Date().toISOString()
 
       const expired = await step.run('find-expired', async (): Promise<ExpiredApproval[]> => {
-        const result = await options.payload.find({
+        const result = await payload.find({
           collection: collectionSlug,
           where: {
             and: [
@@ -77,11 +79,11 @@ export function expireStaleApprovalsJob(
         return { expiredCount: 0 }
       }
 
-      const auditWriter = getAuditWriter(options.payload)
+      const auditWriter = getAuditWriter(payload)
 
       for (const approval of expired) {
         await step.run(`expire-${approval.id}`, async () => {
-          await options.payload.update({
+          await payload.update({
             collection: collectionSlug,
             id: approval.id,
             data: { status: 'expired' },
