@@ -1,5 +1,5 @@
 import type { CorePlugin, McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
+import { getPluginRegistry, resolveAdminGroup } from '@forumone/throughline-plugin-contract'
 import { createNamedLogger, defaultLogger, getAuditWriter } from '@forumone/throughline-core'
 import { getEmailClient as readEmailClient } from '@forumone/throughline-email'
 import type { InngestFunction } from 'inngest'
@@ -61,6 +61,10 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
       defaultRateLimit: resolved.rateLimit,
     }
 
+    // Form Builder declares both collections; it merges each override's
+    // `admin` into the collection it builds, so the group goes in there.
+    const adminGroup = resolveAdminGroup(rawOptions.admin)
+
     const formBuilderConfig = formBuilderPlugin({
       fields: {
         text: true,
@@ -72,6 +76,7 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
         message: true,
       },
       formOverrides: {
+        admin: adminGroup,
         fields: ({ defaultFields }) => addFormPolicyFields(defaultFields, policyFieldsOptions),
         hooks: {
           beforeChange: [
@@ -96,6 +101,7 @@ export const formsPlugin: CorePlugin<FormsPluginOptions> =
         },
       },
       formSubmissionOverrides: {
+        admin: adminGroup,
         access: {
           read: ({ req }) => {
             const roles = (req.user?.['roles'] as string[] | undefined) ?? []

@@ -68,6 +68,10 @@ export default buildConfig({
 })
 ```
 
+## Sidebar group
+
+The approvals collection sits in the admin sidebar's `Throughline` group by default. Pass `admin: { group: 'Workflow' }` to file it elsewhere, or `admin: { group: false }` to leave it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group).
+
 ## Wiring with the publishing server
 
 The publishing server's `approvalStep` does not require an `approvalResolver` in its options. When approvalsPlugin is registered, it attaches the resolver to the Payload instance under `Symbol.for('@forumone/throughline/approvals-resolver')`, and publishing's approval step looks it up at publish time.

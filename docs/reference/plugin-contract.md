@@ -23,15 +23,20 @@ Shared types for building Throughline-compatible plugins. This is what you depen
 import type {
   AuthenticatedUser,
   BaseCorePluginOptions,
+  CollectionPluginOptions,
   CorePlugin,
   Logger,
   McpAuthResult,
   McpAuthenticator,
   McpToolContext,
   McpToolDefinition,
+  PluginAdminGroup,
+  PluginAdminOptions,
   PluginRegistry,
   PluginRegistryEntry,
 } from '@forumone/throughline-plugin-contract'
+
+import { DEFAULT_ADMIN_GROUP, resolveAdminGroup } from '@forumone/throughline-plugin-contract'
 ```
 
 ### `CorePlugin<Options>`
@@ -54,6 +59,55 @@ interface BaseCorePluginOptions {
 Common option shape every Throughline plugin extends. Always honour `enabled === false` (return the incoming config unchanged) and never include `/api` in `routePrefix` (Payload prepends it).
 
 `routePrefix` covers a plugin's own HTTP endpoints — admin controls, an approval action link, a public form post. It does not cover MCP: tools reach a client through the host's `@payloadcms/plugin-mcp`, on one `/api/mcp`. A plugin that serves no HTTP endpoints of its own should `Omit` this option rather than accept one it cannot honour — `auditQueryPlugin`, `componentsPlugin` and `integrationsPlugin` all do.
+
+### Admin sidebar group
+
+```typescript
+type PluginAdminGroup = string | Record<string, string> | false
+
+interface PluginAdminOptions {
+  group?: PluginAdminGroup          // default DEFAULT_ADMIN_GROUP ('Throughline')
+}
+
+interface CollectionPluginOptions {
+  admin?: PluginAdminOptions
+}
+
+function resolveAdminGroup(admin?: PluginAdminOptions): { group?: string | Record<string, string> }
+```
+
+Every plugin that declares a collection extends `CollectionPluginOptions`: `auditPlugin` (`audit-events`), `approvalsPlugin` (`approvals`), `integrationsPlugin` (`integrations`) and `formsPlugin` (`forms`, `form-submissions`). One `admin.group` applies to every collection that plugin declares.
+
+| `admin.group` | Sidebar placement |
+| --- | --- |
+| omitted | the `Throughline` group |
+| a string, or a locale map such as `{ en: 'Workflow', fr: 'Flux' }` | that group |
+| `false` | ungrouped — Payload's default "Collections" section |
+
+The default is a group because Payload renders an ungrouped collection loose at the top of the sidebar, above every group, so the audit log and approval queue would otherwise sit above the content editors came to edit.
+
+`false` means *ungrouped* here. On a collection's own `admin.group`, Payload reads `false` as "leave out of the nav entirely"; `resolveAdminGroup` returns `{}` for it and never passes `false` through. A plugin author spreads its result into each collection's `admin` block — see [Building a plugin](../guides/building-a-plugin.md).
+
+```typescript
+auditPlugin({ inngest, admin: { group: 'Workflow' } })
+approvalsPlugin({ /* … */ admin: { group: 'Workflow' } })
+integrationsPlugin({ inngest, mcpTools, admin: { group: 'Admin' } })
+```
+
+#### `@payloadcms/plugin-mcp`'s key collection
+
+`payload-mcp-api-keys` comes from Payload's plugin, which takes no group option and so lands ungrouped. Group it through the plugin's `overrideApiKeyCollection`, keeping whatever else that override already does:
+
+```typescript
+mcpPlugin({
+  mcp: { tools: mcpTools.tools },
+  overrideApiKeyCollection: (collection) => ({
+    ...collection,
+    admin: { ...collection.admin, group: DEFAULT_ADMIN_GROUP },
+    // access: { … } — the scaffold narrows this collection to admins here
+  }),
+})
+```
 
 ### `PluginRegistry`
 

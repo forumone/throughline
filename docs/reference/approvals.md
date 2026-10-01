@@ -49,6 +49,7 @@ approvalsPlugin({
   groups: ApproverGroup[],                   // required
   groupResolver: GroupResolver,              // required (often a stub at plugin time; closed over `payload` after onInit)
   collectionSlug?: string,                   // default 'approvals'
+  admin?: { group?: string | false },        // sidebar group; default 'Throughline', false = ungrouped
   expireAfter?: string,                      // ISO duration, default '14d'
   routePrefix?: string,                      // default '/approvals'
 })
@@ -79,6 +80,8 @@ interface ResolvedApprover {
 ```
 
 See [Configuring approvers](../guides/configuring-approvers.md) for three patterns of `GroupResolver`.
+
+`admin.group` places the approvals collection in the admin sidebar. See [Admin sidebar group](plugin-contract.md#admin-sidebar-group).
 
 ## MCP tools
 

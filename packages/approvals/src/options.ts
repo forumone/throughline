@@ -1,6 +1,9 @@
 import type { McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
-import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
+import type {
+  BaseCorePluginOptions,
+  CollectionPluginOptions,
+} from '@forumone/throughline-plugin-contract'
 
 export interface ApproverGroup {
   /** Group slug, referenced by the policy.approverGroups field on requests. */
@@ -27,7 +30,7 @@ export interface GroupResolver {
   resolveUsers: (groupSlugs: string[]) => Promise<ResolvedApprover[]>
 }
 
-export interface ApprovalsPluginOptions extends BaseCorePluginOptions {
+export interface ApprovalsPluginOptions extends BaseCorePluginOptions, CollectionPluginOptions {
   /** Approver groups available in this deployment. */
   groups: ApproverGroup[]
   /** Resolver mapping group slugs to users. Required. */

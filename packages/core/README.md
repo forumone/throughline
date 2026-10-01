@@ -68,6 +68,10 @@ onInit: async (payload) => {
 
 The writer is **fire-and-forget**: failures log but never throw. Audit failures must never break the originating action.
 
+### Sidebar group
+
+The `audit-events` collection sits in the admin sidebar's `Throughline` group by default. `auditPlugin({ inngest, admin: { group: 'Workflow' } })` files it elsewhere; `admin: { group: false }` leaves it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group).
+
 ## MCP authentication
 
 `createApiKeysCollection` adds a Payload collection that stores SHA-256 hashes of bearer tokens (the raw key is shown to the operator once on create, then never persisted). `createBearerTokenAuthenticator` validates incoming requests against that collection.

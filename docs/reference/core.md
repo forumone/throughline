@@ -51,8 +51,11 @@ interface AuditPluginOptions {
   inngest?: InngestClient   // optional; if omitted, no events are fired
   collectionSlug?: string   // default 'audit-log'
   retainFields?: string[]   // for diff before/after computation
+  admin?: { group?: string | false }  // sidebar group; default 'Throughline', false = ungrouped
 }
 ```
+
+`admin.group` is also accepted by `createAuditCollection`. See [Admin sidebar group](plugin-contract.md#admin-sidebar-group).
 
 ## Auth
 
@@ -178,10 +181,13 @@ For convenience:
 ```typescript
 import type {
   AuthenticatedUser,
+  CollectionPluginOptions,
   CorePlugin,
   Logger,
   McpToolContext,
   McpToolDefinition,
+  PluginAdminGroup,
+  PluginAdminOptions,
   PluginRegistry,
 } from '@forumone/throughline-core'
 ```

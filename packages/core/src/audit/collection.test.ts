@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline-plugin-contract'
 import { DEFAULT_AUDIT_SLUG, createAuditCollection } from './collection.js'
 
 describe('createAuditCollection', () => {
@@ -50,5 +51,21 @@ describe('createAuditCollection', () => {
     const config = createAuditCollection()
     const action = config.fields.find((f) => 'name' in f && f.name === 'action')
     expect(action).toMatchObject({ type: 'select', required: true })
+  })
+
+  it('sits in the Throughline sidebar group by default', () => {
+    expect(createAuditCollection().admin?.group).toBe(DEFAULT_ADMIN_GROUP)
+  })
+
+  it('takes a custom sidebar group, including a localized one', () => {
+    expect(createAuditCollection({ admin: { group: 'Workflow' } }).admin?.group).toBe('Workflow')
+    const localized = { en: 'Workflow', fr: 'Flux' }
+    expect(createAuditCollection({ admin: { group: localized } }).admin?.group).toEqual(localized)
+  })
+
+  it('is left ungrouped, not hidden, when group is false', () => {
+    const config = createAuditCollection({ admin: { group: false } })
+    expect(config.admin).not.toHaveProperty('group')
+    expect(config.admin?.useAsTitle).toBe('summary')
   })
 })
