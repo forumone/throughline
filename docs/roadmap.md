@@ -24,6 +24,19 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C13](#c13--cli-scaffolder) | CLI Scaffolder | ✅ Done |
 | [C14](#c14--documentation-site) | Documentation (markdown only; site deferred) | ✅ Done |
 
+### Throughline 1.0
+
+Spec: [`docs/spec/1.0-plan.md`](spec/1.0-plan.md). Checklists are [below](#throughline-10).
+
+| Phase | Title | Status |
+| --- | --- | --- |
+| [1.0-P0](#10-p0--stabilize-0x) | Stabilize 0.x | ✅ Done |
+| [1.0-P1](#10-p1--foundations) | Foundations (`1.0.0-next`) | ⬜ Not started |
+| [1.0-P2](#10-p2--moves-and-mcp-tools) | Moves and MCP tools | ⬜ Not started |
+| [1.0-P3](#10-p3--scaffolder-docs-codemod-release) | Scaffolder, docs, codemod, release | ⬜ Not started |
+| [1.0-P4](#10-p4--migrate-forumone-2026) | Migrate forumone-2026 | ⬜ Not started |
+| [1.0-P5](#10-p5--after-10) | After 1.0 | ⬜ When a second site arrives |
+
 ---
 
 ## C0 — Monorepo Scaffold
@@ -381,3 +394,85 @@ The original spec called for a Nextra-based docs site. We're shipping the *conte
 - [x] Reference (13 pages): one per published package, plus an index
 - [ ] Live docs site (Nextra + Vercel deployment) — deferred to a future phase
 - [ ] Auto-generated typedoc reference replacing the hand-authored reference pages — deferred
+
+---
+
+## Throughline 1.0
+
+Spec: `docs/spec/1.0-plan.md`. Each phase ends at a gate, and the site migrates once, in P4. Tick a box when it is merged on `main`, and link the PR.
+
+### 1.0-P0 — Stabilize 0.x
+
+Gate: forumone-2026 pins a released 0.x, and #166 is closed.
+
+- [x] Merge the #166 platform fixes: #186, #190, #191, #192, #193, #196, #197, #198, #200
+- [x] forumone-2026 takes each one up in the PR that pins it, removing its workaround (forumone-2026 #789, #794, #792, #793, #795; tracked and closed in forumone-2026#782)
+- [x] forumone-2026's CI refuses a pin that is not on this repo's `main` (`check-throughline-pin.sh`, forumone-2026#789)
+- [x] forumone-2026 aligns every `@payloadcms/*` package on 3.90.2, and drops the unused `plugin-form-builder` (forumone-2026#789)
+- [x] `check-block-props` loads TSX args and CSS modules (#207, #208; forumone-2026#796)
+- [x] Release the 0.x final: #199, then #209 for #208
+- [x] forumone-2026 pins the release commit `5613d4c` (forumone-2026#797)
+- [x] #166 closed
+
+### 1.0-P1 — Foundations
+
+Gate: the workflow tests pass against both job adapters, the playground runs on Payload Jobs, and forumone-2026's rehearsal branch builds against `1.0.0-next.N`.
+
+- [ ] Enter changesets pre-release mode on `main` (`1.0.0-next.N`), and cut a `v0` branch from the 0.x release for fixes
+- [ ] `@forumone/throughline/jobs`: `defineJob`, `emit`, and a `step` with `run`, `sleepUntil` and `sendEvent`
+- [ ] `inngestJobs(client)` adapter, keeping today's function ids
+- [ ] `payloadJobs()` adapter, with a per-minute Vercel cron or `autoRun`
+- [ ] Measure "publishes on the minute" under `payloadJobs` in the playground, and record the result in the spec (it settles decision 3)
+- [ ] Move failure handling (the `job-failures` writer, error reporting) into the adapter layer
+- [ ] Port every workflow and plugin job to `defineJob`; run the workflow tests against both adapters
+- [ ] Consolidate into `@forumone/throughline` with subpath exports; fold workflows into its owners (publishing, approvals, audit, integrations)
+- [ ] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today)
+- [ ] Fold reference-ds into create-throughline as template and test fixture
+- [ ] Make plugin-contract, the capability registry and the MCP collector internal
+- [ ] `throughline({...})` registers every plugin in order and wires the MCP collector
+- [ ] `resend`, React Email and `inngest` become optional peers, loaded only by the subpath that needs them
+- [ ] One fixed version across the three published packages (changesets `fixed`)
+- [ ] Bootstrap npm trusted publishing for the new package names (see the C0 note)
+- [ ] Leave forms out of 1.0; tag its last 0.x source
+- [ ] forumone-2026 opens `chore/throughline-next` and keeps it building against each `next.N`
+
+### 1.0-P2 — Moves and MCP tools
+
+Gate: every new admin view has its MCP tool and a parity test, and the rehearsal branch is green on the latest `next.N`.
+
+- [ ] `/media`: usage tracking for blocks stored as JSON, delete guards, "Used on" panel; tools `find_references` and `can_delete`
+- [ ] `/editorial`: content health view; tool `find_content_needing_attention`
+- [ ] `/editorial`: content calendar; tool `get_content_calendar`
+- [ ] `/editorial`: "Your work" dashboard; tool `list_my_work`
+- [ ] `/editorial`: command palette; tool `search_content`
+- [ ] `/fields`: slug and trashed-slug guard, character count, `publishedAt`, `revisedAt`, `usedBy`, `unlisted`, `mapFields`; tool `check_slug`
+- [ ] Access hardening for Payload's internal collections, moved to the root
+- [ ] `list_job_failures` over `job-failures`
+- [ ] Vercel Blob client-upload hardening: PR to Payload, or `/media` if refused
+- [ ] Every 1.0 default field name and slug matches forumone-2026's current one
+
+### 1.0-P3 — Scaffolder, docs, codemod, release
+
+Gate: `1.0.0` is on npm.
+
+- [ ] Regenerate the scaffolder for the new shape; CI generates a site from it and builds that site
+- [ ] Import codemod (`throughline migrate-imports`) covering every 0.x import path
+- [ ] Migration guide in `docs/guides/upgrading.md`
+- [ ] Reference docs updated for the three packages
+- [ ] PR snapshots (`pr` dist-tag) and `next` snapshots on merge
+- [ ] Exit pre-release mode and release `1.0.0`
+
+### 1.0-P4 — Migrate forumone-2026
+
+Gate: forumone-2026 runs 1.0 in production, and the submodule is gone. The steps are in the spec, under "Migrating forumone-2026".
+
+- [ ] One site PR: dependencies, codemod, `throughline({...})`, jobs, moved code, generated files, repo rules
+- [ ] `migrate:create` finds nothing to change (run with the Blob token set)
+- [ ] Full `fast` and `verify`, a prerender-manifest diff, and an admin smoke test against a local Postgres
+- [ ] A preview with a publish scheduled ten minutes out
+- [ ] Merged and promoted to production
+- [ ] The submodule, `check:boundary` and `check-throughline-pin.sh` retired
+
+### 1.0-P5 — After 1.0
+
+When a second site shows which configuration points are real: Okta generalised to OIDC, draft preview, HubSpot and Greenhouse, narration, AI Suggest, `llms.txt`.
