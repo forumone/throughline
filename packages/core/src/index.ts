@@ -61,10 +61,13 @@ export type { DocumentContentHashOptions } from './utils/index.js'
 export type {
   AuthenticatedUser,
   BaseCorePluginOptions,
+  CollectionPluginOptions,
   CorePlugin,
   Logger,
   McpToolContext,
   McpToolDefinition,
+  PluginAdminGroup,
+  PluginAdminOptions,
   PluginRegistry,
   PluginRegistryEntry,
 } from '@forumone/throughline-plugin-contract'

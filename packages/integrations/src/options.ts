@@ -1,6 +1,9 @@
 import type { McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
-import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
+import type {
+  BaseCorePluginOptions,
+  CollectionPluginOptions,
+} from '@forumone/throughline-plugin-contract'
 import type { Integration } from './types.js'
 
 export const DEFAULT_INTEGRATIONS_SLUG = 'integrations'
@@ -10,7 +13,9 @@ export const DEFAULT_INTEGRATIONS_SLUG = 'integrations'
 plugin's options. This server's only endpoint was `/<prefix>/mcp`, and its
 tools now reach a client through the host's `mcpPlugin`.
 */
-export interface IntegrationsPluginOptions extends Omit<BaseCorePluginOptions, 'routePrefix'> {
+export interface IntegrationsPluginOptions
+  extends Omit<BaseCorePluginOptions, 'routePrefix'>,
+    CollectionPluginOptions {
   /**
    * Inngest client used to register integration functions and to fire
    * manual-sync trigger events. Required: integrations are an

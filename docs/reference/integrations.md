@@ -50,6 +50,7 @@ integrationsPlugin({
   inngest,                                   // required
   integrations: Integration[],               // required; the registered set
   collectionSlug?: string,                   // default 'integrations'
+  admin?: { group?: string | false },        // sidebar group; default 'Throughline', false = ungrouped
   mcpTools?: McpToolCollector,                // hand it the host's collector, or
                                               // its five tools reach nobody
 })
@@ -64,6 +65,8 @@ The plugin:
 
 It serves no HTTP endpoint of its own, which is why it takes no `routePrefix` —
 passing one is a compile error rather than a setting that does nothing.
+
+`admin.group` places the `integrations` collection in the admin sidebar. See [Admin sidebar group](plugin-contract.md#admin-sidebar-group).
 
 ## The `Integration` interface
 

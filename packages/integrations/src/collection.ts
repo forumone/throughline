@@ -1,4 +1,5 @@
 import type { Access, CollectionConfig, Endpoint, FieldAccess } from 'payload'
+import { type PluginAdminOptions, resolveAdminGroup } from '@forumone/throughline-plugin-contract'
 import type { IntegrationRegistry } from './registry.js'
 import { DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 
@@ -13,6 +14,8 @@ export interface CreateIntegrationsCollectionOptions {
   registry: IntegrationRegistry
   /** Collection endpoints to mount, e.g. the manual-sync trigger. */
   endpoints?: Endpoint[]
+  /** Sidebar placement. Default: the `'Throughline'` group; `group: false` leaves it ungrouped. */
+  admin?: PluginAdminOptions
 }
 
 const adminOrEditor: Access = ({ req }) => {
@@ -57,6 +60,7 @@ export function createIntegrationsCollection(
   return {
     slug,
     admin: {
+      ...resolveAdminGroup(options.admin),
       useAsTitle: 'name',
       defaultColumns: ['name', 'integrationType', 'enabled', 'lastSyncAt', 'lastSyncStatus'],
       description:

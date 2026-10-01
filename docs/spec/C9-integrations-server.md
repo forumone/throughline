@@ -95,11 +95,13 @@ export interface IntegrationContext {
   loadInstances: <Config = Record<string, unknown>>(
     integrationId: string,
   ) => Promise<Array<{ id: string; name: string; config: Config }>>
-  /** Updates an instance's lastSyncAt and lastSyncStatus fields. */
+  /**
+   * Updates an instance's lastSyncAt, lastSyncStatus and lastError fields.
+   * `partial` and `failed` require a message; only `success` clears lastError.
+   */
   updateStatus: (
     instanceId: string,
-    status: 'success' | 'partial' | 'failed',
-    error?: string,
+    ...update: [status: 'success'] | [status: 'partial' | 'failed', error: string]
   ) => Promise<void>
   /** Writes an audit event (thin wrapper over core's auditWriter). */
   recordAudit: (event: {
@@ -436,7 +438,8 @@ export function createWebhookFunctions(ctx: IntegrationContext): InngestFunction
           }
 
           const success = response.ok
-          await ctx.updateStatus(instance.id, success ? 'success' : 'failed', success ? undefined : `HTTP ${response.status}`)
+          if (success) await ctx.updateStatus(instance.id, 'success')
+          else await ctx.updateStatus(instance.id, 'failed', `HTTP ${response.status}`)
           await ctx.recordAudit({
             integrationId: instance.id,
             instanceName: instance.name,
@@ -667,14 +670,15 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> = (rawOpt
             config: (doc.config ?? {}) as Config,
           }))
         },
-        async updateStatus(instanceId, status, error) {
+        async updateStatus(instanceId, ...[status, error]) {
           await payload.update({
             collection: collectionSlug,
             id: instanceId,
             data: {
               lastSyncAt: new Date().toISOString(),
               lastSyncStatus: status,
-              lastError: error,
+              // Only a success clears the reason; a partial or failed run replaces it.
+              lastError: status === 'success' ? null : error,
             },
           })
         },

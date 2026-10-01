@@ -1,4 +1,5 @@
 import type { Access, CollectionConfig } from 'payload'
+import { type PluginAdminOptions, resolveAdminGroup } from '@forumone/throughline-plugin-contract'
 import { AUDIT_ACTIONS, AUDIT_MCP_SERVERS } from './types.js'
 
 export interface AuditCollectionOptions {
@@ -9,6 +10,8 @@ export interface AuditCollectionOptions {
    * Defaults to admin/editor roles.
    */
   readAccess?: Access
+  /** Sidebar placement. Default: the `'Throughline'` group; `group: false` leaves it ungrouped. */
+  admin?: PluginAdminOptions
 }
 
 export const DEFAULT_AUDIT_SLUG = 'audit-events'
@@ -30,6 +33,7 @@ export function createAuditCollection(options: AuditCollectionOptions = {}): Col
   return {
     slug,
     admin: {
+      ...resolveAdminGroup(options.admin),
       useAsTitle: 'summary',
       defaultColumns: ['createdAt', 'actor', 'action', 'targetCollection', 'targetId'],
       description:

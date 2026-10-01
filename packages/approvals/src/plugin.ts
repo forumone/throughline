@@ -30,6 +30,7 @@ export const approvalsPlugin: CorePlugin<ApprovalsPluginOptions> =
       ...(options.collectionSlug ? { slug: options.collectionSlug } : {}),
       ...(options.usersSlug ? { usersSlug: options.usersSlug } : {}),
       groupSlugs: options.groups.map((g) => g.slug),
+      ...(options.admin ? { admin: options.admin } : {}),
     })
 
     /*

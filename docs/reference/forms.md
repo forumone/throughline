@@ -66,6 +66,7 @@ formsPlugin({
   allowedDestinations: AllowedDestination[], // required; min 1, unique labels
   collectionSlug?: string,                   // default 'forms'
   submissionsCollectionSlug?: string,        // default 'form-submissions'
+  admin?: { group?: string | false },        // sidebar group for both collections; default 'Throughline'
   privacyNotice?: string,                    // default copy
   rateLimit?: { perHour?: number },          // default { perHour: 10 }
   routePrefix?: string,                      // default '/forms'
@@ -80,6 +81,8 @@ interface AllowedDestination {
   signingSecret?: string                     // optional; if set, requests are HMAC-SHA256 signed
 }
 ```
+
+`admin.group` places both Form Builder collections, `forms` and `form-submissions`, in the admin sidebar. See [Admin sidebar group](plugin-contract.md#admin-sidebar-group).
 
 `validateOptions(options)` is what the plugin runs internally. It returns `ResolvedFormsConfig` with:
 

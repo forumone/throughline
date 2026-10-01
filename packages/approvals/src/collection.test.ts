@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline-plugin-contract'
 import {
   DEFAULT_APPROVALS_SLUG,
   createApprovalsCollection,
@@ -63,5 +64,24 @@ describe('createApprovalsCollection', () => {
       'changes-requested',
       'expired',
     ])
+  })
+
+  it('sits in the Throughline sidebar group by default', () => {
+    const config = createApprovalsCollection({ groupSlugs: ['editorial'] })
+    expect(config.admin?.group).toBe(DEFAULT_ADMIN_GROUP)
+  })
+
+  it('takes a custom sidebar group', () => {
+    const config = createApprovalsCollection({
+      groupSlugs: ['editorial'],
+      admin: { group: 'Workflow' },
+    })
+    expect(config.admin?.group).toBe('Workflow')
+  })
+
+  it('is left ungrouped, not hidden, when group is false', () => {
+    const config = createApprovalsCollection({ groupSlugs: ['editorial'], admin: { group: false } })
+    expect(config.admin).not.toHaveProperty('group')
+    expect(config.admin?.useAsTitle).toBe('targetTitle')
   })
 })
