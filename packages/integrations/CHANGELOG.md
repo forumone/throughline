@@ -1,5 +1,11 @@
 # @forumone/throughline-integrations
 
+## 0.10.4
+
+### Patch Changes
+
+- @forumone/throughline-workflows@0.6.4
+
 ## 0.10.3
 
 ### Patch Changes
