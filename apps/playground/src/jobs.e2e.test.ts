@@ -25,6 +25,9 @@ beforeAll(async () => {
       revalidate,
     }),
     logger: { options: { level: 'silent' } },
+    // Otherwise `getPayload` forks `payload generate:types` in the background,
+    // where it hangs and outlives the run.
+    typescript: { autoGenerate: false },
   })
   payload = await getPayload({ config })
 }, 120_000)
