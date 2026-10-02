@@ -72,7 +72,16 @@ async function makePage(status: 'draft' | 'published'): Promise<number | string>
   return doc.id
 }
 
-function update(id: number | string, args: Record<string, unknown>) {
+/*
+Each write lands in a later millisecond than the one before. The hook judges a
+write by the document's *latest version*, which Payload picks by timestamp; on
+in-memory SQLite a create and an immediate draft edit can share a millisecond,
+the tie picks the older version, and a write that should be blocked is not.
+Failed about one run in two when this file ran alone. Two saves of one
+document inside a millisecond is a test artefact, not something an editor can do.
+*/
+async function update(id: number | string, args: Record<string, unknown>) {
+  await new Promise((resolve) => setTimeout(resolve, 2))
   return payload.update({ collection: 'pages', id, overrideAccess: true, ...args })
 }
 
