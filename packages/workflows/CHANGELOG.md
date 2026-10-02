@@ -1,5 +1,13 @@
 # @forumone/throughline-workflows
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [4289ee2]
+  - @forumone/throughline-core@0.12.0
+  - @forumone/throughline-publishing@0.11.2
+
 ## 0.6.0
 
 ### Minor Changes

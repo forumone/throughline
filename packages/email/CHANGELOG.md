@@ -1,5 +1,13 @@
 # @forumone/throughline-email
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [4289ee2]
+  - @forumone/throughline-core@0.12.0
+  - @forumone/throughline-workflows@0.6.1
+
 ## 0.4.0
 
 ### Minor Changes

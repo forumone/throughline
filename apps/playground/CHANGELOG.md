@@ -1,5 +1,18 @@
 # @forumone/throughline-playground
 
+## 0.0.40
+
+### Patch Changes
+
+- Updated dependencies [4289ee2]
+  - @forumone/throughline-core@0.12.0
+  - @forumone/throughline-approvals@0.9.2
+  - @forumone/throughline-audit@0.6.2
+  - @forumone/throughline-components@0.6.2
+  - @forumone/throughline-integrations@0.10.1
+  - @forumone/throughline-publishing@0.11.2
+  - @forumone/throughline-workflows@0.6.1
+
 ## 0.0.39
 
 ### Patch Changes
