@@ -1,4 +1,4 @@
-export { editorialPlugin, CONTENT_HEALTH_VIEW_PATH } from './plugin.js'
+export { editorialPlugin, CONTENT_CALENDAR_VIEW_PATH, CONTENT_HEALTH_VIEW_PATH } from './plugin.js'
 export type { EditorialPluginOptions } from './plugin.js'
 
 export {
@@ -34,3 +34,30 @@ export {
 export type { HealthToolDeps } from './health/tool.js'
 
 export { relativeTime } from './relativeTime.js'
+
+export { clockFor, daysInMonth, readCalendarMonth } from './calendar/calendar.js'
+export type { CalendarMonth, CalendarOptions } from './calendar/calendar.js'
+export { findContentCalendar } from './calendar/find.js'
+export type {
+  CalendarEventSource,
+  CalendarItem,
+  CalendarKind,
+  CalendarSources,
+} from './calendar/find.js'
+export {
+  calendarClock,
+  dayTitle,
+  defaultZoneLabel,
+  gridDays,
+  monthParam,
+  monthTitle,
+  queryRange,
+  shiftMonth,
+} from './calendar/month.js'
+export type { CalendarClock, Month } from './calendar/month.js'
+export {
+  CALENDAR_TOOLS,
+  CALENDAR_TOOL_DESCRIPTORS,
+  createGetContentCalendarTool,
+  toolCalendar,
+} from './calendar/tool.js'
