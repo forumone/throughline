@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Create Release Pull Request or Publish
-        uses: changesets/action@v1
+        uses: changesets/action@v2.1.2
         with:
           publish: pnpm publish-packages
           commit: 'chore: release'
