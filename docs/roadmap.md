@@ -31,8 +31,8 @@ Spec: [`docs/spec/1.0-plan.md`](spec/1.0-plan.md). Checklists are [below](#throu
 | Phase | Title | Status |
 | --- | --- | --- |
 | [1.0-P0](#10-p0--stabilize-0x) | Stabilize 0.x | ✅ Done |
-| [1.0-P1](#10-p1--jobs-interface-0x) | Jobs interface (0.x) | 🟡 In progress |
-| [1.0-P2](#10-p2--moves-and-mcp-tools-0x) | Moves and MCP tools (0.x) | ⬜ Not started |
+| [1.0-P1](#10-p1--jobs-interface-0x) | Jobs interface (0.x) | ✅ Done |
+| [1.0-P2](#10-p2--moves-and-mcp-tools-0x) | Moves and MCP tools (0.x) | 🟡 In progress |
 | [1.0-P3](#10-p3--consolidate-and-release-10) | Consolidate and release 1.0 | ⬜ Not started |
 | [1.0-P4](#10-p4--migrate-forumone-2026) | Migrate forumone-2026 | ⬜ Not started |
 | [1.0-P5](#10-p5--after-10) | After 1.0 | ⬜ When a second site arrives |
@@ -429,8 +429,8 @@ Gate: the workflow tests pass against both adapters, the playground runs on Payl
     - [x] ~~forms~~ Won't do: forms is not in 1.0 (decision 4)
 - [x] Playground runs on `payloadJobs`, with an end-to-end test of publish revalidation and scheduled publishing
 - [x] Measure "publishes on the minute" under `payloadJobs`, and record the result in the spec (it settles decision 3): on the minute it lands within a second, and mid-minute it lands on the next tick
-- [ ] Release as 0.x
-- [ ] forumone-2026 adopts `inngestJobs` in production (moving its Inngest environment pinning in), with function ids unchanged and a scheduled publish verified across the deploy
+- [x] Release as 0.x (#212): core 0.11, workflows 0.6, email 0.4, integrations 0.10, with the site's Inngest environment pinning moved into core (#218)
+- [x] forumone-2026 adopts `inngestJobs` in production (moving its Inngest environment pinning in), with function ids unchanged and a scheduled publish verified across the deploy (forumone-2026#798, promoted 2026-10-02: the same 31 registrations in production, preview down to 19 with no crons, and a publish scheduled before the deploy landed after it)
 
 ### 1.0-P2 — Moves and MCP tools (0.x)
 
@@ -444,6 +444,7 @@ Gate: every moved feature runs from the package in forumone-2026's production, w
 - [ ] Field kit: slug and trashed-slug guard, character count, `publishedAt`, `revisedAt`, `usedBy`, `unlisted`, `mapFields`; tool `check_slug` (in `core` for now)
 - [ ] Access hardening for Payload's internal collections
 - [ ] `list_job_failures` over `job-failures`
+- [ ] Terminal-failure handlers for the five functions that have none: the three email notifications and the webhook integration's two. Found while counting forumone-2026's Inngest registrations in P1. On a jobs adapter they get its `onFailure` for free.
 - [ ] Vercel Blob client-upload hardening: PR to Payload, or Throughline if refused
 - [ ] Every default field name and slug matches forumone-2026's current one, so adoption needs no data migration
 
