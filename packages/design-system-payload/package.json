@@ -42,7 +42,7 @@
     "@types/react": "^19.2.0",
     "eslint": "^10.11.0",
     "payload": "3.90.2",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.0",
     "vitest": "^4.1.10"
   }
 }
