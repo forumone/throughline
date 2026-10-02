@@ -21,3 +21,7 @@ export type {
   PublishingIssue,
   PublishingResponse,
 } from '../admin/publishing-client.js'
+
+export { CommandPalette } from '../editorial/palette/CommandPalette.js'
+export type { CommandPaletteProps } from '../editorial/palette/CommandPalette.js'
+export { ReportsNav } from '../editorial/palette/ReportsNav.js'
