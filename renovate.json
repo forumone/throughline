@@ -1,6 +1,148 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits",
+    "schedule:weekly"
+  ],
+  "timezone": "America/Chicago",
+  "configMigration": true,
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+
+  "cloneSubmodules": true,
+  "git-submodules": { "enabled": false },
+
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+
+  "minimumReleaseAge": "5 days",
+  "internalChecksFilter": "strict",
+
+  "postUpdateOptions": ["pnpmDedupe"],
+  "automergeStrategy": "squash",
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"]
+  },
+
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null,
+    "prCreation": "immediate",
+    "labels": ["dependencies", "security"],
+    "automerge": false
+  },
+
+  "packageRules": [
+    {
+      "description": "Grouped so a lint config and the plugins it loads never land apart.",
+      "matchPackageNames": [
+        "eslint",
+        "@eslint/**",
+        "typescript-eslint",
+        "eslint-plugin-**",
+        "eslint-config-**",
+        "@forumone/eslint-config-es5",
+        "globals"
+      ],
+      "groupName": "eslint"
+    },
+    {
+      "description": "Pinned at the root and re-pinned through a pnpm override, so every copy has to move together. Ordered after eslint so eslint-config-prettier lands here.",
+      "matchPackageNames": [
+        "prettier",
+        "prettier-plugin-**",
+        "eslint-config-prettier"
+      ],
+      "groupName": "prettier"
+    },
+    {
+      "description": "Ordered after eslint so eslint-plugin-storybook lands here.",
+      "matchPackageNames": [
+        "storybook",
+        "@storybook/**",
+        "eslint-plugin-storybook",
+        "@chromatic-com/storybook"
+      ],
+      "groupName": "storybook"
+    },
+    {
+      "matchPackageNames": ["postcss", "postcss-**", "@csstools/**"],
+      "groupName": "postcss"
+    },
+    {
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "groupName": "react"
+    },
+    {
+      "matchPackageNames": ["vitest", "@vitest/**"],
+      "groupName": "vitest"
+    },
+    {
+      "description": "Both workspaces install playwright and the vitest browser provider drives it; a version skew fails every story smoke test at once.",
+      "matchPackageNames": [
+        "playwright",
+        "playwright-core",
+        "@playwright/test"
+      ],
+      "groupName": "playwright"
+    },
+    {
+      "description": "Three workspaces declare typescript and CLAUDE.md requires them aligned.",
+      "matchPackageNames": ["typescript"],
+      "groupName": "typescript"
+    },
+    {
+      "matchPackageNames": ["node", "@types/node"],
+      "groupName": "node"
+    },
+    {
+      "description": "Payload core and its plugins are version-locked to each other. Six are pinned exactly and five carry carets, so an ungrouped bump splits the tree across two Payload versions.",
+      "matchPackageNames": ["payload", "@payloadcms/**"],
+      "groupName": "payload"
+    },
+    {
+      "description": "The Throughline suite ships as a set. All 0.x, so config:recommended already treats a minor as breaking.",
+      "matchPackageNames": ["@forumone/throughline-**"],
+      "groupName": "throughline"
+    },
+    {
+      "description": "Automerge only what CI actually proves. This depends on the verify job running on renovate/** branches — see .github/workflows/ci.yml. If that ever stops being true, a green check means the fast tier only and this rule must come out.",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "matchCurrentVersion": "!/^0\\./",
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
+      "description": "These can move payload-types.ts, select-options.json or importMap.js, which check-generated.sh will fail on and no bot here can regenerate — postUpgradeTasks is self-hosted only. Ordered after the automerge rule so it overrides it.",
+      "matchPackageNames": [
+        "payload",
+        "@payloadcms/**",
+        "@forumone/throughline-**",
+        "next",
+        "react",
+        "react-dom",
+        "typescript",
+        "node"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Majors queue on the dependency dashboard rather than opening at once. Each open PR is a preview deploy that migrates and seeds the shared database and runs every cron against it.",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major-upgrade"],
+      "assignees": ["briangraves"],
+      "dependencyDashboardApproval": true
+    }
   ]
 }
