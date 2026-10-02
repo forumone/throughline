@@ -1,5 +1,6 @@
 import { checkEnvValue } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
+import type { WorkflowFailureHandler } from '@forumone/throughline-workflows'
 import type { BaseCorePluginOptions, EnvRequirement } from '@forumone/throughline-plugin-contract'
 import type { EmailBrandTokens } from './tokens.js'
 
@@ -23,6 +24,13 @@ export interface EmailPluginOptions extends BaseCorePluginOptions {
    * jobs adapter instead.
    */
   inngest?: Inngest
+  /**
+   * Called once when a notification run has exhausted its retries. Default:
+   * `createTerminalFailureHandler({ payload })` from the workflows package,
+   * which records a `job-failures` row (with `jobFailuresPlugin`), logs, and
+   * reports. These three ran with none, so a failed approval email was silent.
+   */
+  onTerminalFailure?: WorkflowFailureHandler
   /** Resend API key. Falls back to `process.env.RESEND_API_KEY`. */
   apiKey?: string
   /** From address (e.g. `notifications@example.com`). Falls back to `EMAIL_FROM_ADDRESS`. */

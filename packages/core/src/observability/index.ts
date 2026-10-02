@@ -37,3 +37,9 @@ export type { JobFailureWriter, JobFailureWriterOptions } from './writer.js'
 
 export { getJobFailureWriter, jobFailuresPlugin } from './plugin.js'
 export type { JobFailuresPluginOptions } from './plugin.js'
+
+export {
+  OBSERVABILITY_TOOLS,
+  OBSERVABILITY_TOOL_DESCRIPTORS,
+  createListJobFailuresTool,
+} from './tool.js'

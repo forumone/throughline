@@ -61,6 +61,9 @@ export type {
 
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
+export { LOCKED_DOCUMENTS_SLUG, hardenCoreCollections } from './access/coreCollections.js'
+export type { HardenCoreCollectionsOptions } from './access/coreCollections.js'
+
 export {
   describeReferences,
   findReferencedIds,

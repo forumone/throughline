@@ -2,7 +2,7 @@ import type { CorePlugin } from '@forumone/throughline-plugin-contract'
 import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
 import { createNamedLogger, defaultLogger } from '@forumone/throughline-core'
 import type { InngestFunction } from 'inngest'
-import type { Job, JobContext } from '@forumone/throughline-workflows'
+import { createTerminalFailureHandler, type Job, type JobContext } from '@forumone/throughline-workflows'
 import { type EmailPluginOptions, validateOptions } from './options.js'
 import { mergeTokens } from './tokens.js'
 import { createEmailClient, type EmailClient } from './client.js'
@@ -63,11 +63,14 @@ export const emailPlugin: CorePlugin<EmailPluginOptions> =
         // With no Inngest client, the site runs these as jobs (`emailJobs`),
         // and there is nothing to register here.
         const inngest = options.inngest
-        const functions: InngestFunction.Any[] = inngest
+        // A failed notification is recorded and reported like any other job.
+        const onFailure = options.onTerminalFailure ?? createTerminalFailureHandler({ payload })
+        const deps = inngest ? { inngest, payload, client, tokens, options, onFailure } : undefined
+        const functions: InngestFunction.Any[] = deps
           ? [
-              createNotifyApprovalRequestFunction({ inngest, payload, client, tokens, options }),
-              createNotifyApprovalDecisionFunction({ inngest, payload, client, tokens, options }),
-              createNotifyApprovalExpiredFunction({ inngest, payload, client, tokens, options }),
+              createNotifyApprovalRequestFunction(deps),
+              createNotifyApprovalDecisionFunction(deps),
+              createNotifyApprovalExpiredFunction(deps),
             ]
           : []
 

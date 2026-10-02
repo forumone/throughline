@@ -1,3 +1,4 @@
+import type { WorkflowFailureHandler } from '@forumone/throughline-workflows'
 import type { McpToolCollector } from '@forumone/throughline-core'
 import type { Inngest } from 'inngest'
 import type {
@@ -27,6 +28,14 @@ export interface IntegrationsPluginOptions
    * on Inngest: `payloadJobs().emit`. Defaults to `inngest.send`.
    */
   emit?: (event: { name: string; data: unknown }) => Promise<void>
+  /**
+   * Called once when an integration's Inngest run has exhausted its retries,
+   * and given to every integration as `ctx.onFailure`. Default:
+   * `createTerminalFailureHandler({ payload })` from the workflows package,
+   * which records a `job-failures` row (with `jobFailuresPlugin`), logs, and
+   * reports. The webhook integration's two functions ran with none.
+   */
+  onTerminalFailure?: WorkflowFailureHandler
   /**
    * Integration modules to register, in addition to the built-in webhook
    * integration. Order matters only for tie-breaking in lists; the registry
