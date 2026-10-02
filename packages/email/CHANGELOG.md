@@ -1,5 +1,11 @@
 # @forumone/throughline-email
 
+## 0.4.4
+
+### Patch Changes
+
+- @forumone/throughline-workflows@0.6.4
+
 ## 0.4.3
 
 ### Patch Changes
