@@ -1,5 +1,12 @@
 # @forumone/throughline-audit
 
+## 0.6.3
+
+### Patch Changes
+
+- Updated dependencies [841b91b]
+  - @forumone/throughline-core@0.13.0
+
 ## 0.6.2
 
 ### Patch Changes
