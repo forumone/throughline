@@ -17,6 +17,14 @@
     "./client": {
       "types": "./dist/exports/client.d.ts",
       "default": "./dist/exports/client.js"
+    },
+    "./editorial": {
+      "types": "./dist/editorial/index.d.ts",
+      "default": "./dist/editorial/index.js"
+    },
+    "./rsc": {
+      "types": "./dist/exports/rsc.d.ts",
+      "default": "./dist/exports/rsc.js"
     }
   },
   "files": [
@@ -52,13 +60,21 @@
     "access": "public"
   },
   "peerDependencies": {
+    "@payloadcms/next": "^3.0.0",
     "@payloadcms/ui": "^3.0.0",
     "inngest": "^4.0.0",
+    "next": "^15.0.0 || ^16.0.0",
     "payload": "^3.89.0",
     "react": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
+    "@payloadcms/next": {
+      "optional": true
+    },
     "@payloadcms/ui": {
+      "optional": true
+    },
+    "next": {
       "optional": true
     },
     "react": {
@@ -74,13 +90,17 @@
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
     "@payloadcms/db-sqlite": "^3.83.0",
+    "@payloadcms/next": "^3.83.0",
     "@payloadcms/ui": "^3.83.0",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "eslint": "^10.11.0",
     "inngest": "^4.2.0",
+    "next": "^16.2.4",
     "payload": "^3.83.0",
     "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "typescript": "^5.6.0",
     "vitest": "^4.1.10"
   }
