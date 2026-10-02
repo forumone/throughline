@@ -1,4 +1,9 @@
-export { editorialPlugin, CONTENT_CALENDAR_VIEW_PATH, CONTENT_HEALTH_VIEW_PATH } from './plugin.js'
+export {
+  editorialPlugin,
+  CONTENT_CALENDAR_VIEW_PATH,
+  CONTENT_HEALTH_VIEW_PATH,
+  YOUR_WORK_DASHBOARD_PATH,
+} from './plugin.js'
 export type { EditorialPluginOptions } from './plugin.js'
 
 export {
@@ -61,3 +66,7 @@ export {
   createGetContentCalendarTool,
   toolCalendar,
 } from './calendar/tool.js'
+
+export { readYourWork } from './work/work.js'
+export type { WorkOptions, WorkRow, YourWorkResult } from './work/work.js'
+export { WORK_TOOLS, WORK_TOOL_DESCRIPTORS, createListMyWorkTool, toolWork } from './work/tool.js'

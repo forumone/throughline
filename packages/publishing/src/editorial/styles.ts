@@ -8,6 +8,12 @@ a package is a bundler question this avoids. Ported from forumone-2026's
 `app/(payload)/custom.css` dashboard and health rules.
 */
 export const EDITORIAL_CSS = `
+.tl-editorial__dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--base);
+  margin-bottom: calc(var(--base) * 2);
+}
 .tl-editorial__panel {
   border: 1px solid var(--theme-elevation-150);
   border-radius: var(--style-radius-m);

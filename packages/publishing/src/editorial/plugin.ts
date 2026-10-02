@@ -7,6 +7,8 @@ import { calendarClock } from './calendar/month.js'
 import { CALENDAR_TOOL_DESCRIPTORS, createGetContentCalendarTool } from './calendar/tool.js'
 import type { HealthCheck } from './health/checks.js'
 import { HEALTH_TOOL_DESCRIPTORS, createFindContentNeedingAttentionTool } from './health/tool.js'
+import { WORK_TOOL_DESCRIPTORS, createListMyWorkTool } from './work/tool.js'
+import type { WorkOptions } from './work/work.js'
 
 export interface EditorialPluginOptions {
   enabled?: boolean
@@ -21,6 +23,14 @@ export interface EditorialPluginOptions {
     /** Where the view lives under the admin route. Default `/content-calendar`. */
     path?: string
   }
+  /**
+   * "Your work" on the dashboard (unpublished changes and scheduled publishes,
+   * with content health's counts beside them) and `list_my_work`.
+   */
+  work?: WorkOptions & {
+    /** Put the panels in `beforeDashboard`. Default `true`; `false` for the tool alone. */
+    dashboard?: boolean
+  }
   /** Where the tools go. Omit for none. Must come before `mcpPlugin`. */
   mcpTools?: McpToolCollector
 }
@@ -28,6 +38,7 @@ export interface EditorialPluginOptions {
 /** The views' import-map paths. */
 export const CONTENT_HEALTH_VIEW_PATH = '@forumone/throughline-publishing/rsc#ContentHealthView'
 export const CONTENT_CALENDAR_VIEW_PATH = '@forumone/throughline-publishing/rsc#ContentCalendarView'
+export const YOUR_WORK_DASHBOARD_PATH = '@forumone/throughline-publishing/rsc#YourWorkDashboard'
 
 function addView(
   config: Config,
@@ -110,6 +121,28 @@ export function editorialPlugin(options: EditorialPluginOptions): Plugin {
       descriptors.push(...CALENDAR_TOOL_DESCRIPTORS)
     }
 
+    if (options.work) {
+      const { dashboard, ...work } = options.work
+      runtime.work = { options: work }
+      if (dashboard !== false) {
+        // First, so "what is waiting" sits above everything else on the dashboard.
+        config = {
+          ...config,
+          admin: {
+            ...config.admin,
+            components: {
+              ...config.admin?.components,
+              beforeDashboard: [
+                YOUR_WORK_DASHBOARD_PATH,
+                ...(config.admin?.components?.beforeDashboard ?? []),
+              ],
+            },
+          },
+        }
+      }
+      descriptors.push(...WORK_TOOL_DESCRIPTORS)
+    }
+
     if (descriptors.length > 0) options.mcpTools?.declare(descriptors, { serverName: 'editorial' })
 
     return {
@@ -125,6 +158,7 @@ export function editorialPlugin(options: EditorialPluginOptions): Plugin {
           ...(runtime.calendar
             ? [createGetContentCalendarTool({ payload, calendar: runtime.calendar.options })]
             : []),
+          ...(runtime.work ? [createListMyWorkTool({ payload, work: runtime.work.options })] : []),
         ]
         if (tools.length > 0) {
           options.mcpTools.add(tools as unknown as McpToolDefinition[], { serverName: 'editorial' })
