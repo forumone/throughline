@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-workflows",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Composable Inngest function factories and Payload cache-revalidation hooks for the Throughline framework — revalidation, scheduled publishing, approval expiration, audit fan-out, healthcheck.",
   "type": "module",
   "main": "./dist/index.js",
