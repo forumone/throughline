@@ -1,5 +1,5 @@
 import type { Inngest, InngestFunction } from 'inngest'
-import { defineJob, inngestJobs, type Job, type JobContext } from '@forumone/throughline-workflows'
+import { defineJob, inngestJobs, type Job, type JobContext, type WorkflowFailureHandler } from '@forumone/throughline-workflows'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'
@@ -15,6 +15,8 @@ export interface NotifyApprovalExpiredDeps {
   options: EmailPluginOptions
   /** Override the function id. Default: `notify-approval-expired`. */
   id?: string
+  /** Called once when a run has exhausted its retries. `emailPlugin` passes one. */
+  onFailure?: WorkflowFailureHandler
 }
 
 /**
@@ -93,5 +95,5 @@ export function notifyApprovalExpiredJob(
 }
 
 export function createNotifyApprovalExpiredFunction(deps: NotifyApprovalExpiredDeps): InngestFunction.Any {
-  return inngestJobs(deps.inngest).toFunction(notifyApprovalExpiredJob(() => deps, deps.id))
+  return inngestJobs(deps.inngest, deps.onFailure ? { onFailure: deps.onFailure } : {}).toFunction(notifyApprovalExpiredJob(() => deps, deps.id))
 }

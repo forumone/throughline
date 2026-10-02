@@ -1,5 +1,5 @@
 import type { Inngest, InngestFunction } from 'inngest'
-import { defineJob, inngestJobs, type Job, type JobContext } from '@forumone/throughline-workflows'
+import { defineJob, inngestJobs, type Job, type JobContext, type WorkflowFailureHandler } from '@forumone/throughline-workflows'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'
@@ -20,6 +20,8 @@ export interface NotifyApprovalRequestDeps {
   options: EmailPluginOptions
   /** Override the function id. Default: `notify-approval-request`. */
   id?: string
+  /** Called once when a run has exhausted its retries. `emailPlugin` passes one. */
+  onFailure?: WorkflowFailureHandler
 }
 
 /**
@@ -144,5 +146,5 @@ export function notifyApprovalRequestJob(
 }
 
 export function createNotifyApprovalRequestFunction(deps: NotifyApprovalRequestDeps): InngestFunction.Any {
-  return inngestJobs(deps.inngest).toFunction(notifyApprovalRequestJob(() => deps, deps.id))
+  return inngestJobs(deps.inngest, deps.onFailure ? { onFailure: deps.onFailure } : {}).toFunction(notifyApprovalRequestJob(() => deps, deps.id))
 }

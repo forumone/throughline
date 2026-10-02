@@ -1,6 +1,6 @@
 import type { Field } from 'payload'
 import type { Inngest } from 'inngest'
-import type { Job, JobContext } from '@forumone/throughline-workflows'
+import type { Job, JobContext, WorkflowFailureHandler } from '@forumone/throughline-workflows'
 import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
 
 export type IntegrationCategory =
@@ -135,6 +135,12 @@ export interface IntegrationContext {
   inngest: Inngest
   /** Send an event on whichever runner the site uses. */
   emit: (event: { name: string; data: unknown }) => Promise<void>
+  /**
+   * The site's terminal-failure handler, for an integration's Inngest functions:
+   * `inngestJobs(ctx.inngest, { onFailure: ctx.onFailure })`. On Payload Jobs
+   * the adapter's own `onFailure` applies instead.
+   */
+  onFailure?: WorkflowFailureHandler
   integrationsCollectionSlug: string
   /** Loads all enabled instances of an integration by id. */
   loadInstances: <Config = Record<string, unknown>>(

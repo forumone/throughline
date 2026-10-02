@@ -92,7 +92,9 @@ export function createWebhookJobs(getContext: (job: JobContext) => IntegrationCo
 
 /** The same two jobs, registered with Inngest exactly as they always were. */
 export function createWebhookFunctions(ctx: IntegrationContext): InngestFunction.Any[] {
-  return inngestJobs(ctx.inngest).functions(createWebhookJobs(() => ctx))
+  return inngestJobs(ctx.inngest, ctx.onFailure ? { onFailure: ctx.onFailure } : {}).functions(
+    createWebhookJobs(() => ctx),
+  )
 }
 
 interface DeliverArgs {

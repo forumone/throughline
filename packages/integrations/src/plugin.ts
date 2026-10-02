@@ -8,7 +8,7 @@ import { createSyncEndpoint } from './endpoints/sync.js'
 import { createStatusWriter } from './sync/status.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { Integration, IntegrationContext } from './types.js'
-import type { Job, JobContext } from '@forumone/throughline-workflows'
+import { createTerminalFailureHandler, type Job, type JobContext } from '@forumone/throughline-workflows'
 import {
   INTEGRATIONS_TOOL_DESCRIPTORS,
   createGetIntegrationStatusTool,
@@ -107,6 +107,7 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
         const context: IntegrationContext = {
           inngest: options.inngest ?? noInngest,
           emit,
+          onFailure: options.onTerminalFailure ?? createTerminalFailureHandler({ payload }),
           integrationsCollectionSlug: collectionSlug,
           async loadInstances<Config = Record<string, unknown>>(integrationId: string) {
             const result = await payload.find({
