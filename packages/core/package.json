@@ -21,6 +21,10 @@
       "types": "./dist/auth/index.d.ts",
       "default": "./dist/auth/index.js"
     },
+    "./client": {
+      "types": "./dist/exports/client.d.ts",
+      "default": "./dist/exports/client.js"
+    },
     "./env": {
       "types": "./dist/env/index.d.ts",
       "default": "./dist/env/index.js"
@@ -28,6 +32,10 @@
     "./events": {
       "types": "./dist/events/index.d.ts",
       "default": "./dist/events/index.js"
+    },
+    "./fields": {
+      "types": "./dist/fields/index.d.ts",
+      "default": "./dist/fields/index.js"
     },
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",
@@ -88,13 +96,17 @@
     "payload": "^3.89.0",
     "inngest": "^4.0.0",
     "vitest": "^3.0.0 || ^4.0.0",
-    "react": "^18.0.0 || ^19.0.0"
+    "react": "^18.0.0 || ^19.0.0",
+    "@payloadcms/ui": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "vitest": {
       "optional": true
     },
     "react": {
+      "optional": true
+    },
+    "@payloadcms/ui": {
       "optional": true
     }
   },
@@ -107,11 +119,13 @@
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
     "@payloadcms/db-sqlite": "^3.83.0",
+    "@payloadcms/ui": "^3.83.0",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.0",
     "eslint": "^10.11.0",
     "inngest": "^4.2.0",
     "payload": "^3.83.0",
+    "react": "^19.2.0",
     "typescript": "^5.6.0",
     "vitest": "^4.1.10"
   }
