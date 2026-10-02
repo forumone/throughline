@@ -21,7 +21,7 @@
     "publish-packages": "turbo run build && changeset publish"
   },
   "devDependencies": {
-    "@changesets/changelog-git": "^0.2.1",
+    "@changesets/changelog-git": "^1.0.0",
     "@changesets/cli": "^2.27.0",
     "prettier": "^3.4.0",
     "turbo": "^2.3.0",
