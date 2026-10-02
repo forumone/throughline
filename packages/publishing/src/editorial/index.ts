@@ -3,6 +3,8 @@ export {
   CONTENT_CALENDAR_VIEW_PATH,
   CONTENT_HEALTH_VIEW_PATH,
   YOUR_WORK_DASHBOARD_PATH,
+  COMMAND_PALETTE_PATH,
+  REPORTS_NAV_PATH,
 } from './plugin.js'
 export type { EditorialPluginOptions } from './plugin.js'
 
@@ -70,3 +72,20 @@ export {
 export { readYourWork } from './work/work.js'
 export type { WorkOptions, WorkRow, YourWorkResult } from './work/work.js'
 export { WORK_TOOLS, WORK_TOOL_DESCRIPTORS, createListMyWorkTool, toolWork } from './work/tool.js'
+
+export {
+  PER_SOURCE,
+  RECENT_LIMIT,
+  byIdsUrl,
+  documentFromPath,
+  matchCommands,
+  matchRank,
+  pushRecent,
+  readRecent,
+  searchUrl,
+  searchWhere,
+} from './palette/sources.js'
+export type { Command, RecentEntry, Report, SearchSource } from './palette/sources.js'
+export { searchContent } from './palette/search.js'
+export type { SearchHit } from './palette/search.js'
+export { PALETTE_TOOLS, PALETTE_TOOL_DESCRIPTORS, createSearchContentTool } from './palette/tool.js'

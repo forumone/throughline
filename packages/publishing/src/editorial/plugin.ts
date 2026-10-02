@@ -7,6 +7,8 @@ import { calendarClock } from './calendar/month.js'
 import { CALENDAR_TOOL_DESCRIPTORS, createGetContentCalendarTool } from './calendar/tool.js'
 import type { HealthCheck } from './health/checks.js'
 import { HEALTH_TOOL_DESCRIPTORS, createFindContentNeedingAttentionTool } from './health/tool.js'
+import { PALETTE_TOOL_DESCRIPTORS, createSearchContentTool } from './palette/tool.js'
+import type { Report, SearchSource } from './palette/sources.js'
 import { WORK_TOOL_DESCRIPTORS, createListMyWorkTool } from './work/tool.js'
 import type { WorkOptions } from './work/work.js'
 
@@ -31,6 +33,22 @@ export interface EditorialPluginOptions {
     /** Put the panels in `beforeDashboard`. Default `true`; `false` for the tool alone. */
     dashboard?: boolean
   }
+  /** The Cmd-K command palette and `search_content`. */
+  palette?: {
+    /** What it searches, in the order results are grouped. */
+    sources: SearchSource[]
+    /** Collections offered as "New …". Default: every source. */
+    creatable?: string[]
+    /** The per-user preference the "recently opened" list is kept in. */
+    preferenceKey?: string
+  }
+  /**
+   * Admin screens beyond the ones this plugin registers, for the palette's "Go
+   * to" and the sidebar's Reports group.
+   */
+  reports?: Report[]
+  /** The sidebar's "Reports" group, after the collections. Default `true` when there are reports. */
+  reportsNav?: boolean
   /** Where the tools go. Omit for none. Must come before `mcpPlugin`. */
   mcpTools?: McpToolCollector
 }
@@ -39,6 +57,8 @@ export interface EditorialPluginOptions {
 export const CONTENT_HEALTH_VIEW_PATH = '@forumone/throughline-publishing/rsc#ContentHealthView'
 export const CONTENT_CALENDAR_VIEW_PATH = '@forumone/throughline-publishing/rsc#ContentCalendarView'
 export const YOUR_WORK_DASHBOARD_PATH = '@forumone/throughline-publishing/rsc#YourWorkDashboard'
+export const COMMAND_PALETTE_PATH = '@forumone/throughline-publishing/client#CommandPalette'
+export const REPORTS_NAV_PATH = '@forumone/throughline-publishing/client#ReportsNav'
 
 function addView(
   config: Config,
@@ -143,6 +163,67 @@ export function editorialPlugin(options: EditorialPluginOptions): Plugin {
       descriptors.push(...WORK_TOOL_DESCRIPTORS)
     }
 
+    // The screens this plugin added, then the host's own.
+    const reports: Report[] = [
+      ...(runtime.health
+        ? [{ path: runtime.health.path, label: 'Content health', keywords: 'stale seo alt review' }]
+        : []),
+      ...(runtime.calendar
+        ? [
+            {
+              path: runtime.calendar.path,
+              label: 'Content calendar',
+              keywords: 'schedule scheduled events publish month',
+            },
+          ]
+        : []),
+      ...(options.reports ?? []),
+    ]
+
+    if (options.palette) {
+      runtime.palette = { sources: options.palette.sources }
+      config = {
+        ...config,
+        admin: {
+          ...config.admin,
+          components: {
+            ...config.admin?.components,
+            providers: [
+              ...(config.admin?.components?.providers ?? []),
+              {
+                path: COMMAND_PALETTE_PATH,
+                clientProps: {
+                  sources: options.palette.sources,
+                  reports,
+                  ...(options.palette.creatable ? { creatable: options.palette.creatable } : {}),
+                  ...(options.palette.preferenceKey
+                    ? { preferenceKey: options.palette.preferenceKey }
+                    : {}),
+                },
+              },
+            ],
+          },
+        },
+      }
+      descriptors.push(...PALETTE_TOOL_DESCRIPTORS)
+    }
+
+    if (reports.length > 0 && options.reportsNav !== false) {
+      config = {
+        ...config,
+        admin: {
+          ...config.admin,
+          components: {
+            ...config.admin?.components,
+            afterNavLinks: [
+              ...(config.admin?.components?.afterNavLinks ?? []),
+              { path: REPORTS_NAV_PATH, clientProps: { reports } },
+            ],
+          },
+        },
+      }
+    }
+
     if (descriptors.length > 0) options.mcpTools?.declare(descriptors, { serverName: 'editorial' })
 
     return {
@@ -159,6 +240,9 @@ export function editorialPlugin(options: EditorialPluginOptions): Plugin {
             ? [createGetContentCalendarTool({ payload, calendar: runtime.calendar.options })]
             : []),
           ...(runtime.work ? [createListMyWorkTool({ payload, work: runtime.work.options })] : []),
+          ...(runtime.palette
+            ? [createSearchContentTool({ payload, sources: runtime.palette.sources })]
+            : []),
         ]
         if (tools.length > 0) {
           options.mcpTools.add(tools as unknown as McpToolDefinition[], { serverName: 'editorial' })

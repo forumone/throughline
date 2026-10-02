@@ -1,6 +1,7 @@
 import type { Payload, SanitizedConfig } from 'payload'
 import type { CalendarOptions } from './calendar/calendar.js'
 import type { HealthCheck } from './health/checks.js'
+import type { SearchSource } from './palette/sources.js'
 import type { WorkOptions } from './work/work.js'
 
 /*
@@ -24,6 +25,9 @@ export interface EditorialRuntime {
   }
   work?: {
     options: WorkOptions
+  }
+  palette?: {
+    sources: readonly SearchSource[]
   }
 }
 
