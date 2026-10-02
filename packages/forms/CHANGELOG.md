@@ -1,5 +1,11 @@
 # @forumone/throughline-forms
 
+## 0.7.6
+
+### Patch Changes
+
+- @forumone/throughline-email@0.4.5
+
 ## 0.7.5
 
 ### Patch Changes

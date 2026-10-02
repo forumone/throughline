@@ -1,5 +1,12 @@
 # @forumone/throughline-approvals
 
+## 0.9.6
+
+### Patch Changes
+
+- Updated dependencies [01210dc]
+  - @forumone/throughline-publishing@0.15.0
+
 ## 0.9.5
 
 ### Patch Changes
