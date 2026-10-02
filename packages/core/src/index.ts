@@ -62,6 +62,27 @@ export type {
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
 export {
+  describeReferences,
+  findReferencedIds,
+  findReferences,
+  movesToTrash,
+  referenceRefusal,
+  referencesIn,
+  referencesPlugin,
+  referencesTo,
+  refuseDeleteWhileReferenced,
+  refuseTrashWhileReferenced,
+} from './references/index.js'
+export type {
+  DocumentReferences,
+  FindReferencesOptions,
+  Reference,
+  ReferenceCollectionOptions,
+  ReferenceGuardOptions,
+  ReferencesPluginOptions,
+} from './references/index.js'
+
+export {
   DEFAULT_JOB_FAILURES_SLUG,
   DEFAULT_REPORTED_HEADERS,
   ERROR_WEBHOOK_URL_ENV,
