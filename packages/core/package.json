@@ -37,6 +37,10 @@
       "types": "./dist/fields/index.d.ts",
       "default": "./dist/fields/index.js"
     },
+    "./media": {
+      "types": "./dist/media/index.d.ts",
+      "default": "./dist/media/index.js"
+    },
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",
       "default": "./dist/mcp/index.js"
@@ -97,7 +101,9 @@
     "inngest": "^4.0.0",
     "vitest": "^3.0.0 || ^4.0.0",
     "react": "^18.0.0 || ^19.0.0",
-    "@payloadcms/ui": "^3.0.0"
+    "@payloadcms/ui": "^3.0.0",
+    "@vercel/blob": "^2.0.0",
+    "@payloadcms/plugin-cloud-storage": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "vitest": {
@@ -107,6 +113,12 @@
       "optional": true
     },
     "@payloadcms/ui": {
+      "optional": true
+    },
+    "@vercel/blob": {
+      "optional": true
+    },
+    "@payloadcms/plugin-cloud-storage": {
       "optional": true
     }
   },
@@ -119,9 +131,11 @@
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
     "@payloadcms/db-sqlite": "^3.83.0",
+    "@payloadcms/plugin-cloud-storage": "^3.83.0",
     "@payloadcms/ui": "^3.83.0",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.0",
+    "@vercel/blob": "2.3.1",
     "eslint": "^10.11.0",
     "inngest": "^4.2.0",
     "payload": "^3.83.0",
