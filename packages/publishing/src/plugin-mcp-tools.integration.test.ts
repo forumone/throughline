@@ -50,7 +50,9 @@ beforeAll(async () => {
       auditPlugin({ inngest }),
       publishingPlugin({ inngest, collections: [{ slug: 'pages' }], mcpTools: collector }),
     ],
-    typescript: { outputFile: '/dev/null' },
+    // Not `outputFile: '/dev/null'`, which still forks `payload generate:types`
+    // in the background, where it hangs and outlives the run.
+    typescript: { autoGenerate: false },
     logger: { options: { level: 'silent' } },
   })
 
