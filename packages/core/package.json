@@ -37,6 +37,14 @@
       "types": "./dist/observability/index.d.ts",
       "default": "./dist/observability/index.js"
     },
+    "./references": {
+      "types": "./dist/references/index.d.ts",
+      "default": "./dist/references/index.js"
+    },
+    "./rsc": {
+      "types": "./dist/exports/rsc.d.ts",
+      "default": "./dist/exports/rsc.js"
+    },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
@@ -79,10 +87,14 @@
   "peerDependencies": {
     "payload": "^3.89.0",
     "inngest": "^4.0.0",
-    "vitest": "^3.0.0 || ^4.0.0"
+    "vitest": "^3.0.0 || ^4.0.0",
+    "react": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
     "vitest": {
+      "optional": true
+    },
+    "react": {
       "optional": true
     }
   },
@@ -94,7 +106,9 @@
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
+    "@payloadcms/db-sqlite": "^3.83.0",
     "@types/node": "^24.13.2",
+    "@types/react": "^19.2.0",
     "eslint": "^10.11.0",
     "inngest": "^4.2.0",
     "payload": "^3.83.0",
