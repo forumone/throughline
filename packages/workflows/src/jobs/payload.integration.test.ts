@@ -102,7 +102,9 @@ beforeAll(async () => {
         approvalRequests,
       ]),
     ],
-    typescript: { outputFile: '/dev/null' },
+    // Not `outputFile: '/dev/null'`, which still forks `payload generate:types`
+    // in the background, where it hangs and outlives the run.
+    typescript: { autoGenerate: false },
     logger: { options: { level: 'silent' } },
   })
   payload = await getPayload({ config })
