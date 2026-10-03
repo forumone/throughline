@@ -5,8 +5,8 @@ import { createWebhookFunctions } from './functions.js'
 
 /*
 What the webhook integration registers with Inngest, frozen before it moved
-onto `defineJob` and held unchanged after. See the same test in
-`@forumone/throughline-workflows` for why a drift here matters.
+onto `defineJob` and held unchanged after. See `jobs/function-ids.test.ts`
+in `@forumone/throughline` for why a drift here matters.
 */
 
 function registered(onFailure?: IntegrationContext['onFailure']) {

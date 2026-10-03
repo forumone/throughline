@@ -69,3 +69,27 @@ export {
   headingHierarchyCheck,
   linkLabelsCheck,
 } from './checks/index.js'
+
+// Revalidation and scheduled publishing, as jobs for either adapter in `/jobs`.
+export { revalidateOnPublishJob } from './jobs/revalidate-on-publish.js'
+export { executeScheduledPublishesJob } from './jobs/execute-scheduled-publishes.js'
+export { publishAtScheduledTimeJob } from './jobs/publish-at-scheduled-time.js'
+export { createTagRevalidationHooks } from './jobs/revalidate-tag-hooks.js'
+export type {
+  CollectionTagHookOptions,
+  GlobalTagHookOptions,
+  RevalidateTagFn,
+  TagRevalidationHooks,
+  TagRevalidationOptions,
+  TagSelector,
+} from './jobs/revalidate-tag-hooks.js'
+export type {
+  ExecuteScheduledPublishesOptions,
+  PublishAtScheduledTimeOptions,
+  RevalidateFn,
+  RevalidateOnPublishOptions,
+  RevalidatePathsInput,
+  ScheduledCollectionConfig,
+  ScheduledPublishRequest,
+  ScheduledPublishResult,
+} from '../jobs/workflow-types.js'

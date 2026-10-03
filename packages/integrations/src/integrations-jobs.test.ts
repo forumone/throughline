@@ -1,4 +1,4 @@
-import type { JobContext } from '@forumone/throughline-workflows'
+import type { JobContext } from '@forumone/throughline/jobs'
 import type { Payload } from 'payload'
 import { describe, expect, it, vi } from 'vitest'
 import { validateOptions } from './options.js'

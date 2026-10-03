@@ -10,19 +10,17 @@ import { getPublishingService, publishingPlugin } from '@forumone/throughline/pu
 import { approvalsPlugin } from '@forumone/throughline-approvals'
 import { auditQueryPlugin } from '@forumone/throughline-audit'
 import { integrationsJobs, integrationsPlugin } from '@forumone/throughline-integrations'
+import { auditEventEchoJob } from '@forumone/throughline/audit'
+import { createPayloadReachableCheck, healthcheckJob } from '@forumone/throughline/integrations'
+import { createTerminalFailureHandler, eventSenderFor } from '@forumone/throughline/jobs'
 import {
-  auditEventEchoJob,
-  createPayloadReachableCheck,
-  createTerminalFailureHandler,
-  eventSenderFor,
   executeScheduledPublishesJob,
-  expireStaleApprovalsJob,
-  healthcheckJob,
-  payloadJobs,
   publishAtScheduledTimeJob,
   revalidateOnPublishJob,
   type ScheduledPublishRequest,
-} from '@forumone/throughline-workflows'
+} from '@forumone/throughline/publishing'
+import { expireStaleApprovalsJob } from '@forumone/throughline/approvals'
+import { payloadJobs } from '@forumone/throughline/jobs/payload'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { Manifest } from '@forumone/throughline-design-contract'
 import type { Access, CollectionConfig, Config, Payload } from 'payload'

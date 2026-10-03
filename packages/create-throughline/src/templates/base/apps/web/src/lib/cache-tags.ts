@@ -18,6 +18,6 @@ Change the scheme here and every end moves with it. Imported from the
 package's `/cache-tags` subpath, which imports nothing, so frontend code that
 uses it does not pull in Payload.
 */
-import { createCacheTags } from '@forumone/throughline-workflows/cache-tags'
+import { createCacheTags } from '@forumone/throughline/cache-tags'
 
 export const cacheTags = createCacheTags()

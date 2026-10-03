@@ -1,5 +1,11 @@
 import type { Inngest, InngestFunction } from 'inngest'
-import { defineJob, inngestJobs, type Job, type JobContext, type WorkflowFailureHandler } from '@forumone/throughline-workflows'
+import {
+  defineJob,
+  type Job,
+  type JobContext,
+  type WorkflowFailureHandler,
+} from '@forumone/throughline/jobs'
+import { inngestJobs } from '@forumone/throughline/jobs/inngest'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'

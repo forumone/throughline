@@ -8,8 +8,8 @@ import { createNotifyApprovalRequestFunction } from './notify-approval-request.j
 
 /*
 What each notification registers with Inngest, frozen before the three moved
-onto `defineJob`, and held unchanged after. See the same test in
-`@forumone/throughline-workflows` for why a drift here matters.
+onto `defineJob`, and held unchanged after. See `jobs/function-ids.test.ts`
+in `@forumone/throughline` for why a drift here matters.
 */
 
 const options = {

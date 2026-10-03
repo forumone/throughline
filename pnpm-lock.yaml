@@ -51,9 +51,6 @@ importers:
       '@forumone/throughline-reference-ds':
         specifier: workspace:*
         version: link:../../packages/reference-ds
-      '@forumone/throughline-workflows':
-        specifier: workspace:*
-        version: link:../../packages/workflows
       '@payloadcms/db-postgres':
         specifier: ^3.83.0
         version: 3.90.2(@libsql/client@0.14.0)(@opentelemetry/api@1.9.1)(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))
@@ -319,9 +316,6 @@ importers:
       '@forumone/throughline':
         specifier: workspace:*
         version: link:../throughline
-      '@forumone/throughline-workflows':
-        specifier: workspace:*
-        version: link:../workflows
       '@react-email/components':
         specifier: ^0.5.4
         version: 0.5.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -447,9 +441,6 @@ importers:
       '@forumone/throughline':
         specifier: workspace:*
         version: link:../throughline
-      '@forumone/throughline-workflows':
-        specifier: workspace:*
-        version: link:../workflows
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -626,43 +617,6 @@ importers:
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(happy-dom@20.14.5)(jsdom@29.1.1)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(sass@1.77.4)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/tsconfig: {}
-
-  packages/workflows:
-    dependencies:
-      '@forumone/throughline':
-        specifier: workspace:*
-        version: link:../throughline
-    devDependencies:
-      '@forumone/throughline-eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@forumone/throughline-tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-      '@payloadcms/db-sqlite':
-        specifier: ^3.83.0
-        version: 3.90.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))(pg@8.20.0)
-      '@types/node':
-        specifier: ^24.13.2
-        version: 24.19.0
-      eslint:
-        specifier: ^10.11.0
-        version: 10.11.0
-      inngest:
-        specifier: ^4.2.0
-        version: 4.21.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(express@5.2.1)(hono@4.13.5)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(react@19.3.0)(typescript@5.9.3)(zod@3.25.76)
-      next:
-        specifier: ^16.2.4
-        version: 16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4)
-      payload:
-        specifier: ^3.83.0
-        version: 3.90.2(graphql@16.14.2)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.6.0
-        version: 5.9.3
-      vitest:
-        specifier: ^4.1.10
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(happy-dom@20.14.5)(jsdom@29.1.1)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(sass@1.77.4)(tsx@4.23.15)(yaml@2.9.1))
 
 packages:
 
