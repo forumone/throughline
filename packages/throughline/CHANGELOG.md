@@ -1,5 +1,86 @@
 # @forumone/throughline
 
+## 1.0.0
+
+### Major Changes
+
+- dcf84fc: `resend`, `@react-email/components` and `@react-email/render` are optional peers rather than dependencies, and `inngest` is an optional peer. `payload` is the only required one. Each optional peer is loaded only by the subpath that uses it, and the root loads none: the approval emails import their templates when they send, so registering the suite with `throughline()` no longer loads React or React Email. A missing optional peer fails when its feature runs, with an error naming the package to install.
+- e7d34fa: Smaller gaps closed before 1.0:
+
+  - `Integration.createFunctions` is optional. `throughline()` runs `createJobs` and never called it.
+  - `auditQuery.readAccess` now applies: it takes the tool's context, `(ctx) => boolean`, and replaces the admin/editor rule for the five audit tools. It was declared with a `PayloadRequest` and read by nothing.
+  - `job-failures` takes an `admin` sidebar group like every other Throughline collection, and gets the suite's from `throughline()`.
+  - An accessibility issue of severity `warning` reaches the publish result's `warnings` instead of being dropped.
+  - The webhook integration no longer subscribes to `form/submission.received`, which nothing sends since forms left the suite; the stored filter option stays. Stale text naming forms, the "Approvals Server" and 0.x paths is corrected.
+
+- 673ff70: `throughline()`: one call for the whole suite (`docs/spec/1.0-throughline-call.md`). It returns `{ plugin, mcpTools, jobs }`: one Payload plugin that registers every enabled Throughline plugin in order, the tool array for `mcpPlugin`, and every job the options call for. Audit, job failures and `check_slug` are always on; every other plugin is on when its key is present. Shared values are given once: `approvals.collectionSlug` reaches the collection, the emails and the expiry job, and `collections` reaches publishing, "Your work" and scheduled publishing. Its defaults are what every site wrote by hand: scheduled publishes go through the publishing pipeline (`publishScheduledThroughPipeline`), approval links are signed with approvals' secret, and a failing healthcheck is recorded in `job-failures`. On Payload Jobs it registers its jobs itself. It refuses an integration with no `createJobs`.
+
+  **Internal now:** `getPluginRegistry`, `resolveAdminGroup`, `DEFAULT_ADMIN_GROUP`, `PluginRegistry*`, `createMcpToolCollector` and the collector's option types, `toPayloadMcpTool(s)`, `getEmailFunctions`, `getIntegrationRegistry` and `getIntegrationContext`. Use `throughline()`. `McpToolCollector` and `PayloadMcpTool` stay exported as types.
+
+  `HealthcheckOptions.onFailure` receives `{ payload }` as a second argument, and `createHealthcheckFailureHandler()` made without a `payload` records on the run's own.
+
+- fb0b908: Jobs move in from `@forumone/throughline-workflows`, split by owner, by `docs/spec/1.0-exports.md`:
+
+  - `defineJob`, the job types, `jobPayload`, `eventSenderFor`, `failureOptions` and the two failure handlers are on `@forumone/throughline/jobs`.
+  - `inngestJobs` is on `/jobs/inngest`, beside the Inngest client; `payloadJobs` is on `/jobs/payload`.
+  - `revalidateOnPublishJob`, `publishAtScheduledTimeJob`, `executeScheduledPublishesJob` and `createTagRevalidationHooks` are on `/publishing`; `expireStaleApprovalsJob` on `/approvals`; `auditEventEchoJob` on `/audit`; `healthcheckJob` and its checks on `/integrations`.
+  - `createCacheTags` is on `/cache-tags`, which still imports nothing.
+
+  **Removed:** the six Inngest-shaped factories, `createRevalidateOnPublishFunction`, `createPublishAtScheduledTimeFunction`, `createExecuteScheduledPublishesFunction`, `createExpireStaleApprovalsFunction`, `createAuditEventEchoFunction` and `createHealthcheckFunction`. Each was `inngestJobs(inngest).toFunction(<job>(options))`; write that instead, or better, give the adapter `onFailure` and `payload` once and pass the jobs to `jobs.functions([...])`. Function ids are unchanged. `BaseWorkflowOptions` and `AuditEventEchoOptions` no longer take an `inngest`.
+
+- cb29249: `@forumone/throughline`: the 1.0 package, starting from `@forumone/throughline-core` and `@forumone/throughline-plugin-contract`.
+
+  The root holds what is shared: environment checks, access helpers, the logger, utilities, the plugin and MCP tool types, and the MCP collector until `throughline()` wires it. Everything else is on a subpath: `/audit`, `/fields`, `/jobs`, `/jobs/inngest`, `/media` (now including reference tracking), `/observability`, `/testing`, `/client` and `/rsc`. The `throughline-payload` bin is unchanged.
+
+  Moving from 0.x, by `docs/spec/1.0-exports.md`:
+
+  - core's root no longer re-exports audit, events, references or observability; import them from `/audit`, `/jobs` and `/jobs/inngest`, `/media` and `/observability`.
+  - `/events` is now `/jobs` (the event taxonomy) and `/jobs/inngest` (the Inngest client and Vercel environment pinning). Augment `CoreEvents` on `@forumone/throughline/jobs`.
+  - `/references` is part of `/media`; `/env` and `/mcp` are part of the root; `/auth` is gone.
+  - plugin-contract's types are on the root. Its separate `McpMeta` interface is gone; the root's `McpMeta` is the one.
+  - Admin component paths are `@forumone/throughline/client#…` and `@forumone/throughline/rsc#UsedOnPanel`, so a site's `importMap.js` changes.
+
+- 3b467f0: The last five 0.x server packages move in, by `docs/spec/1.0-exports.md`:
+
+  - `@forumone/throughline-audit` joins core's audit writer on `@forumone/throughline/audit`. `DEFAULT_AUDIT_COLLECTION_SLUG` is gone; use `DEFAULT_AUDIT_SLUG`, the same value.
+  - `@forumone/throughline-approvals` is `/approvals`. `APPROVALS_RESOLVER_SYMBOL` is internal.
+  - `@forumone/throughline-components` is `/components`.
+  - `@forumone/throughline-integrations` is `/integrations`; its `/client` (`SyncButton` and helpers) joins `@forumone/throughline/client`.
+  - `@forumone/throughline-email` and its `/templates` are `/email`. `DEFAULT_APPROVALS_COLLECTION_SLUG` is gone; use `DEFAULT_APPROVALS_SLUG` from `/approvals`, the same value. `validateOptions` is internal.
+
+  **Removed:** `createNotifyApprovalRequestFunction`, `createNotifyApprovalDecisionFunction` and `createNotifyApprovalExpiredFunction`. `emailPlugin` builds the same three Inngest functions itself, so `getEmailFunctions` and the function ids are unchanged; run `notify…Job` through an adapter to build one by hand.
+
+  Admin component paths follow: `@forumone/throughline/client#SyncButton`. Plugin ids in the registry are `@forumone/throughline/<subpath>`, with the audit query plugin at `/audit-query`.
+
+- ea3754f: Publishing moves in from `@forumone/throughline-publishing`, by `docs/spec/1.0-exports.md`:
+
+  - `@forumone/throughline-publishing` and its `/checks` are `@forumone/throughline/publishing`.
+  - `/editorial` is `@forumone/throughline/editorial`.
+  - `/client` and `/rsc` are `@forumone/throughline/client` and `/rsc`, beside core's admin components.
+
+  Admin component paths follow, so a site's `importMap.js` changes: `@forumone/throughline/client#PublishButton`, `#UnpublishButton`, `#SchedulePublishField`, `#CommandPalette` and `#ReportsNav`, and `@forumone/throughline/rsc#ContentHealthView`, `#ContentCalendarView` and `#YourWorkDashboard`. `next` and `@payloadcms/next` are optional peers, used only by those components.
+
+- 6c1409a: The trust boundary now covers every write that changes what the public sees. A create with `_status: 'published'` is refused (create a draft, then publish), and so is a non-draft save that changes a live document (save a draft, then publish). Before, both went live with no pipeline, approval or audit row, so "requires approval" held only for a page's first publish. Data a system derives from a live page and writes back to it, such as an audio URL, passes with `context: DERIVED_WRITE_CONTEXT` from `/publishing`, which can never change `_status`, create, or promote a draft.
+
+### Minor Changes
+
+- 2e49ee7: `throughline migrate-imports [paths…] [--dry-run]`, a new bin: rewrites every 0.x `@forumone/throughline-*` import to its 1.0 home, by `docs/spec/1.0-exports.md`. It splits an import by where each name went, keeps `type` and aliases, rewrites admin component paths (`importMap.js` included), and points mocks, dynamic imports and module augmentation at the 1.0 counterpart for you to check. Names 1.0 removed or made internal are left in place and listed with what to use instead, as are the `package.json` dependencies to swap, and it exits 1 while anything is left. Run on forumone-2026, it rewrites 163 files and leaves the five imports `throughline()` replaces.
+
+### Patch Changes
+
+- 825f4e9: `@forumone/throughline-design-system`: the 1.0 design-system package, from `@forumone/throughline-design-contract` and `@forumone/throughline-design-system-payload`, by `docs/spec/1.0-exports.md`. It is published for the first time: design-system-payload was private and shipped TypeScript source, and this package builds to `dist`.
+
+  - `@forumone/throughline-design-contract` is `/contract`, and its `/lint` is `/lint`.
+  - design-system-payload's `/generate`, `/render`, `/client` and `/testing` keep their names. Its root (`fieldOverride` and the override types) is part of `/generate`.
+  - The `check-block-props` bin is unchanged, and runs the built CLI.
+  - Admin component paths are `@forumone/throughline-design-system/client#BlockSummary`, `#BlockGuidance` and `#RowSummary`, so a site's `importMap.js` changes.
+  - `/contract` and `/lint` need no peers. `payload`, `react`, `@payloadcms/ui`, `typescript` (which `/generate` uses to read component source) and `vitest` (for `/testing`) are optional peers.
+
+  `@forumone/throughline/components` now reads manifests through `@forumone/throughline-design-system/contract`.
+
+- Updated dependencies [825f4e9]
+  - @forumone/throughline-design-system@1.0.0
+
 ## 1.0.0-next.2
 
 ### Major Changes
