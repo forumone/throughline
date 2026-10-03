@@ -97,7 +97,7 @@ describe('the scaffold checks its environment at startup', () => {
     const at = config.indexOf('assertEnvironment(\n')
     expect(at).toBeGreaterThan(-1)
     expect(at).toBeLessThan(config.indexOf('buildConfig({'))
-    expect(at).toBeLessThan(config.indexOf('createInngestClient('))
+    expect(at).toBeLessThan(config.indexOf('throughline({'))
   })
 
   it("passes every env-reading plugin's own declaration, not a copy of it", () => {

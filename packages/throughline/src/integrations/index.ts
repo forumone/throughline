@@ -14,12 +14,7 @@ export type {
   HealthcheckResult,
 } from '../jobs/workflow-types.js'
 
-export {
-  integrationsJobs,
-  integrationsPlugin,
-  getIntegrationRegistry,
-  getIntegrationContext,
-} from './plugin.js'
+export { integrationsJobs, integrationsPlugin } from './plugin.js'
 export { IntegrationRegistry } from './registry.js'
 export { DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 export type { IntegrationsPluginOptions } from './options.js'

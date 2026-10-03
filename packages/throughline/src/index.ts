@@ -1,6 +1,14 @@
-// `@forumone/throughline`: what every part of the suite shares. Each plugin
-// lives on its own subpath (`/audit`, `/media`, `/fields`, `/observability`,
-// …); docs/spec/1.0-exports.md maps every 0.x import to its 1.0 one.
+// `@forumone/throughline`: `throughline()`, and what every part of the suite
+// shares. Each plugin lives on its own subpath (`/publishing`, `/audit`,
+// `/media`, …); docs/spec/1.0-exports.md maps every 0.x import to its 1.0 one.
+
+// One call for the whole suite; docs/spec/1.0-throughline-call.md.
+export { publishScheduledThroughPipeline, throughline } from './throughline.js'
+export type {
+  ThroughlineOptions,
+  ThroughlinePublishingOptions,
+  ThroughlineSuite,
+} from './throughline.js'
 
 export { EnvironmentError, assertEnvironment, checkEnvValue } from './env/index.js'
 export type { EnvValueProblem, EnvironmentCheck } from './env/index.js'
@@ -19,18 +27,9 @@ export {
 } from './mcp/index.js'
 export type { AuditContextFields, McpMeta } from './mcp/index.js'
 
-// The collector, until `throughline()` wires it and it becomes internal.
-export { createMcpToolCollector, toPayloadMcpTool, toPayloadMcpTools } from './mcp/index.js'
-export type {
-  AddToolsOptions,
-  CreateMcpToolCollectorOptions,
-  DeclareToolsOptions,
-  McpToolCollector,
-  McpToolDescriptor,
-  PayloadMcpRequest,
-  PayloadMcpTool,
-  ToPayloadMcpToolOptions,
-} from './mcp/index.js'
+// The shape of `suite.mcpTools`, and of the collector each plugin's `mcpTools`
+// option takes. `throughline()` builds the collector; nothing else needs to.
+export type { McpToolCollector, PayloadMcpTool } from './mcp/index.js'
 
 export { defaultLogger, createNamedLogger } from './logger/index.js'
 
@@ -58,16 +57,3 @@ export type {
   PluginAdminGroup,
   PluginAdminOptions,
 } from './plugin-contract/index.js'
-
-/**
- * @internal The plugin registry and admin-group helpers. Public only while
- * plugins still ship as separate packages that need them; `throughline()`
- * owns the registration order once they have all moved in.
- */
-export {
-  DEFAULT_ADMIN_GROUP,
-  getPluginRegistry,
-  resolveAdminGroup,
-} from './plugin-contract/index.js'
-/** @internal See `getPluginRegistry`. */
-export type { PluginRegistry, PluginRegistryEntry } from './plugin-contract/index.js'

@@ -1,0 +1,7 @@
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+
+/*
+The one Inngest client: payload.config.ts sends events through it, and the
+endpoint at app/api/inngest serves this site's jobs with it.
+*/
+export const inngest = createInngestClient({ id: '{{projectName}}' })

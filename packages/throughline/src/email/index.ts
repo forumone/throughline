@@ -3,7 +3,7 @@
  * tokens, the three approval notifications as jobs, and their React Email
  * templates. Was `@forumone/throughline-email` (and its `/templates`) in 0.x.
  */
-export { emailJobs, emailPlugin, getEmailClient, getEmailFunctions } from './plugin.js'
+export { emailJobs, emailPlugin, getEmailClient } from './plugin.js'
 
 export { createEmailClient } from './client.js'
 export type {

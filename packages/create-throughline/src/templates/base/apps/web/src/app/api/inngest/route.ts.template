@@ -1,112 +1,28 @@
-import type { InngestFunction } from 'inngest'
 import { serve } from 'inngest/next'
 import { getPayload } from 'payload'
-import config from '@/payload.config'
-import { cacheTags } from '@/lib/cache-tags'
-import { createInngestClient, inngestJobs } from '@forumone/throughline/jobs/inngest'
-import {
-  createHealthcheckFailureHandler,
-  createTerminalFailureHandler,
-} from '@forumone/throughline/jobs'
-import {
-  executeScheduledPublishesJob,
-  getPublishingService,
-  publishAtScheduledTimeJob,
-  revalidateOnPublishJob,
-  type ScheduledPublishRequest,
-} from '@forumone/throughline/publishing'
-import { expireStaleApprovalsJob } from '@forumone/throughline/approvals'
-import { auditEventEchoJob } from '@forumone/throughline/audit'
-import { createPayloadReachableCheck, healthcheckJob } from '@forumone/throughline/integrations'
-import { getEmailFunctions } from '@forumone/throughline/email'
-import { getIntegrationContext, getIntegrationRegistry } from '@forumone/throughline/integrations'
+import config, { suite } from '@/payload.config'
+import { inngest } from '@/lib/inngest'
+import { inngestJobs } from '@forumone/throughline/jobs/inngest'
+import { createTerminalFailureHandler } from '@forumone/throughline/jobs'
 
-const inngest = createInngestClient({ id: '{{projectName}}' })
 const payload = await getPayload({ config })
 
 /*
+Every job the Throughline suite runs, as `throughline()` in payload.config.ts
+listed them: publish revalidation, scheduled publishing and its backstop,
+approval expiry, the audit echo, the healthcheck, the approval emails and each
+integration's jobs. Each keeps the function id it has always had, so a run in
+flight survives an upgrade.
+
 A job that runs out of retries is logged, recorded in the `job-failures`
-collection, and posted to ERROR_WEBHOOK_URL if that is set. Given once, to the
-jobs adapter, which hands it to every platform job below.
-*/
-const onTerminalFailure = createTerminalFailureHandler({ payload })
+collection, and posted to ERROR_WEBHOOK_URL if that is set: given once, here,
+and handed to every job.
 
-/*
-The platform's jobs, on Inngest. Each keeps the function id it has always had,
-so a run in flight survives an upgrade. A site on Payload Jobs registers the
-same jobs with `payloadJobs()` from `@forumone/throughline/jobs/payload`.
+Add this site's own functions to the list beside them.
 */
-const jobs = inngestJobs(inngest, { onFailure: onTerminalFailure, payload })
-
-const emailFunctions = getEmailFunctions(payload) ?? []
-/*
-Through the publishing service, in process — so a scheduled publish passes the
-same composition, accessibility and approval gates as an interactive one. Not
-`payload.update`, which skips all of them.
-*/
-async function publishScheduled({ collection, id, reasoning }: ScheduledPublishRequest) {
-  const outcome = await getPublishingService(payload).publish({
-    collection,
-    id,
-    actor: { apiKeyName: 'scheduled-publish', channel: 'mcp' },
-    meta: { reasoning },
-  })
-  return { published: outcome.published, reason: outcome.reason }
-}
-
-const scheduledCollections = [{ slug: 'pages' }]
-
-/*
-Where each publishable collection's documents are served, so a publish
-revalidates the right path. There are no defaults: a collection missing here
-has its cache tags dropped but no path revalidated, and the run logs a warning.
-Add an entry for every collection you give publishingPlugin.
-*/
-const urlBuilders = {
-  pages: (slug: string) => (slug === 'home' ? '/' : `/${slug}`),
-}
-
-/*
-Typed with this app's own `InngestFunction.Any`. The registry is generic in what
-`createFunctions` returns and defaults to `unknown`, because the platform never
-touches those functions — and one `unknown` element leaves `serve()` unable to
-type the whole array below.
-*/
-const integrationRegistry = getIntegrationRegistry<InngestFunction.Any>(payload)
-const integrationContext = getIntegrationContext(payload)
-const integrationFunctions =
-  integrationRegistry && integrationContext
-    ? integrationRegistry
-        .list()
-        .flatMap((integration) => integration.createFunctions(integrationContext))
-    : []
+const jobs = inngestJobs(inngest, { onFailure: createTerminalFailureHandler({ payload }), payload })
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [
-    ...jobs.functions([
-      revalidateOnPublishJob({ urlBuilders, cacheTags }),
-      // On time: sleeps until each document's scheduled time.
-      publishAtScheduledTimeJob({
-        collections: scheduledCollections,
-        publish: publishScheduled,
-      }),
-      // The backstop, for a schedule whose wake-up event never arrived.
-      executeScheduledPublishesJob({
-        collections: scheduledCollections,
-        publish: publishScheduled,
-        schedule: '17 3 * * *',
-        overdueByMs: 60 * 60 * 1000,
-      }),
-      expireStaleApprovalsJob({}),
-      auditEventEchoJob({}),
-      healthcheckJob({
-        checks: [createPayloadReachableCheck()],
-        // The healthcheck's own: called on the first failing run, not after retries.
-        onFailure: createHealthcheckFailureHandler({ payload }),
-      }),
-    ]),
-    ...emailFunctions,
-    ...integrationFunctions,
-  ],
+  functions: [...jobs.functions(suite.jobs)],
 })

@@ -4,24 +4,15 @@ import { buildConfig } from 'payload'
 import type { Access, CollectionConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { assertEnvironment, createMcpToolCollector, mcpApiKeyAccess } from '@forumone/throughline'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+import { assertEnvironment, mcpApiKeyAccess, throughline } from '@forumone/throughline'
+import { inngestJobs } from '@forumone/throughline/jobs/inngest'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
-import { componentsPlugin } from '@forumone/throughline/components'
-import { publishingPlugin } from '@forumone/throughline/publishing'
-import {
-  approvalsEnv,
-  approvalsPlugin,
-  buildActionUrl,
-  generateActionToken,
-} from '@forumone/throughline/approvals'
-import { auditQueryPlugin } from '@forumone/throughline/audit'
-import { integrationsPlugin } from '@forumone/throughline/integrations'
-import { emailEnv, emailPlugin } from '@forumone/throughline/email'
+import { approvalsEnv } from '@forumone/throughline/approvals'
+import { emailEnv } from '@forumone/throughline/email'
+import { createPayloadReachableCheck } from '@forumone/throughline/integrations'
 import { createTagRevalidationHooks } from '@forumone/throughline/publishing'
 import { cacheTags } from './lib/cache-tags'
-import { jobFailuresPlugin } from '@forumone/throughline/observability'
+import { inngest } from './lib/inngest'
 import { databaseConnectionString } from './lib/database'
 {{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-system/contract'
 import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
@@ -64,16 +55,74 @@ assertEnvironment(
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const inngest = createInngestClient({ id: '{{projectName}}' })
-
 /*
-Where every Throughline server puts its tools for `mcpPlugin`, which serves them
-all on one `/api/mcp`. Each plugin declares its tools as the config is built and
-binds the handlers at `onInit`; `mcpPlugin` reads this array at both moments.
-Hand over `mcpTools.tools` itself — a spread or `.slice()` would hand over
-something nobody fills.
+The Throughline suite, in one call. It registers every plugin in the order they
+need, gives each the one MCP tool collector, sends their events through the jobs
+adapter, and lists the jobs these options call for, which app/api/inngest
+serves. One value for each thing two plugins must agree on: the approvals
+collection's slug reaches approvals, the emails and the expiry job alike.
+
+A plugin is on when its key is here. Delete a key to turn one off.
 */
-const mcpTools = createMcpToolCollector()
+export const suite = throughline({
+  jobs: inngestJobs(inngest),
+  // The collections publishing gates, "Your work" lists and scheduling publishes.
+  collections: ['pages'],
+
+  {{#if useReferenceDs}}components: {
+    manifest: { type: 'object', manifest: designSystemManifest as unknown as Manifest },
+    matching: { strategy: 'tfidf' },
+  },
+  {{else}}components: {
+    // TODO: point at your design system manifest
+    manifest: { type: 'url', url: 'https://your-design-system.example.com/manifest.json' },
+    matching: { strategy: 'tfidf' },
+  },
+  {{/if}}publishing: {
+    /*
+    Where each publishable collection's documents are served, so a publish
+    revalidates the right path. There are no defaults: a collection missing here
+    has its cache tags dropped but no path revalidated, and the run logs a
+    warning. Add an entry for every collection in `collections`.
+    */
+    urls: { pages: (slug: string) => (slug === 'home' ? '/' : `/${slug}`) },
+    revalidation: { cacheTags },
+    // Scheduled publishes go through the publishing pipeline, as an editor's
+    // would. The backstop catches a schedule whose wake-up event never arrived.
+    scheduling: { backstop: { schedule: '17 3 * * *', overdueByMs: 60 * 60 * 1000 } },
+  },
+
+  approvals: {
+    groups: [
+      { slug: 'editorial', name: 'Editorial' },
+      { slug: 'legal', name: 'Legal' },
+      { slug: 'communications', name: 'Communications' },
+      { slug: 'senior', name: 'Senior leadership' },
+    ],
+    groupResolver: {
+      // TODO: replace with your actual user/group lookup (DB query, SSO, etc.)
+      async resolveUsers(_groupSlugs) {
+        return []
+      },
+    },
+  },
+
+  auditQuery: {},
+
+  // Approval links are signed with APPROVAL_TOKEN_SECRET and point at
+  // NEXT_PUBLIC_SERVER_URL, both checked above.
+  email: {
+    // TODO: replace with your real user lookups
+    resolveApprover: async (_userId) => null,
+    resolveRequester: async (_userId) => null,
+    tokens: { brandName: '{{projectName}}' },
+  },
+
+  integrations: {},
+
+  // A failing check is recorded in `job-failures` and posted to ERROR_WEBHOOK_URL.
+  healthcheck: { checks: [createPayloadReachableCheck()] },
+})
 
 /*
 Drops a Next cache tag when content changes, named by the same scheme your
@@ -188,83 +237,14 @@ export default buildConfig({
     outputFile: path.resolve(__dirname, 'payload-types.ts'),
   },
   plugins: [
-    // Order matters twice. `auditPlugin` first: every other Throughline plugin
-    // requires the audit log at init. And every tool-bearing plugin before
-    // `mcpPlugin`, which reads the declared tools when the config is built — a
-    // plugin registered after it gets no per-key checkbox, and its tools are
-    // denied to every key with no error anywhere.
-    auditPlugin({ inngest }),
+    suite.plugin,
 
-    // Where a workflow that ran out of retries, or a failing healthcheck, leaves
-    // a row — see the failure handlers in app/api/inngest/route.ts. Not the
-    // audit log: that records who did what through an MCP tool.
-    jobFailuresPlugin({}),
-
-    componentsPlugin({
-      {{#if useReferenceDs}}manifest: { type: 'object', manifest: designSystemManifest as unknown as Manifest },
-      {{else}}// TODO: point at your design system manifest
-      manifest: { type: 'url', url: 'https://your-design-system.example.com/manifest.json' },
-      {{/if}}matching: { strategy: 'tfidf' },
-      mcpTools,
-    }),
-
-    publishingPlugin({
-      collections: [{ slug: 'pages' }],
-      inngest,
-      // Lazy-resolve approvals at call time so plugin order doesn't matter.
-      approvalResolver: {
-        getActiveApproval: async () => null, // TODO: wire to approvals plugin
-      },
-      mcpTools,
-    }),
-
-    approvalsPlugin({
-      inngest,
-      groups: [
-        { slug: 'editorial', name: 'Editorial' },
-        { slug: 'legal', name: 'Legal' },
-        { slug: 'communications', name: 'Communications' },
-        { slug: 'senior', name: 'Senior leadership' },
-      ],
-      groupResolver: {
-        // TODO: replace with your actual user/group lookup (DB query, SSO, etc.)
-        async resolveUsers(_groupSlugs) {
-          return []
-        },
-      },
-      mcpTools,
-    }),
-
-    auditQueryPlugin({ mcpTools }),
-
-    emailPlugin({
-      inngest,
-      // TODO: replace with your real user lookups
-      resolveApprover: async (_userId) => null,
-      resolveRequester: async (_userId) => null,
-      // Signed, and pointed at the route approvalsPlugin serves
-      // (`/api/approvals/action`). The token binds one approval, one action
-      // and one approver, so a link cannot be edited into a different decision.
-      buildActionUrl: async ({ approvalId, action, approverId }) => {
-        const secret = process.env.APPROVAL_TOKEN_SECRET
-        if (!secret) throw new Error('APPROVAL_TOKEN_SECRET is required to sign approval links.')
-        const token = await generateActionToken(
-          { approvalId, action, approverId, issuedAt: Date.now() },
-          secret,
-        )
-        return buildActionUrl(process.env.NEXT_PUBLIC_SERVER_URL!, token)
-      },
-      tokens: { brandName: '{{projectName}}' },
-    }),
-
-    integrationsPlugin({ inngest, mcpTools }),
-
-    // Last of the tool-bearing chain. An MCP key is a credential that runs
-    // every tool as the person it is bound to, so who may mint, read and
-    // revoke one is an admin's call: `mcpApiKeyAccess` narrows the key
-    // collection to `isAdmin`, and refuses a key principal outright.
+    // After the suite, whose plugins fill the tools it serves. An MCP key is a
+    // credential that runs every tool as the person it is bound to, so who may
+    // mint, read and revoke one is an admin's call: `mcpApiKeyAccess` narrows
+    // the key collection to `isAdmin`, and refuses a key principal outright.
     mcpPlugin({
-      mcp: { tools: mcpTools.tools },
+      mcp: { tools: suite.mcpTools },
       overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
     }),
   ],

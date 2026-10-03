@@ -1,29 +1,15 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { examplePlugin } from './example-plugin'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createMcpToolCollector, mcpApiKeyAccess } from '@forumone/throughline'
+import { mcpApiKeyAccess, throughline } from '@forumone/throughline'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
-import { componentsPlugin } from '@forumone/throughline/components'
-import { getPublishingService, publishingPlugin } from '@forumone/throughline/publishing'
-import { approvalsPlugin } from '@forumone/throughline/approvals'
-import { auditQueryPlugin } from '@forumone/throughline/audit'
-import { integrationsJobs, integrationsPlugin } from '@forumone/throughline/integrations'
-import { auditEventEchoJob } from '@forumone/throughline/audit'
-import { createPayloadReachableCheck, healthcheckJob } from '@forumone/throughline/integrations'
-import { createTerminalFailureHandler, eventSenderFor } from '@forumone/throughline/jobs'
-import {
-  executeScheduledPublishesJob,
-  publishAtScheduledTimeJob,
-  revalidateOnPublishJob,
-  type ScheduledPublishRequest,
-} from '@forumone/throughline/publishing'
-import { expireStaleApprovalsJob } from '@forumone/throughline/approvals'
+import { createPayloadReachableCheck } from '@forumone/throughline/integrations'
+import { createTerminalFailureHandler } from '@forumone/throughline/jobs'
 import { payloadJobs } from '@forumone/throughline/jobs/payload'
+import type { revalidateOnPublishJob } from '@forumone/throughline/publishing'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { Manifest } from '@forumone/throughline-design-system/contract'
-import type { Access, CollectionConfig, Config, Payload } from 'payload'
+import type { Access, CollectionConfig, Config } from 'payload'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -100,20 +86,6 @@ const isAdmin: Access = ({ req: { user } }) => {
 /** Where a page is served, for revalidation. The playground has no frontend. */
 const urlBuilders = { pages: (slug: string) => `/${slug}` }
 
-/** A scheduled publish goes through the publishing pipeline, in process, as on a real site. */
-async function publishScheduled(
-  { collection, id, reasoning }: ScheduledPublishRequest,
-  { payload }: { payload: Payload },
-) {
-  const outcome = await getPublishingService(payload).publish({
-    collection,
-    id,
-    actor: { apiKeyName: 'scheduled-publish', channel: 'mcp' },
-    meta: { reasoning },
-  })
-  return { published: outcome.published, reason: outcome.reason }
-}
-
 export interface PlaygroundConfigOptions {
   db: Config['db']
   /**
@@ -128,38 +100,49 @@ export interface PlaygroundConfigOptions {
 /**
  * The playground's whole config, less the database.
  *
- * **It runs on Payload Jobs, with no Inngest anywhere** (1.0 P1). Every
- * background job a Throughline site has — publish revalidation, scheduled
- * publishing and its backstop, approval expiry, the audit echo, the healthcheck,
- * the webhook integration — is a `defineJob` job registered with
- * `payloadJobs().plugin(...)`, and runs on Payload's own queue.
- *
- * The plugins that only announce events (audit, approvals, publishing) are
- * handed `eventSenderFor(jobs)` as their `inngest`, which sends through the
- * adapter. That is transitional: P3 gives them the adapter itself.
+ * **One `throughline()` call, on Payload Jobs, with no Inngest anywhere.** The
+ * call registers every plugin in order, gives each the one MCP collector, sends
+ * the plugins' events through the jobs adapter, and, because the adapter is
+ * Payload Jobs, registers every job the options call for: publish
+ * revalidation, scheduled publishing and its backstop, approval expiry, the
+ * audit echo, the healthcheck and the webhook integration.
  *
  * Shared by `payload.config.ts` (Postgres, for `pnpm dev`) and the end-to-end
  * test (SQLite in memory), so the test boots the configuration the playground
  * runs rather than a copy of it.
  */
 export function playgroundConfig(options: PlaygroundConfigOptions): Config {
-  const jobs = payloadJobs({ onFailure: createTerminalFailureHandler() })
-  const events = eventSenderFor(jobs)
-
-  /*
-  Where every server puts its tools for `mcpPlugin`.
-
-  Each plugin declares its tools' names and descriptions as the config is built,
-  and binds the handlers at `onInit` — which is the earliest they can exist,
-  since each closes over `payload`, the publishing service or the manifest
-  loader. The plugin reads this array at both moments: once at config time to
-  generate a per-key checkbox per tool, and again per request to serve them.
-
-  Handed over as `mcpTools.tools`, the array itself. A spread or a `.slice()`
-  here would hand over something nobody fills.
-  */
-  const mcpTools = createMcpToolCollector()
-  const scheduled = [{ slug: Pages.slug }]
+  const suite = throughline({
+    jobs: payloadJobs({ onFailure: createTerminalFailureHandler() }),
+    collections: [Pages.slug],
+    components: {
+      // Cast through `unknown`: the JSON literal type is structurally
+      // compatible but TS won't widen tuple types like `placement` from
+      // `string[]` to `["page" | "section" | "inline", ...]` automatically.
+      // The plugin's Zod schema validates the shape at load time anyway.
+      manifest: { type: 'object', manifest: referenceManifest as unknown as Manifest },
+      matching: { strategy: 'tfidf' },
+    },
+    publishing: {
+      urls: urlBuilders,
+      ...(options.revalidate ? { revalidation: { revalidate: options.revalidate } } : {}),
+    },
+    approvals: {
+      groups: [
+        { slug: 'editorial', name: 'Editorial review' },
+        { slug: 'legal', name: 'Legal review' },
+      ],
+      // Stub resolver for the playground — replace with a real lookup once
+      // the playground gains a `groups` field on Users.
+      groupResolver: { resolveUsers: async () => [] },
+      tokenSecret:
+        process.env.APPROVAL_TOKEN_SECRET ??
+        'playground-approval-secret-change-me-change-me-change',
+    },
+    auditQuery: {},
+    integrations: {},
+    healthcheck: { checks: [createPayloadReachableCheck()] },
+  })
 
   return {
     admin: {
@@ -190,80 +173,18 @@ export function playgroundConfig(options: PlaygroundConfigOptions): Config {
         : { autoRun: [{ cron: '* * * * *', queue: 'throughline' }] }),
     },
     /*
-    Order is load-bearing twice over.
+    The suite first, then `mcpPlugin`, which serves the tools the suite's
+    plugins declare. Handed the array itself, not a copy: it reads `mcp.tools`
+    per request, and the suite's plugins fill it at `onInit`.
 
-    `auditPlugin` first: every other Throughline plugin requires the
-    `audit-log` capability at init and refuses to load without it.
-
-    And every tool-bearing server before `mcpPlugin`. Each declares its tools'
-    names and descriptions as the config is built — which is when `mcpPlugin`
-    reads the array, to generate one per-key checkbox per tool — and binds the
-    handlers at `onInit`. A server registered *after* `mcpPlugin` declares into
-    an array that has already been read, so its tools get no checkbox and are
-    then denied to every key with no error anywhere.
+    The key collection is admin-only: a key runs every tool as the person it is
+    bound to, so minting, reading and revoking one is an admin's call.
+    `mcpApiKeyAccess` also refuses a key principal outright.
     */
     plugins: [
-      auditPlugin({ inngest: events }),
-      componentsPlugin({
-        // Cast through `unknown`: the JSON literal type is structurally
-        // compatible but TS won't widen tuple types like `placement` from
-        // `string[]` to `["page" | "section" | "inline", ...]` automatically.
-        // The plugin's Zod schema validates the shape at load time anyway.
-        manifest: { type: 'object', manifest: referenceManifest as unknown as Manifest },
-        matching: { strategy: 'tfidf' },
-        mcpTools,
-      }),
-      approvalsPlugin({
-        inngest: events,
-        groups: [
-          { slug: 'editorial', name: 'Editorial review' },
-          { slug: 'legal', name: 'Legal review' },
-        ],
-        // Stub resolver for the playground — replace with a real lookup once
-        // the playground gains a `groups` field on Users.
-        groupResolver: { resolveUsers: async () => [] },
-        tokenSecret:
-          process.env.APPROVAL_TOKEN_SECRET ??
-          'playground-approval-secret-change-me-change-me-change',
-        mcpTools,
-      }),
-      publishingPlugin({
-        inngest: events,
-        collections: [{ slug: Pages.slug }],
-        mcpTools,
-      }),
-      auditQueryPlugin({ mcpTools }),
-      integrationsPlugin({ emit: jobs.emit, mcpTools }),
-      examplePlugin({ greeting: 'Hello from the playground' }),
-
-      /*
-      Every job, declared before Payload exists: none of these is given
-      `payload`, and each finds it on its context when it runs.
-      */
-      jobs.plugin([
-        revalidateOnPublishJob({
-          urlBuilders,
-          ...(options.revalidate ? { revalidate: options.revalidate } : {}),
-        }),
-        publishAtScheduledTimeJob({ collections: scheduled, publish: publishScheduled }),
-        executeScheduledPublishesJob({ collections: scheduled, publish: publishScheduled }),
-        expireStaleApprovalsJob({}),
-        auditEventEchoJob({}),
-        healthcheckJob({ checks: [createPayloadReachableCheck()] }),
-        ...integrationsJobs(),
-      ]),
-
-      /*
-      Last of the tool-bearing chain, and handed the collector's array itself
-      rather than a copy: it reads `mcp.tools` per request, and the servers
-      above fill that array at `onInit`.
-
-      The key collection is admin-only: a key runs every tool as the person it
-      is bound to, so minting, reading and revoking one is an admin's call.
-      `mcpApiKeyAccess` also refuses a key principal outright.
-      */
+      suite.plugin,
       mcpPlugin({
-        mcp: { tools: mcpTools.tools },
+        mcp: { tools: suite.mcpTools },
         overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
       }),
     ],

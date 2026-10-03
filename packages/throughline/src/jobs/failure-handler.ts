@@ -91,7 +91,7 @@ export function createTerminalFailureHandler(
 export function createHealthcheckFailureHandler(
   options: HealthcheckFailureHandlerOptions = {},
 ): NonNullable<HealthcheckOptions['onFailure']> {
-  return async (failures) => {
+  return async (failures, context) => {
     let report: HealthcheckFailureReport
     try {
       report = buildHealthcheckFailureReport(
@@ -101,7 +101,10 @@ export function createHealthcheckFailureHandler(
     } catch {
       return
     }
-    await dispatch(report, '[healthcheck-failed]', options)
+    // The run's own Payload, when the handler was made without one: what lets
+    // it be declared with the job, before Payload exists, and still write its row.
+    const payload = options.payload ?? context?.payload
+    await dispatch(report, '[healthcheck-failed]', payload ? { ...options, payload } : options)
   }
 }
 

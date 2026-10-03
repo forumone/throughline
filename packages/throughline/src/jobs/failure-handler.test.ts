@@ -177,4 +177,23 @@ describe('createHealthcheckFailureHandler', () => {
       }),
     )
   })
+
+  it("records on the run's own Payload when it was made without one", async () => {
+    // How `throughline()` declares it: with the job, before Payload exists.
+    const { payload, create } = await payloadWithJobFailures()
+    const fake = createFakeInngest()
+    asInngestFunction(healthcheckJob, {
+      inngest: fake.inngest,
+      payload,
+      checks: [{ name: 'always-down', run: async () => ({ ok: false, details: 'down' }) }],
+      onFailure: createHealthcheckFailureHandler({ report: false, logger: logger() }),
+    })
+
+    await fake.invoke('healthcheck', { name: 'inngest/scheduled.timer', data: {} })
+    const { data } = (create.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0]
+    expect(data).toMatchObject({
+      kind: 'healthcheck',
+      details: [{ name: 'always-down', details: 'down' }],
+    })
+  })
 })
