@@ -30,6 +30,8 @@ Every component ships a `ComponentContract` that conforms to `@forumone/throughl
 
 ## Using components
 
+Inside this repository; nothing outside it can install a private package. A scaffolded project imports the same components from its own `design-system/` package, under the name it chose.
+
 ```tsx
 import '@forumone/throughline-reference-ds/styles.css'
 import { Hero, CardGrid, Card } from '@forumone/throughline-reference-ds'
@@ -99,10 +101,10 @@ pnpm --filter @forumone/throughline-reference-ds build-storybook
 pnpm --filter @forumone/throughline-reference-ds validate
 ```
 
-`validate` runs `lintManifest` from `@forumone/throughline-design-system/lint` against the generated manifest. Errors fail the build; warnings print but pass.
+`validate` runs `lintManifest` from `@forumone/throughline-design-system/lint` against the generated manifest. Errors fail the build; warnings print but pass, except `antiExamples.empty` and `intent.brevity`, which `scripts/validate.ts` promotes to errors.
 
 ## Authoring your own design system
 
 Use this package as a reference. Each component has a `.contract.ts` file; every contract satisfies `ComponentContractSchema`. Copy the structure, replace the content, and your design system becomes a valid input to Throughline.
 
-The authoring guide lives at `docs/building-plugins.md` (for MCP plugins) and the contract authoring expectations live in `@forumone/throughline-design-system/contract`'s README.
+The contract authoring guide is [Authoring component contracts](../../../docs/guides/authoring-component-contracts.md), and the schema is documented in [the contract reference](../../../docs/reference/design-system/contract.md).

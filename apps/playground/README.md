@@ -1,8 +1,10 @@
 # @forumone/throughline-playground
 
-Internal Next.js + Payload app used to develop and smoke-test Throughline core plugins. Never published to npm.
+Internal Next.js + Payload app used to develop and smoke-test Throughline: one `throughline()` call, on Payload Jobs rather than Inngest, with the reference design system's manifest as its components. Never published to npm.
 
 ## One-time setup
+
+From `apps/playground`:
 
 ```bash
 cp .env.example .env
@@ -18,11 +20,13 @@ On first run, open <http://localhost:3000/admin> and create the initial admin us
 - `pnpm build` / `pnpm start` — production build and serve
 - `pnpm db:up` / `pnpm db:down` — bring Postgres up/down via `docker compose`
 - `pnpm payload` — Payload CLI (e.g. `pnpm payload generate:types`, `pnpm payload generate:importmap`),
-  run through `throughline-payload` from `@forumone/throughline-core` so a hung run cannot outlive the
+  run through `throughline-payload` from `@forumone/throughline` so a hung run cannot outlive the
   shell that started it. It is killed after 5 minutes — set `PAYLOAD_CLI_TIMEOUT_MS` to change that, or
   `0` to disable it; `migrate` commands have no limit by default.
 - `pnpm payload:reap` — kill any Payload CLI run a killed shell left behind (also done at the start of
   the next `pnpm payload`). From the repo root: `pnpm payload:reap`.
+- `pnpm test` — `src/jobs.e2e.test.ts`: boots the same config on in-memory SQLite and runs the suite's
+  jobs through Payload's queue. Needs no Postgres.
 
 ## Using your own Postgres
 
@@ -34,4 +38,4 @@ If you already run Postgres locally, skip `docker compose` and point `DATABASE_U
 
 ## Why this exists
 
-Every core plugin should compose cleanly into a Payload config. The playground is where we prove that. Keep it minimal — no visual polish, no production hardening. The design system work lives in `packages/create-throughline/reference-ds/` (phase C3).
+Every plugin should compose cleanly into a Payload config through `throughline()`. The playground is where we prove that. Keep it minimal — no visual polish, no production hardening. The reference design system it reads lives in `packages/create-throughline/reference-ds/`.

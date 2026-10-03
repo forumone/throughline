@@ -57,7 +57,7 @@ jobs:
     # Builds Storybook and validates the reference-ds manifest against the
     # generated story index so every contract's storyId resolves. Runs in
     # parallel with `verify`; adds ~45s but is the real integration test
-    # for design-contract + reference-ds.
+    # for the design-system package and reference-ds.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -73,7 +73,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build reference-ds and its workspace dependencies
-        # Using turbo (not pnpm --filter) so design-contract builds first;
+        # Using turbo (not pnpm --filter) so the design-system package builds first;
         # reference-ds's contract files import from it at type-check time.
         run: pnpm turbo run build --filter=@forumone/throughline-reference-ds
 

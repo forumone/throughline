@@ -61,12 +61,15 @@ const main = async () => {
       },
       // bypass access controls; you're running as a script, not on behalf of a user
       overrideAccess: true,
-      // mark as already-published — skip the publish pipeline for migrated content
-      // ONLY if the source is trusted; otherwise let the pipeline run
-      // _status: 'published',
+      // Created as a draft. To create it already published — skipping the
+      // publish pipeline, so ONLY if the source is trusted — add
+      // `_status: 'published'` to `data` and pass
+      // `context: { bypassPublishingServer: true }`. `overrideAccess` alone
+      // does not get past the publishing plugin, which refuses the create.
     })
 
-    // Write a redirect from the old URL
+    // Write a redirect from the old URL, to a `redirects` collection of your
+    // own: the scaffold does not have one.
     await payload.create({
       collection: 'redirects',
       data: { from: row.oldUrl, to: `/${slug}`, type: 'permanent' },
@@ -97,28 +100,28 @@ pnpm tsx scripts/import-pages.ts
 
 Two valid answers.
 
-**Yes, run through the pipeline.** Migrated content is treated like any new content. The pipeline catches missing alt text, missing SEO descriptions, broken links — all the things you probably want to fix anyway. Pro: your migrated content has the same quality bar as your future content. Con: every page that fails a gate stops the migration; you spend time fixing data the script can't.
+**Yes, run through the pipeline.** Migrated content is treated like any new content: the script creates each document as a draft, then publishes it with `getPublishingService(payload).publish({ collection, id, actor })` from `@forumone/throughline/publishing`, which returns `published: false` and a reason rather than throwing. The pipeline catches missing alt text, missing SEO titles and descriptions, links without labels — all the things you probably want to fix anyway. Pro: your migrated content has the same quality bar as your future content. Con: every page that fails a gate stays a draft; you spend time fixing data the script can't.
 
-**No, bypass for the bulk import.** Set `_status: 'published'` directly via `overrideAccess: true`. Pro: fast; one-shot. Con: migrated content lives in `_status: 'published'` without ever having proven it satisfies your policy gates. The first time someone *edits* a migrated page, the publish pipeline runs and may reject things that were already shipped.
+**No, bypass for the bulk import.** Create documents with `_status: 'published'` and the `bypassPublishingServer` context flag, as the comment in the script shows. Pro: fast; one-shot. Con: migrated content lives in `_status: 'published'` without ever having proven it satisfies your policy gates. The first time someone *edits* a migrated page, the publish pipeline runs and may reject things that were already shipped.
 
-The honest middle ground: **bypass for the bulk import, then run a one-off audit script that calls `publishingPlugin.checkPipeline(collection, id)` on every imported document and reports failures.** That gives you a list of pages to fix before they're touched in normal editing. The framework doesn't ship `checkPipeline` as a public method yet, but you can build the equivalent by reading each document and calling each accessibility check directly.
+The honest middle ground: **bypass for the bulk import, then run a one-off audit script that calls `getPublishingService(payload).getStatus({ collection, id, actor })` on every imported document and reports failures.** It runs every pipeline check except the write and changes nothing, returning `publishable` with the failing step, `reason` and `issues`. That gives you a list of pages to fix before they're touched in normal editing. For a script, an `actor` of `{ apiKeyName: 'content-migration' }` is enough: with no `enforceAccessAs` the checks run without access control, and on a `publish` the name is what the audit log records as the actor.
 
 ## Preserve URLs
 
 The single most-important thing to preserve in any CMS migration is URL structure. Search-engine ranking depends on it. Two options:
 
 1. **Keep the same URL paths.** Your slugs and routing match the old site one-for-one. Sometimes possible, sometimes not (CMS-X used `/article-12345`, you want `/blog/post-name`).
-2. **Add redirects.** The example script above writes to a `redirects` collection. Wire that collection's data to a Next.js middleware:
+2. **Add redirects.** The example script above writes to a `redirects` collection, which you add to the config. Wire that collection's data to Next.js's proxy (Next 16's name for middleware; `middleware.ts` still runs, with a deprecation warning):
 
 ```typescript
-// apps/web/src/middleware.ts
+// apps/web/src/proxy.ts
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 const cache = new Map<string, string>()
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname
   if (cache.has(path)) {
     return NextResponse.redirect(new URL(cache.get(path)!, req.url), 301)
@@ -144,11 +147,11 @@ Use `301` for permanent moves so search engines transfer link equity.
 
 If your old CMS stored content as raw HTML and your new collection uses block-based layouts, the conversion is real work. Options:
 
-- **HTML to Lexical**: Payload's Lexical editor accepts a JSON representation. Use a parser like `@payloadcms/richtext-lexical/converters/html` to convert HTML → Lexical JSON.
+- **HTML to Lexical**: Payload's Lexical editor accepts a JSON representation. `convertHTMLToLexical` from `@payloadcms/richtext-lexical` converts HTML → Lexical JSON. (The package's `/html` subpath goes the other way, Lexical → HTML.)
 - **HTML to blocks**: write a parser that recognizes structural patterns (e.g., `<h2>` followed by `<p>` becomes a SectionIntro block). Lossy, but produces real composition.
 - **Single-block fallback**: dump the HTML into a single `Prose` block. Loses semantic structure but is one-line to implement; iterate later.
 
-Most clients start with the fallback and iterate. The constraint is whether your design system has a `Prose` (or similar) block that accepts arbitrary HTML — see [the reference DS Prose component](../../packages/create-throughline/reference-ds/src/components/Prose/Prose.tsx) for the shape.
+Most clients start with the fallback and iterate. The constraint is whether your design system has a `Prose` (or similar) block that takes free-flowing content. [The reference DS Prose component](../../packages/create-throughline/reference-ds/src/components/Prose/Prose.tsx) takes it as rich text, not an HTML string: its contract's one field is `richtext`, so convert the HTML to Lexical first.
 
 ## Preserve `publishedAt` for SEO and ordering
 

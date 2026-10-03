@@ -1,6 +1,6 @@
 # Client-agnostic core
 
-Throughline core is one repo: `forumone/throughline` on GitHub, published as `@forumone/throughline-*` on npm. Client projects are *separate* repos that depend on the published packages. There's a deliberate seam between the two — and the seam is configuration, not code.
+Throughline core is one repo: `forumone/throughline` on GitHub, published on npm as `@forumone/throughline`, `@forumone/throughline-design-system` and `@forumone/create-throughline`. Client projects are *separate* repos that depend on the published packages. There's a deliberate seam between the two — and the seam is configuration, not code.
 
 ## Two tracks
 
@@ -9,14 +9,11 @@ Throughline core is one repo: `forumone/throughline` on GitHub, published as `@f
    │   forumone/throughline (core)      │    │   forumone/acme-website        │
    │                                    │    │                                │
    │   packages/                        │    │   apps/web/                    │
-   │     core                           │    │     payload.config.ts ─────────┼──┐
-   │     components                     │    │     app/api/inngest/route.ts   │  │
-   │     publishing                     │    │   packages/                    │  │
-   │     approvals                      │    │     design-system              │  │
-   │     audit                          │    │     content                    │  │
-   │     ...                            │    │     brand                      │  │
-   │                                    │    │                                │  │
-   │   apps/playground (smoke test)     │    │   .env.local                   │  │
+   │     throughline                    │    │     payload.config.ts ─────────┼──┐
+   │     design-system                  │    │       throughline({ ... })     │  │
+   │     create-throughline             │    │     app/api/inngest/route.ts   │  │
+   │                                    │    │   design-system/               │  │
+   │   apps/playground (smoke test)     │    │   apps/web/.env.local          │  │
    │   docs/                            │    │   ...                          │  │
    └────────────────────────────────────┘    └────────────────────────────────┘  │
                   │                                                              │
@@ -28,10 +25,9 @@ Core is a framework. The client repo is an application using that framework. The
 
 ## What lives in core
 
-- The eight Throughline plugins, each with its options surface and its capabilities
-- Generic helpers (audit log writer, MCP handler, Inngest client factory, env loader)
-- The reference design system + design contract schema
-- The CLI scaffolder
+- `@forumone/throughline`: `throughline()`, every plugin on its own subpath, and the helpers they share (the audit writer, the jobs adapters, the environment check)
+- `@forumone/throughline-design-system`: the design contract, its lint, and the manifest's Payload blocks
+- `@forumone/create-throughline`: the scaffolder, with the reference design system a new project starts from
 - These docs
 
 Core knows nothing about Forum One, any specific client, any specific brand, or any specific content model. It can't — it's a single artifact installed into many projects.
@@ -92,7 +88,7 @@ A custom plugin in a client project is just a Payload plugin. The framework alre
 
 ## What about monorepos?
 
-Some Forum One clients prefer monorepos that include core as a workspace package rather than a published dependency. This is supported but not the default — the published-dependency path is simpler to upgrade and easier to reason about. If you go monorepo, treat the inner `packages/core` like a third-party dependency anyway: PRs against core go through the core repo's review process; clients consume releases.
+A client can consume core as source instead — forumone-2026 did, with core as a git submodule in its workspace, from its #419 until 1.0. It is not the default, and that site moved to the published packages at 1.0: a submodule pin is a commit rather than a version, it needed its own rules to keep the platform from importing the site, and every pull request snapshot (`<version>-pr-<n>-<sha>` under the `pr` dist-tag) now gives a site the same "try the fix before it merges" that the submodule did. If you go that way anyway, treat core like a third-party dependency: PRs against it go through the core repo's review process.
 
 ## Where to look in code
 
