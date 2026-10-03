@@ -2,10 +2,9 @@ name: Release
 
 on:
   push:
-    # `v0` carries 0.x fixes while `main` is in pre-release mode for 1.0
-    # (docs/spec/1.0-plan.md, "Distribution"). Its own `.changeset/config.json`
-    # sets `baseBranch: "v0"`, so a merge there opens a release PR against `v0`.
-    branches: [main, v0]
+    # Not `v0`: 0.x is closed (the 1.0 roadmap, P4), and a push here releases
+    # nothing. A push to `main` runs `main`'s own copy of this file.
+    branches: [main]
 
 # One release at a time per branch: `main` and `v0` publish different versions
 # and must not wait on, or cancel, each other.
