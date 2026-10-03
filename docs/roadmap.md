@@ -458,7 +458,8 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [x] forumone-2026's `check-throughline-pin.sh` accepts `main` or `v0`, and its `CLAUDE.md` says platform fixes start from `v0` (forumone-2026#812)
 - [x] Enter changesets pre-release mode on `main` (`1.0.0-next.N`), with `CONTRIBUTING.md` saying where a 0.x fix goes
 - [ ] Consolidate into `@forumone/throughline` with subpath exports, folding workflows into its owners (publishing, approvals, audit, integrations). The map is `docs/spec/1.0-exports.md` (#242).
-    - [x] core and plugin-contract
+    - [x] core and plugin-contract (#243)
+    - [x] publishing, into `/publishing`, `/editorial`, `/client` and `/rsc`
 - [ ] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today)
 - [ ] Fold reference-ds into create-throughline as template and test fixture
 - [ ] Make plugin-contract, the capability registry and the MCP collector internal
