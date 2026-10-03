@@ -108,8 +108,10 @@ describe('generate (with reference DS)', () => {
         }
       }
     }
-    // Ten in apps/web (nine plugins + design-contract), one in the design system.
-    expect(ranges).toHaveLength(11)
+    // Nine in apps/web (@forumone/throughline, seven plugins still outside it,
+    // and design-contract), one in the design system. Falls as the 1.0
+    // consolidation folds each plugin in.
+    expect(ranges).toHaveLength(10)
     // A hand-typed range left them at ^0.2.0 — patches only, for a 0.x version —
     // while the packages reached 0.9. Every range must be read, not typed.
     for (const [name, range] of ranges) {

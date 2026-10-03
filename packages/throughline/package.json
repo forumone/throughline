@@ -13,13 +13,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./publishing": {
+      "types": "./dist/publishing/index.d.ts",
+      "default": "./dist/publishing/index.js"
+    },
+    "./editorial": {
+      "types": "./dist/editorial/index.d.ts",
+      "default": "./dist/editorial/index.js"
+    },
     "./audit": {
       "types": "./dist/audit/index.d.ts",
       "default": "./dist/audit/index.js"
-    },
-    "./fields": {
-      "types": "./dist/fields/index.d.ts",
-      "default": "./dist/fields/index.js"
     },
     "./jobs": {
       "types": "./dist/jobs/index.d.ts",
@@ -32,6 +36,10 @@
     "./media": {
       "types": "./dist/media/index.d.ts",
       "default": "./dist/media/index.js"
+    },
+    "./fields": {
+      "types": "./dist/fields/index.d.ts",
+      "default": "./dist/fields/index.js"
     },
     "./observability": {
       "types": "./dist/observability/index.d.ts",
@@ -92,7 +100,9 @@
     "react": "^18.0.0 || ^19.0.0",
     "@payloadcms/ui": "^3.0.0",
     "@vercel/blob": "^2.0.0",
-    "@payloadcms/plugin-cloud-storage": "^3.0.0"
+    "@payloadcms/plugin-cloud-storage": "^3.0.0",
+    "next": "^15.0.0 || ^16.0.0",
+    "@payloadcms/next": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "vitest": {
@@ -109,6 +119,12 @@
     },
     "@payloadcms/plugin-cloud-storage": {
       "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "@payloadcms/next": {
+      "optional": true
     }
   },
   "dependencies": {
@@ -119,15 +135,19 @@
     "@forumone/throughline-eslint-config": "workspace:*",
     "@forumone/throughline-tsconfig": "workspace:*",
     "@payloadcms/db-sqlite": "^3.83.0",
+    "@payloadcms/next": "^3.83.0",
     "@payloadcms/plugin-cloud-storage": "^3.83.0",
     "@payloadcms/ui": "^3.83.0",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "@vercel/blob": "2.3.1",
     "eslint": "^10.11.0",
     "inngest": "^4.2.0",
+    "next": "^16.2.4",
     "payload": "^3.83.0",
     "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "typescript": "^5.6.0",
     "vitest": "^4.1.10"
   }

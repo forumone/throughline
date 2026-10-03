@@ -50,7 +50,6 @@
   },
   "dependencies": {
     "@forumone/throughline": "workspace:*",
-    "@forumone/throughline-publishing": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

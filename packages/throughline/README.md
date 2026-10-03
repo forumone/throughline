@@ -4,9 +4,9 @@ Throughline for Payload CMS: the audit log, MCP authentication and tools, the jo
 Inngest client, the field kit, media hardening and reference tracking, error reporting, environment
 checks and a logger. Each part lives on its own subpath.
 
-> **1.0 is in progress.** This package is being assembled from the 0.x packages, starting with
-> `@forumone/throughline-core` and `@forumone/throughline-plugin-contract`; the other plugins move
-> in over the next releases. [`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md) maps every
+> **1.0 is in progress.** This package is being assembled from the 0.x packages: so far
+> `@forumone/throughline-core`, `-plugin-contract` and `-publishing`; the other plugins move in over
+> the next releases. [`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md) maps every
 > 0.x import to its 1.0 path. Pre-releases publish as `1.0.0-next.N` under the `next` dist-tag.
 
 ## What's inside
@@ -14,6 +14,8 @@ checks and a logger. Each part lives on its own subpath.
 | Subpath           | Holds                                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | (root)            | `assertEnvironment`, `checkEnvValue`, `hardenCoreCollections`, `mcpApiKeyAccess`, `withMeta`, `auditContext`, the logger, utilities, and the plugin types |
+| `/publishing`     | `publishingPlugin`, the publishing service, `isDraftWrite`, the built-in accessibility checks; see [docs/publishing.md](docs/publishing.md)               |
+| `/editorial`      | `editorialPlugin`: content health, the content calendar, "Your work", command palette search, and their MCP tools                                         |
 | `/audit`          | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS`                                       |
 | `/jobs`           | `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                                                                                |
 | `/jobs/inngest`   | `createInngestClient`, `resolveInngestEnv`, `registrableInngestFunctions`                                                                                 |

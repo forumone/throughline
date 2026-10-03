@@ -23,7 +23,7 @@ vi.mock('next/cache', () => ({
 }))
 
 const isDraftWrite = vi.fn()
-vi.mock('@forumone/throughline-publishing', () => ({
+vi.mock('@forumone/throughline/publishing', () => ({
   isDraftWrite: (...args: unknown[]) => isDraftWrite(...args),
 }))
 
