@@ -125,7 +125,7 @@ Each registers under the function id its 0.x factory did. On Inngest, serve them
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline@next
+pnpm add @forumone/throughline
 ```
 
 `payload@^3.89.0` is the one required peer. The rest are optional, each needed only by the subpaths that use it, and none is loaded by the root:

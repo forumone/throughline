@@ -8,7 +8,7 @@ Full documentation lives at [`docs/`](./docs/) — getting-started tutorials, co
 
 ## Status
 
-1.0 is in pre-release: `1.0.0-next.N` under the `next` dist-tag, while 0.x fixes go to the `v0` branch and publish to `latest`. See [`docs/roadmap.md`](./docs/roadmap.md) for phase status, and [Upgrading from 0.x to 1.0](./docs/guides/upgrading.md) to move a site.
+1.0. Releases publish under `latest`, and a snapshot of every merge to `main` under `next`. 0.x fixes go to the `v0` branch and publish under `v0`. See [`docs/roadmap.md`](./docs/roadmap.md) for phase status, and [Upgrading from 0.x to 1.0](./docs/guides/upgrading.md) to move a site.
 
 ## Packages
 
@@ -37,7 +37,7 @@ It asks a small set of questions and produces a pnpm monorepo with Payload, the 
 Or add the packages to a Payload site:
 
 ```bash
-pnpm add @forumone/throughline@next @forumone/throughline-design-system@next
+pnpm add @forumone/throughline @forumone/throughline-design-system
 ```
 
 See [`docs/reference/`](./docs/reference/) for the reference.

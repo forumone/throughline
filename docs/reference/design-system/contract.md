@@ -16,7 +16,7 @@ Zero runtime dependencies beyond Zod. Safe to import into client apps, design sy
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline-design-system@next
+pnpm add @forumone/throughline-design-system
 ```
 
 ## Authoring contracts in a design system

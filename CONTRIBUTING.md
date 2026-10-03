@@ -30,13 +30,11 @@ pnpm add @forumone/throughline@1.0.0-pr-264-a1b2c3d
 
 Install the exact version, never `@pr`: the tag moves with every pull request. Renovate's branches and the release PR publish nothing.
 
-Once 1.0 is out, every merge to `main` with changesets pending publishes `<next version>-next-<sha>` under `next` the same way. Until then `next` is the release PR's `1.0.0-next.N`. The script is `scripts/publish-snapshot.sh`; it versions the checkout and never commits or tags.
+Every merge to `main` with changesets pending publishes `<next version>-next-<sha>` under `next` the same way, so `next` is always what the next release holds. The script is `scripts/publish-snapshot.sh`; it versions the checkout and never commits or tags.
 
-### Two lines while 1.0 is in progress
+### 0.x fixes go to `v0`
 
-`main` is in changesets pre-release mode (`.changeset/pre.json`, tag `next`) while the packages are consolidated for 1.0. A release from `main` publishes `-next.N` versions under the `next` dist-tag, and leaves `latest` alone.
-
-**A fix for 0.x goes to `v0`**, the branch cut from the last 0.x release: base your branch and your pull request on `v0`. Its release PR opens against `v0` and publishes to `latest`. If 1.0 needs the fix too, port it to `main` by hand. See [the 1.0 plan](docs/spec/1.0-plan.md#distribution).
+**A fix for 0.x goes to `v0`**, the branch cut from the last 0.x release: base your branch and your pull request on `v0`. Its release PR opens against `v0` and publishes under the `v0` dist-tag, so it never moves `latest` off 1.x. If 1.x needs the fix too, port it to `main` by hand. See [the 1.0 plan](docs/spec/1.0-plan.md#distribution).
 
 ## Commits
 
