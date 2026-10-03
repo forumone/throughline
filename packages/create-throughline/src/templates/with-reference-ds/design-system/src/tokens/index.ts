@@ -21,7 +21,7 @@ export const allTokens = {
 
 export type TokenName = keyof typeof allTokens
 
-/** Returns every token in the shape the design-contract manifest expects. */
+/** Returns every token in the shape the manifest schema (`@forumone/throughline-design-system/contract`) expects. */
 export function getTokenList() {
   const categorize = (name: string) => name.split('.')[0] ?? 'other'
   return Object.entries(allTokens).map(([name, value]) => ({

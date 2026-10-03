@@ -22,7 +22,7 @@ import {
 import { expireStaleApprovalsJob } from '@forumone/throughline/approvals'
 import { payloadJobs } from '@forumone/throughline/jobs/payload'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
-import type { Manifest } from '@forumone/throughline-design-contract'
+import type { Manifest } from '@forumone/throughline-design-system/contract'
 import type { Access, CollectionConfig, Config, Payload } from 'payload'
 
 const __filename = fileURLToPath(import.meta.url)

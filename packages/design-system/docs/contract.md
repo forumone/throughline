@@ -1,0 +1,181 @@
+# The contract: `/contract` and `/lint`
+
+This was `@forumone/throughline-design-contract` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+
+The contract every AI-ready design system satisfies to be consumable by Throughline.
+
+## What this package provides
+
+- **`ComponentContractSchema`** — the Zod schema for per-component metadata (intent, composition rules, content fields, tokens, accessibility, examples).
+- **`ManifestSchema`** — the aggregated JSON format a design system publishes, versioned via `contractVersion`.
+- **`loadManifest` / `loadManifestFromUrl`** — runtime loaders with strict validation and a readable error format.
+- **`lintManifest`** (via the `/lint` subpath) — CI-runnable consistency checks for design system repos.
+
+Zero runtime dependencies beyond Zod. Safe to import into client apps, design systems, and server packages alike.
+
+## Installation
+
+```bash
+pnpm add @forumone/throughline-design-system@next
+```
+
+## Authoring contracts in a design system
+
+Each component has a co-located contract file:
+
+```
+src/components/Hero/
+├── Hero.tsx
+├── Hero.stories.tsx
+├── Hero.contract.ts
+└── index.ts
+```
+
+`Hero.contract.ts` exports a single object that satisfies `ComponentContract`:
+
+```typescript
+import type { ComponentContract } from '@forumone/throughline-design-system/contract'
+
+export const contract: ComponentContract = {
+  name: 'Hero',
+  category: 'hero',
+  description: 'A page opener with a headline and optional call-to-action.',
+  intent:
+    'Used to establish what a page is about within the first viewport. Appropriate for top-level pages that need editorial framing.',
+  composition: {
+    placement: ['page'],
+    maxPerPage: 1,
+    requiredSiblings: [],
+    forbiddenAdjacent: ['Hero'],
+  },
+  content: {
+    fields: [{ name: 'headline', type: 'text', required: true, maxLength: 80 }],
+  },
+  tokens: { consumes: ['color.brand.primary'] },
+  accessibility: {
+    keyboardSupport: [],
+    screenReaderBehavior: 'Headline is announced as h1 by default.',
+    contentWarnings: [],
+  },
+  examples: [{ label: 'Default', intent: 'Standard page opener', storyId: 'hero--default' }],
+  antiExamples: [
+    { label: 'Stacked heroes', why: 'Breaks the visual rhythm.', useInstead: 'Section' },
+  ],
+}
+```
+
+Your design system's build tooling aggregates these into a `Manifest`. See the reference design system for a canonical example.
+
+## `category` and `group`
+
+Two fields, two questions.
+
+`category` is what the component **is** — `hero`, `section`, `card`, `media`, `cta`, `navigation`, `data`, `form`, `utility`. It is required, and consumers reason about it as a kind: `list_components` in the components MCP server filters on it.
+
+`group` is where an **editor looks for it** — `hero`, `narrative`, `proof`, `listing`, `media`, `form`, `cta`, `navigation`, `utility`. It is optional, and exists because `category` is a bad answer to that second question at any real size. A design system of sixty blocks files roughly half of them under `section`, so an authoring UI grouped on `category` hands back the flat list the grouping was meant to avoid, while `card` and `navigation` hold one entry each. Evening the shelves out by moving components between categories would file them under the wrong _kind_ for every other consumer, so the fix is a second field rather than a looser first one.
+
+There is deliberately no `section` in the group vocabulary — a shelf holding half the library is the problem this field exists to solve — and no `card` or `data`, both of which name a kind rather than a place to look.
+
+Read the resolved value with `groupOf`, never either field directly:
+
+```typescript
+import { groupOf } from '@forumone/throughline-design-system/contract'
+
+groupOf({ category: 'section', group: 'proof' }) // 'proof'
+groupOf({ category: 'hero' }) // 'hero' — falls back
+```
+
+The fallback is what makes this a non-breaking addition: a design system that sets no `group` anywhere groups exactly as it did before the field existed, and one part-way through adopting it stays consistent instead of grouping half one way and half the other.
+
+## Loading a manifest at runtime
+
+```typescript
+import { loadManifest } from '@forumone/throughline-design-system/contract'
+import manifest from '@my-company/design-system/manifest.json'
+
+const loaded = loadManifest(manifest)
+
+const hero = loaded.requireComponent('Hero')
+console.log(hero.intent)
+
+for (const name of loaded.listByCategory('card')) {
+  console.log(name)
+}
+
+// Grouped for an authoring UI. Matches on the resolved group, so components
+// with no `group` are found by their category.
+for (const shelf of loaded.listGroups()) {
+  console.log(shelf, loaded.listByGroup(shelf).length)
+}
+```
+
+Invalid manifests throw immediately with a path-qualified error message. The loader never partially loads invalid data.
+
+### Loading over HTTP
+
+```typescript
+import { loadManifestFromUrl } from '@forumone/throughline-design-system/contract'
+
+const loaded = await loadManifestFromUrl('https://ds.example.com/manifest.json')
+```
+
+## Linting in CI
+
+Every design system should lint its own manifest before publishing. Import the lint helpers from the `/lint` subpath:
+
+```typescript
+import { lintManifest, formatLintIssues } from '@forumone/throughline-design-system/lint'
+import manifest from './dist/manifest.json'
+
+const issues = lintManifest(manifest, {
+  availableStoryIds: new Set(/* collected from storybook-static */),
+})
+
+if (issues.some((i) => i.severity === 'error')) {
+  console.error(formatLintIssues(issues))
+  process.exit(1)
+}
+```
+
+`lintManifest` checks:
+
+- Every `requiredSiblings` and `forbiddenAdjacent` entry references a real component in the manifest.
+- Every token in `tokens.consumes` exists in the manifest's token table (or in `availableTokens` if you pass one).
+- Every example's `storyId` exists in `availableStoryIds` (skipped when the option is omitted).
+- Warnings: components with no anti-examples; intent statements shorter than 50 characters.
+
+`assertManifestClean(manifest, options)` is the CI-friendly form: throws on any error, silent on warnings-only.
+
+## Versioning
+
+The current contract version is `1.0.0`, exported as `CONTRACT_VERSION`. Manifests declare it via the `contractVersion` field; the loader rejects mismatches so Claude never recommends a component from a schema it does not understand.
+
+When the contract evolves, this package ships a new major version with migration guidance in the changelog.
+
+## Relationship to Storybook AI manifests
+
+Storybook ships its own [AI manifest format](https://storybook.js.org/docs/ai/manifests) (`/manifests/components.json`). It is a static-analysis artifact that describes what _exists_ in a Storybook — component ids, paths, props with types and JSDoc, story ids, import statements. Storybook marks it as preview / unstable.
+
+This package's contract describes what's _appropriate_ — intent, composition rules, accessibility expectations, anti-examples, token consumption. Hand-authored, stable, versioned.
+
+They complement rather than overlap. Typical integration: during a design system's CI, parse Storybook's `components.json`, collect every `stories[].id`, and pass the set to `lintManifest` as `availableStoryIds`. That gives you the "does this `storyId` resolve to a real story?" check for free:
+
+```typescript
+import storybookManifest from './storybook-static/manifests/components.json'
+import contractManifest from './dist/manifest.json'
+import { lintManifest } from '@forumone/throughline-design-system/lint'
+
+const availableStoryIds = new Set(
+  Object.values(storybookManifest.components).flatMap((c: { stories: Array<{ id: string }> }) =>
+    c.stories.map((s) => s.id),
+  ),
+)
+
+const issues = lintManifest(contractManifest, { availableStoryIds })
+```
+
+## Related packages
+
+- `@forumone/throughline-reference-ds` — a reference design system that satisfies this contract (C3).
+- `@forumone/throughline-components` — the Component Server MCP that consumes manifests (C5).
+- `@forumone/throughline-plugin-contract` — the plugin contract for packages that extend Payload.

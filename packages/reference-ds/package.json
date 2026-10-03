@@ -64,7 +64,7 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "dependencies": {
-    "@forumone/throughline-design-contract": "workspace:*",
+    "@forumone/throughline-design-system": "workspace:*",
     "clsx": "^2.1.1"
   },
   "devDependencies": {

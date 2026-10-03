@@ -24,7 +24,7 @@ import { createTagRevalidationHooks } from '@forumone/throughline/publishing'
 import { cacheTags } from './lib/cache-tags'
 import { jobFailuresPlugin } from '@forumone/throughline/observability'
 import { databaseConnectionString } from './lib/database'
-{{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-contract'
+{{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-system/contract'
 import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }
 {{/if}}
 

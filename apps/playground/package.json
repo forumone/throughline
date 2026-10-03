@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@forumone/throughline": "workspace:*",
-    "@forumone/throughline-design-contract": "workspace:*",
+    "@forumone/throughline-design-system": "workspace:*",
     "@forumone/throughline-reference-ds": "workspace:*",
     "@payloadcms/db-postgres": "^3.83.0",
     "@payloadcms/next": "^3.83.0",

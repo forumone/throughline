@@ -2,7 +2,7 @@ import { formatZodIssues } from '../utils/zod-issues.js'
 import type { McpToolCollector } from '../mcp/collector.js'
 import { z } from 'zod'
 import type { BaseCorePluginOptions } from '../plugin-contract/index.js'
-import type { Manifest } from '@forumone/throughline-design-contract'
+import type { Manifest } from '@forumone/throughline-design-system/contract'
 
 export type ManifestSource =
   | { type: 'object'; manifest: Manifest }

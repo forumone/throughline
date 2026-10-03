@@ -8,7 +8,7 @@ The Components MCP server. Reads a design-system manifest, exposes it to Claude 
 pnpm add @forumone/throughline-components @forumone/throughline-design-contract
 ```
 
-Peer dependencies: `payload@^3.89.0`. Workspace depends on `@forumone/throughline-core` and `@forumone/throughline-design-contract`.
+Peer dependencies: `payload@^3.89.0`. Workspace depends on `@forumone/throughline-core` and `@forumone/throughline-design-system/contract`.
 
 ## Public API
 

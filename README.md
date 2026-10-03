@@ -28,7 +28,7 @@ Plugins:
 
 Design system:
 
-- `@forumone/throughline-design-contract` — manifest schema + lint rules
+- `@forumone/throughline-design-system/contract` — manifest schema + lint rules
 - `@forumone/throughline-reference-ds` — brand-neutral 12-component reference design system
 
 Tooling:

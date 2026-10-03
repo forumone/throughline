@@ -87,7 +87,7 @@ be composed. It is built from a `<Name>.contract.ts` beside every component.
 {{else}}
 The design system here is a placeholder. When you build it, give every
 component a contract, publish a manifest, and point `componentsPlugin` at it —
-see the design-contract package in the Throughline repository.
+see `@forumone/throughline-design-system` in the Throughline repository.
 {{/if}}
 ## Tests
 

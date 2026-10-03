@@ -26,7 +26,7 @@
   "dependencies": {
     "@forumone/throughline": "^{{version_throughline}}",
     "@forumone/throughline-forms": "^{{version_forms}}",
-    {{#if useReferenceDs}}"@forumone/throughline-design-contract": "^{{version_design_contract}}",
+    {{#if useReferenceDs}}"@forumone/throughline-design-system": "^{{version_design_system}}",
     "{{designSystemName}}": "workspace:*",
     {{/if}}"@payloadcms/db-postgres": "^3.89.0",
     "@payloadcms/next": "^3.89.0",

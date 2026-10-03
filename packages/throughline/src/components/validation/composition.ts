@@ -1,4 +1,4 @@
-import type { LoadedManifest } from '@forumone/throughline-design-contract'
+import type { LoadedManifest } from '@forumone/throughline-design-system/contract'
 
 export interface CompositionBlock {
   type: string

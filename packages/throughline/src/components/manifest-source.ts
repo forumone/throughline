@@ -3,7 +3,7 @@ import {
   type LoadedManifest,
   loadManifest,
   loadManifestFromUrl,
-} from '@forumone/throughline-design-contract'
+} from '@forumone/throughline-design-system/contract'
 import type { ManifestSource } from './options.js'
 
 export interface ManifestLoader {

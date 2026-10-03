@@ -34,7 +34,7 @@
     "clean": "rm -rf dist .turbo storybook-static *.tsbuildinfo"
   },
   "dependencies": {
-    "@forumone/throughline-design-contract": "^{{version_design_contract}}",
+    "@forumone/throughline-design-system": "^{{version_design_system}}",
     "clsx": "^2.1.1"
   },
   "peerDependencies": {

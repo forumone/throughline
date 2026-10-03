@@ -1,8 +1,8 @@
 import { readFile, stat } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadManifest } from '@forumone/throughline-design-contract'
-import { formatLintIssues, lintManifest } from '@forumone/throughline-design-contract/lint'
+import { loadManifest } from '@forumone/throughline-design-system/contract'
+import { formatLintIssues, lintManifest } from '@forumone/throughline-design-system/lint'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(__dirname, '..')
@@ -36,7 +36,7 @@ async function collectStoryIds(): Promise<Set<string> | undefined> {
 Lint rules this design system treats as failures, though the shared linter
 reports them as warnings.
 
-`design-contract` sets both to `warning` because it serves every project, and a
+The suite's linter sets both to `warning` because it serves every project, and a
 project migrating an existing design system onto the contract should not be
 blocked by prose. A design system written against the contract from the start is
 never mid-migration, so it starts strict. Relax a rule here, deliberately, if

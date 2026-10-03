@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { loadManifest } from '@forumone/throughline-design-contract'
+import { loadManifest } from '@forumone/throughline-design-system/contract'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import { findAntiPatterns, validateComposition } from './composition.js'
 

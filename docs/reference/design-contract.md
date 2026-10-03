@@ -20,7 +20,7 @@ import {
   lintManifest,
   formatLintIssues,
   loadManifest,
-} from '@forumone/throughline-design-contract'
+} from '@forumone/throughline-design-system/contract'
 ```
 
 ## Types
@@ -32,7 +32,7 @@ import type {
   TokenList,
   LintIssue,
   LintResult,
-} from '@forumone/throughline-design-contract'
+} from '@forumone/throughline-design-system/contract'
 ```
 
 ### `ComponentContract`
@@ -116,7 +116,7 @@ Pretty-prints lint issues for terminal output. Used by every DS's validate scrip
 ### `loadManifest(source): Promise<Manifest>`
 
 ```typescript
-import { loadManifest } from '@forumone/throughline-design-contract'
+import { loadManifest } from '@forumone/throughline-design-system/contract'
 
 const manifest = await loadManifest({ type: 'url', url: 'https://ds.example.com/manifest.json' })
 // or
@@ -134,7 +134,7 @@ Reads a manifest from one of three sources. Validates with `lintManifest` along 
 ## CONTRACT_VERSION
 
 ```typescript
-import { CONTRACT_VERSION } from '@forumone/throughline-design-contract'
+import { CONTRACT_VERSION } from '@forumone/throughline-design-system/contract'
 // "0.1.0"
 ```
 
@@ -147,7 +147,7 @@ Manifest schema version. Manifests with a `contractVersion` mismatching this str
 ```typescript
 // scripts/build-manifest.ts
 import { writeFile } from 'node:fs/promises'
-import { CONTRACT_VERSION, lintManifest, formatLintIssues } from '@forumone/throughline-design-contract'
+import { CONTRACT_VERSION, lintManifest, formatLintIssues } from '@forumone/throughline-design-system/contract'
 import { allTokens, getTokenList } from '../src/tokens'
 import { heroContract, sectionIntroContract /*, ... */ } from '../src/components'
 
