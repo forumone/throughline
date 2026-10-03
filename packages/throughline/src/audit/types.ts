@@ -35,7 +35,12 @@ export const AUDIT_ACTIONS = [
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 
-/** MCP server identifiers. Keep in sync with the planned server packages. */
+/**
+ * MCP server identifiers: the `mcp_server` enum on the audit collection. A
+ * value added here is a migration in every host, so new values go at the end.
+ * The last four arrived in 1.1, so that a throw in those tools is recorded as a
+ * `system.error` like everyone else's.
+ */
 export const AUDIT_MCP_SERVERS = [
   'payload',
   'component',
@@ -44,6 +49,10 @@ export const AUDIT_MCP_SERVERS = [
   'audit',
   'forms',
   'integrations',
+  'editorial',
+  'references',
+  'fields',
+  'observability',
 ] as const
 
 export type AuditMcpServer = (typeof AUDIT_MCP_SERVERS)[number]

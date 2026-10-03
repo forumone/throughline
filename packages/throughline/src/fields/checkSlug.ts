@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { findAuditWriter } from '../audit/plugin.js'
 import type { CollectionSlug, Field, Payload, Plugin } from 'payload'
 import type { McpToolContext, McpToolDefinition } from '../plugin-contract/index.js'
 import type { McpToolCollector, McpToolDescriptor } from '../mcp/collector.js'
@@ -135,7 +136,7 @@ export function fieldsPlugin(options: {
           [
             createCheckSlugTool({ payload, ...(options.canUse ? { canUse: options.canUse } : {}) }),
           ] as unknown as McpToolDefinition[],
-          { serverName: 'fields' },
+          { serverName: 'fields', ...(findAuditWriter(payload) ? { audit: findAuditWriter(payload)! } : {}) },
         )
       },
     }

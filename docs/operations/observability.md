@@ -89,7 +89,7 @@ The action list is a taxonomy, not an inventory, and the difference is what
 | `approval.expired` | `approvals/jobs/expire-stale-approvals.ts` — the one job that writes here |
 | `form.created` / `.updated` / `.submission_received` | **nothing.** Forms is not part of 1.0; the values stay in the enum so a database migrated under 0.x keeps its rows |
 | `integration.synced` / `.failed` | `integrations/plugin.ts` and the webhook integration, with the failure message |
-| `system.error` | **every tool in the publishing, approvals, components, audit and integrations servers, when its handler throws.** See below |
+| `system.error` | **every tool the suite serves, when its handler throws** (editorial, references, `check_slug` and `list_job_failures` since 1.1). See below |
 | `system.healthcheck` | **nothing.** The healthcheck's failures go to `onFailure` — see Healthchecks |
 
 Eleven of the twenty-seven actions have no writer. That gap is the difference
@@ -110,11 +110,11 @@ Paths in this section are under `packages/throughline/src/`.
 ### `system.error`
 
 `mcp/payload-mcp.ts` wraps every tool handler the suite serves, and records a
-crash for every server that hands the collector an audit writer: publishing,
-approvals, components, audit and integrations — including the four design
-queries and the five audit reads that write no row of their own. The editorial,
-references, `check_slug` and `list_job_failures` tools are added without one, so
-a crash there is logged and not recorded. When a recorded tool throws, the throw
+crash for every server that hands the collector an audit writer — all of them,
+including the four design queries and the five audit reads that write no row of
+their own. Editorial, references, `check_slug` and `list_job_failures` joined in
+1.1, with an `mcp_server` value each; registered by hand without `auditPlugin`,
+those four still serve their tools and only log a crash. When a recorded tool throws, the throw
 still propagates, because the MCP client needs the JSON-RPC error, and a row is
 written first:
 

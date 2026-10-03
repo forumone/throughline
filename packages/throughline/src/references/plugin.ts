@@ -1,4 +1,5 @@
 import type { Block, CollectionConfig, Config, Field, Plugin } from 'payload'
+import { findAuditWriter } from '../audit/plugin.js'
 import type { McpToolContext, McpToolDefinition } from '../plugin-contract/index.js'
 import type { McpToolCollector } from '../mcp/collector.js'
 import { refuseDeleteWhileReferenced, refuseTrashWhileReferenced } from './guards.js'
@@ -151,7 +152,7 @@ export function referencesPlugin(options: ReferencesPluginOptions): Plugin {
             createFindReferencesTool(deps),
             createCanDeleteTool(deps),
           ] as unknown as McpToolDefinition[],
-          { serverName: 'references' },
+          { serverName: 'references', ...(findAuditWriter(payload) ? { audit: findAuditWriter(payload)! } : {}) },
         )
       },
     }

@@ -1,4 +1,5 @@
 import type { Config, Plugin } from 'payload'
+import { findAuditWriter } from '../audit/plugin.js'
 import type { McpToolDefinition } from '../plugin-contract/mcp.js'
 import type { McpToolCollector, McpToolDescriptor } from '../mcp/collector.js'
 import { EDITORIAL_CUSTOM_KEY, type EditorialRuntime } from './config.js'
@@ -245,7 +246,10 @@ export function editorialPlugin(options: EditorialPluginOptions): Plugin {
             : []),
         ]
         if (tools.length > 0) {
-          options.mcpTools.add(tools as unknown as McpToolDefinition[], { serverName: 'editorial' })
+          options.mcpTools.add(tools as unknown as McpToolDefinition[], {
+            serverName: 'editorial',
+            ...(findAuditWriter(payload) ? { audit: findAuditWriter(payload)! } : {}),
+          })
         }
       },
     }
