@@ -114,7 +114,7 @@ pnpm --filter @forumone/throughline-reference-ds test          # vitest
 pnpm --filter @forumone/throughline-reference-ds storybook     # local Storybook server
 ```
 
-`validate` is the most important command. It runs `lintManifest` from `@forumone/throughline-design-contract` against the generated manifest and the Storybook index — a contract pointing at a missing story fails. CI runs this on every PR.
+`validate` is the most important command. It runs `lintManifest` from `@forumone/throughline-design-system/contract` against the generated manifest and the Storybook index — a contract pointing at a missing story fails. CI runs this on every PR.
 
 ## Customizing the reference DS
 

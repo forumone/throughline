@@ -20,7 +20,7 @@ A good first-contract candidate:
 ```typescript
 // packages/design-system/src/components/Hero/Hero.contract.ts
 import { z } from 'zod'
-import type { ComponentContract } from '@forumone/throughline-design-contract'
+import type { ComponentContract } from '@forumone/throughline-design-system/contract'
 
 export const heroContract: ComponentContract = {
   name: 'Hero',
@@ -244,7 +244,7 @@ pnpm --filter @your-scope/design-system validate
 
 `validate` runs `lintManifest` against your generated manifest, using the story IDs from `storybook-static/index.json`. Failures are structured (missing story, prop schema mismatch with example, anti-example shape error).
 
-`validate` checks the contract against itself. It does not check the contract against the component or against the blocks the CMS generates from it. A site built on `@forumone/throughline-design-system-payload` covers those two gaps with the package's test helpers. See the [package reference](../reference/design-system-payload.md#testing-testing).
+`validate` checks the contract against itself. It does not check the contract against the component or against the blocks the CMS generates from it. A site built on `@forumone/throughline-design-system/generate` covers those two gaps with the package's test helpers. See the [package reference](../reference/design-system-payload.md#testing-testing).
 
 - `check-block-props <manifest> <components-dir>` runs each contract through the renderer's coercion and compares the props that come out with the component's `<Name>Args.ts`. One site's contract declared a bare `image` field for a component that read `image.src` and `image.alt`, and every image rendered with no `src` and no `alt`.
 - `describeBlockInvariants(blocks)` checks two things. A newly added block must pass every generated validation before the author types anything. And each checkbox must start at the `defaultValue` its contract declares.

@@ -1,0 +1,108 @@
+{
+  "name": "@forumone/throughline-design-system",
+  "version": "0.0.0",
+  "description": "The design-system side of Throughline: the component contract and manifest a design system publishes, its linter, and the Payload blocks, rendering and admin components generated from it.",
+  "type": "module",
+  "exports": {
+    "./contract": {
+      "types": "./dist/contract/index.d.ts",
+      "default": "./dist/contract/index.js"
+    },
+    "./lint": {
+      "types": "./dist/contract/lint.d.ts",
+      "default": "./dist/contract/lint.js"
+    },
+    "./generate": {
+      "types": "./dist/generate/index.d.ts",
+      "default": "./dist/generate/index.js"
+    },
+    "./render": {
+      "types": "./dist/render/index.d.ts",
+      "default": "./dist/render/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    }
+  },
+  "bin": {
+    "check-block-props": "./bin/check-block-props.mjs"
+  },
+  "files": [
+    "dist",
+    "bin/*.mjs",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src bin",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "throughline",
+    "payload",
+    "design-system",
+    "manifest",
+    "mcp"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/design-system"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/design-system#readme",
+  "bugs": {
+    "url": "https://github.com/forumone/throughline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "tsx": "^4.23.11",
+    "zod": "^3.23.0"
+  },
+  "peerDependencies": {
+    "@payloadcms/ui": "^3.0.0",
+    "payload": "^3.89.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0 || ^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@payloadcms/ui": {
+      "optional": true
+    },
+    "payload": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@payloadcms/ui": "^3.83.0",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.0",
+    "eslint": "^10.11.0",
+    "payload": "3.90.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

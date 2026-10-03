@@ -109,7 +109,7 @@ describe('generate (with reference DS)', () => {
       }
     }
     // Three in apps/web (@forumone/throughline, forms, which 1.0 drops, and
-    // design-contract), one in the design system. Falls as the 1.0
+    // @forumone/throughline-design-system), one in the design system. Falls as the 1.0
     // consolidation folds each package in.
     expect(ranges).toHaveLength(4)
     // A hand-typed range left them at ^0.2.0 — patches only, for a 0.x version —

@@ -1,4 +1,4 @@
-import type { ComponentContract } from '@forumone/throughline-design-contract'
+import type { ComponentContract } from '@forumone/throughline-design-system/contract'
 
 export const contract: ComponentContract = {
   name: 'CTASection',

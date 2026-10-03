@@ -461,8 +461,8 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
     - [x] core and plugin-contract (#243)
     - [x] publishing, into `/publishing`, `/editorial`, `/client` and `/rsc` (#245)
     - [x] workflows, split by owner into `/jobs`, `/jobs/inngest`, `/jobs/payload`, `/publishing`, `/approvals`, `/audit`, `/integrations` and `/cache-tags`; the six Inngest-shaped factories removed (#246)
-    - [x] audit, approvals, components, integrations and email; email's three Inngest-shaped factories removed, and every internal import pointed at its declaring module rather than an entry
-- [ ] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today)
+    - [x] audit, approvals, components, integrations and email; email's three Inngest-shaped factories removed, and every internal import pointed at its declaring module rather than an entry (#247)
+- [x] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today); it builds to `dist` now, rather than shipping TypeScript source
 - [ ] Fold reference-ds into create-throughline as template and test fixture
 - [ ] Make plugin-contract, the capability registry and the MCP collector internal
 - [ ] `throughline({...})` registers every plugin in order and wires the MCP collector

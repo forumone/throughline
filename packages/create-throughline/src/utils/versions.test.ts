@@ -22,8 +22,8 @@ describe('package versions', () => {
 
   it('reads @forumone/throughline and the published @forumone/throughline-* packages, and nothing else', async () => {
     await pkg('throughline', { name: '@forumone/throughline', version: '1.0.0' })
-    await pkg('design-contract', {
-      name: '@forumone/throughline-design-contract',
+    await pkg('design-system', {
+      name: '@forumone/throughline-design-system',
       version: '0.6.0',
     })
     await pkg('reference-ds', {
@@ -35,7 +35,7 @@ describe('package versions', () => {
 
     expect(await readWorkspaceVersions(join(root, 'packages'))).toEqual({
       '@forumone/throughline': '1.0.0',
-      '@forumone/throughline-design-contract': '0.6.0',
+      '@forumone/throughline-design-system': '0.6.0',
     })
   })
 
@@ -51,23 +51,23 @@ describe('package versions', () => {
     await mkdir(join(pkgDir, 'dist', 'templates'), { recursive: true })
     await writeFile(
       join(pkgDir, 'dist', 'versions.json'),
-      JSON.stringify({ '@forumone/throughline-design-contract': '0.6.0' }),
+      JSON.stringify({ '@forumone/throughline-design-system': '0.6.0' }),
     )
     // A workspace sibling that disagrees, to prove the baked file wins.
-    await pkg('design-contract', {
-      name: '@forumone/throughline-design-contract',
+    await pkg('design-system', {
+      name: '@forumone/throughline-design-system',
       version: '9.9.9',
     })
 
     expect(await loadPackageVersions(join(pkgDir, 'dist', 'templates'))).toEqual({
-      version_design_contract: '0.6.0',
+      version_design_system: '0.6.0',
     })
   })
 
   it('falls back to the workspace when running from source', async () => {
     await pkg('throughline', { name: '@forumone/throughline', version: '1.0.0' })
-    await pkg('design-contract', {
-      name: '@forumone/throughline-design-contract',
+    await pkg('design-system', {
+      name: '@forumone/throughline-design-system',
       version: '0.6.0',
     })
     const templatesDir = join(root, 'packages', 'create-throughline', 'src', 'templates')
@@ -75,7 +75,7 @@ describe('package versions', () => {
 
     expect(await loadPackageVersions(templatesDir)).toEqual({
       version_throughline: '1.0.0',
-      version_design_contract: '0.6.0',
+      version_design_system: '0.6.0',
     })
   })
 })

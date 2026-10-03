@@ -134,6 +134,6 @@ The audit writer reads these fields and stores them on every record so "why did 
 
 ## Related
 
-- `@forumone/throughline-design-contract` — the manifest schema this plugin reads
+- `@forumone/throughline-design-system/contract` — the manifest schema this plugin reads
 - `@forumone/throughline-reference-ds` — reference DS used as a test fixture and a starting point for clients
 - `@forumone/throughline` — required peer; provides the audit log, MCP handler, and `withMeta` helper this plugin builds on

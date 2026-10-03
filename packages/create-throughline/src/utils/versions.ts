@@ -8,8 +8,8 @@ const BARE_NAME = '@forumone/throughline'
 
 /**
  * The version of every Throughline package the scaffold depends on, keyed for
- * the template renderer: `@forumone/throughline-design-contract` becomes
- * `version_design_contract`, rendered as `"^{{version_design_contract}}"`.
+ * the template renderer: `@forumone/throughline-design-system` becomes
+ * `version_design_system`, rendered as `"^{{version_design_system}}"`.
  *
  * The ranges used to be typed into the templates by hand, and nothing moved
  * them: they sat at `^0.2.0` — which for a 0.x version admits patches only —

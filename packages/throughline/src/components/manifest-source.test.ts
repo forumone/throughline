@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Payload } from 'payload'
-import type { Manifest } from '@forumone/throughline-design-contract'
+import type { Manifest } from '@forumone/throughline-design-system/contract'
 import { createManifestLoader } from './manifest-source.js'
 
 const minimalManifest: Manifest = {

@@ -60,7 +60,7 @@ my-site/
 
 - `apps/web/src/access/anonymousAccess.test.ts` calls `describeAnonymousAccess` from `@forumone/throughline-core/testing`. It holds every collection in the config, including the ones plugins add, to a bucket: either `renderPath` (read anonymously by the site) or `private`. The scaffold's `pages` collection has a published-or-signed-in `read` rule for this reason. `pnpm test` runs it in CI's `fast` job, and `check:tested` has no exception for `apps/web`.
 - `apps/web/e2e` is a Playwright smoke pack. It checks the front door, a 404, the admin sign-in screen, and anonymous REST reads. It runs in `verify` after the build, against the database that job migrates. Checks for routes a new project does not serve are listed in `e2e/site.ts` as work to do when the route exists: security headers, `robots.txt`, the sitemap, `llms.txt` and draft mode.
-- There are no block tests. The scaffold does not generate Payload blocks, and `@forumone/throughline-design-system-payload`, whose `describeBlockInvariants` and `check-block-props` would test them, is not published.
+- There are no block tests. The scaffold does not generate Payload blocks, and `@forumone/throughline-design-system/generate`, whose `describeBlockInvariants` and `check-block-props` would test them, is not published.
 
 ## Public API
 

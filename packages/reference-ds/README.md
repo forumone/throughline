@@ -70,7 +70,7 @@ The aggregated manifest ships at the `./manifest` subpath. Component servers, li
 
 ```ts
 import manifest from '@forumone/throughline-reference-ds/manifest'
-import { loadManifest } from '@forumone/throughline-design-contract'
+import { loadManifest } from '@forumone/throughline-design-system/contract'
 
 const loaded = loadManifest(manifest)
 console.log(loaded.listComponents())
@@ -110,10 +110,10 @@ pnpm --filter @forumone/throughline-reference-ds build-storybook
 pnpm --filter @forumone/throughline-reference-ds validate
 ```
 
-`validate` runs `lintManifest` from `@forumone/throughline-design-contract/lint` against the generated manifest. Errors fail the build; warnings print but pass.
+`validate` runs `lintManifest` from `@forumone/throughline-design-system/lint` against the generated manifest. Errors fail the build; warnings print but pass.
 
 ## Authoring your own design system
 
 Use this package as a reference. Each component has a `.contract.ts` file; every contract satisfies `ComponentContractSchema`. Copy the structure, replace the content, and your design system becomes a valid input to Throughline.
 
-The authoring guide lives at `docs/building-plugins.md` (for MCP plugins) and the contract authoring expectations live in `@forumone/throughline-design-contract`'s README.
+The authoring guide lives at `docs/building-plugins.md` (for MCP plugins) and the contract authoring expectations live in `@forumone/throughline-design-system/contract`'s README.

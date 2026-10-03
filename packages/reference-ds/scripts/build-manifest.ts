@@ -5,7 +5,7 @@ import {
   CONTRACT_VERSION,
   ManifestSchema,
   type ComponentContract,
-} from '@forumone/throughline-design-contract'
+} from '@forumone/throughline-design-system/contract'
 import { getTokenList } from '../src/tokens/index.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
