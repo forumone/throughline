@@ -33,7 +33,7 @@ Spec: [`docs/spec/1.0-plan.md`](spec/1.0-plan.md). Checklists are [below](#throu
 | [1.0-P0](#10-p0--stabilize-0x) | Stabilize 0.x | ✅ Done |
 | [1.0-P1](#10-p1--jobs-interface-0x) | Jobs interface (0.x) | ✅ Done |
 | [1.0-P2](#10-p2--moves-and-mcp-tools-0x) | Moves and MCP tools (0.x) | ✅ Done |
-| [1.0-P3](#10-p3--consolidate-and-release-10) | Consolidate and release 1.0 | ⬜ Not started |
+| [1.0-P3](#10-p3--consolidate-and-release-10) | Consolidate and release 1.0 | 🟡 In progress |
 | [1.0-P4](#10-p4--migrate-forumone-2026) | Migrate forumone-2026 | ⬜ Not started |
 | [1.0-P5](#10-p5--after-10) | After 1.0 | ⬜ When a second site arrives |
 
@@ -454,9 +454,9 @@ Promoted to forumone-2026's production 2026-10-02 (`live` at forumone-2026 `c331
 
 Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 
-- [ ] Cut `v0` from the last 0.x release. `release.yml` runs on `v0` as well, and `v0`'s changesets config sets `baseBranch: "v0"`
+- [x] Cut `v0` from the last 0.x release. `release.yml` runs on `v0` as well, and `v0`'s changesets config sets `baseBranch: "v0"` (#239, #240; `v0` cut at `fb354b9`, whose packages are #237's release)
 - [ ] forumone-2026's `check-throughline-pin.sh` accepts `main` or `v0`, and its `CLAUDE.md` says platform fixes start from `v0`
-- [ ] Enter changesets pre-release mode on `main` (`1.0.0-next.N`)
+- [x] Enter changesets pre-release mode on `main` (`1.0.0-next.N`), with `CONTRIBUTING.md` saying where a 0.x fix goes
 - [ ] Consolidate into `@forumone/throughline` with subpath exports, folding workflows into its owners (publishing, approvals, audit, integrations)
 - [ ] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today)
 - [ ] Fold reference-ds into create-throughline as template and test fixture
