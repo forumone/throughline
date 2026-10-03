@@ -81,7 +81,7 @@ The `users` collection has a `roles` field. Common roles:
 
 Roles gate some MCP tools, not all. The audit read tools give `admin` and `editor` everything and scope anyone else to their own actions. The integrations tools let `admin` and `editor` read and test, and only `admin` trigger a sync. The publishing and approvals tools refuse a call with no user, and `respond_to_approval` requires the caller to be in one of the request's approver groups and not its requester. The component tools check no role: any key whose checkbox allows them can call them. `check_slug` and the references tools take a `canUse` option for a stricter rule.
 
-Forms, and the `form-admin` role it brought, are not part of 1.0; they stay on the 0.x line (the `v0` branch).
+Forms, and the `form-admin` role it brought, are not part of 1.0. Forms' last release is `@forumone/throughline-forms@0.7.9`, its source is on the closed `v0` branch, and 0.x receives no more releases.
 
 Custom roles are easy: add to the `users.roles` field options, add to the access function for whatever resources you're gating.
 

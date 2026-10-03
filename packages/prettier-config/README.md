@@ -1,15 +1,13 @@
 # @forumone/throughline-prettier-config
 
-Internal shared Prettier config. Not published.
+Internal shared Prettier config. Private: a workspace package, never published.
 
-## Usage
+Nothing consumes it. The root `.prettierrc.json`, which every package in the repository formats by, repeats the same six settings rather than pointing at this package, so a change here changes nothing until you make it there too.
 
-In a package's `package.json`:
+To use it from a package in this repository, add it as a `workspace:*` devDependency and name it in that package's `package.json`:
 
 ```json
 {
   "prettier": "@forumone/throughline-prettier-config"
 }
 ```
-
-The monorepo root applies these settings via `.prettierrc.json` → `{ "extends": "@forumone/throughline-prettier-config" }` pattern is not directly supported; instead the root `.prettierrc.json` mirrors these values. The package exists so client projects can share the same formatting.

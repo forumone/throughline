@@ -22,7 +22,9 @@ export function printNextSteps(answers: Answers): void {
   lines.push(
     formatStep(
       step++,
-      `Copy ${pc.bold('.env.example')} to ${pc.bold('.env.local')} and fill in values`,
+      // apps/web, not the root: `next dev` reads env files from its own
+      // directory, and the Payload CLI looks there before walking up.
+      `Copy ${pc.bold('.env.example')} to ${pc.bold('apps/web/.env.local')} and fill in values`,
     ),
   )
 
@@ -63,7 +65,7 @@ export function printNextSteps(answers: Answers): void {
     ),
   )
   lines.push(
-    formatStep(step++, 'In the admin, create one key under MCP → Payload MCP API Keys'),
+    formatStep(step++, 'In the admin, create one key under MCP → API Keys'),
   )
   lines.push(
     formatStep(

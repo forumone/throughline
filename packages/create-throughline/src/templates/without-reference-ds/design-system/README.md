@@ -17,4 +17,4 @@ pnpm --filter "./design-system" build-storybook   # static Storybook
 pnpm --filter "./design-system" typecheck
 ```
 
-Point the Components MCP server at your manifest in `apps/web/src/payload.config.ts` (`componentsPlugin({ manifest })`) once you generate one. For a worked starting point, re-scaffold with the reference design system.
+Point `components.manifest` in the `throughline()` call in `apps/web/src/payload.config.ts` at your manifest once you generate one; until then it names a placeholder URL. For a worked starting point, re-scaffold with the reference design system.

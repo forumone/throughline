@@ -1,13 +1,13 @@
 # @forumone/throughline-eslint-config
 
-Internal shared ESLint flat config. Not published.
+Internal shared ESLint flat config. Private: a workspace package, never published, so only packages in this repository can use it (as a `workspace:*` devDependency).
 
 ## Entries
 
-| Export                                      | Use for                                            |
-| ------------------------------------------- | -------------------------------------------------- |
-| `@forumone/throughline-eslint-config`       | Node/TS library packages (default).                |
-| `@forumone/throughline-eslint-config/react` | Packages with JSX/TSX (reference DS, client apps). |
+| Export                                      | Use for                                                                                                                                               |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@forumone/throughline-eslint-config`       | Every package here: `throughline`, `design-system`, `create-throughline`, the reference DS and the playground.                                        |
+| `@forumone/throughline-eslint-config/react` | Adds React and React Hooks rules for JSX/TSX. Nothing in the repository extends it today; the design system and the reference DS use the base config. |
 
 ## What it enforces
 

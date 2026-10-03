@@ -22,7 +22,7 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C11](#c11--email-package) | Email Package | ✅ Done |
 | [C12](#c12--forms-package) | Forms Package | ✅ Done |
 | [C13](#c13--cli-scaffolder) | CLI Scaffolder | ✅ Done |
-| [C14](#c14--documentation-site) | Documentation (markdown only; site deferred) | ✅ Done |
+| [C14](#c14--documentation) | Documentation (markdown only; site deferred) | ✅ Done |
 
 ### Throughline 1.0
 
@@ -505,5 +505,5 @@ When a second site shows which configuration points are real: Okta generalised t
 Left from P3 and P4, each documented as it stands until fixed:
 
 - [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw. Each needs a value in the audit log's `mcp_server` enum, which is a migration in every host, so it ships with one
-- [ ] The scaffold: `.env.local` written at the root, where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording
+- [x] The scaffold: `.env.local` written at the root, where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording. Now `apps/web/.env.local`; the first account is the admin and every later one an editor, with roles and groups admin-set; the wording with the template docs sweep
 - [x] `request_approval` stores the request and then reports the call as failed when its `approval/requested` event cannot be sent; publishing treats the same failure as a warning on a write that landed. Now a warning in `request_approval`, `respond_to_approval` and the email action endpoint — which also could not record a decision on Postgres, its `decidedBy` the same string-id defect #270 fixed in the tools
