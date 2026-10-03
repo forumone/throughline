@@ -487,7 +487,7 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
     - [ ] the scaffold: `.env.local` at the root where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording. Not taken for 1.0: it affects new projects only
 - [x] PR snapshots (`pr` dist-tag) and `next` snapshots on merge (#264). Every pull request touching a package publishes `<version>-pr-<n>-<sha>` under `pr`, first `1.0.0-pr-264-881f3a4`; the `next` snapshot of each merge to `main` starts once pre-release mode is exited
 - [x] forumone-2026's `chore/throughline-next` builds against each `next.N`: forumone-2026#814, draft, green in `fast` and `verify` on `1.0.0-next.2`. It is the P4 migration rehearsed — no schema change, every function id and MCP tool unchanged — and becomes the P4 pull request at `1.0.0`
-- [ ] Exit pre-release mode and release `1.0.0`
+- [x] Exit pre-release mode and release `1.0.0` (#266, #268; released 2026-10-03). `v0` now publishes under the `v0` dist-tag so a 0.x fix cannot move `latest` (#267)
 
 ### 1.0-P4 — Migrate forumone-2026
 
