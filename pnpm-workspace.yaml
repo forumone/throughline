@@ -1,3 +1,6 @@
 packages:
   - 'packages/*'
+  # The reference design system: the scaffold's template source and a test
+  # fixture, private to create-throughline.
+  - 'packages/create-throughline/reference-ds'
   - 'apps/*'

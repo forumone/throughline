@@ -463,7 +463,7 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
     - [x] workflows, split by owner into `/jobs`, `/jobs/inngest`, `/jobs/payload`, `/publishing`, `/approvals`, `/audit`, `/integrations` and `/cache-tags`; the six Inngest-shaped factories removed (#246)
     - [x] audit, approvals, components, integrations and email; email's three Inngest-shaped factories removed, and every internal import pointed at its declaring module rather than an entry (#247)
 - [x] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today); it builds to `dist` now, rather than shipping TypeScript source
-- [ ] Fold reference-ds into create-throughline as template and test fixture
+- [x] Fold reference-ds into create-throughline as template and test fixture: private, at `packages/create-throughline/reference-ds`, still the one source the scaffold vendors from
 - [x] Make plugin-contract, the capability registry and the MCP collector internal, with the accessors the Inngest route used (`getEmailFunctions`, `getIntegrationRegistry`, `getIntegrationContext`)
 - [x] `throughline({...})` registers every plugin in order and wires the MCP collector (spec: `docs/spec/1.0-throughline-call.md`, #250); it also lists the jobs the options call for, and the playground and scaffold use it
 - [x] `resend`, React Email and `inngest` become optional peers, loaded only by the subpath that needs them; `payload` is the one required peer, and `src/peers.test.ts` holds every entry to its table

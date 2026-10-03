@@ -15,7 +15,10 @@ with. Then each broken one at a time, to show they fail when they should.
 */
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const referenceComponents = path.resolve(here, '../../../reference-ds/src/components')
+const referenceComponents = path.resolve(
+  here,
+  '../../../create-throughline/reference-ds/src/components',
+)
 
 /** The reference design system's contracts, read the way its manifest build reads them. */
 async function referenceContracts(): Promise<Record<string, ManifestComponent>> {
@@ -58,18 +61,18 @@ describeBlockInvariants(blocks, { minBlocks: 10, title: 'the reference design sy
 // The plain `Block[]` a site's registry usually exports, with the manifest
 // beside it — the other way of saying where the contracts are.
 describeBlockInvariants(
-  blocks.map(generated => generated.block),
+  blocks.map((generated) => generated.block),
   { manifest, minBlocks: 10, title: 'the reference design system, as plain blocks' },
 )
 
 const blockNamed = (slug: string): GeneratedBlock => {
-  const found = blocks.find(candidate => candidate.block.slug === slug)
+  const found = blocks.find((candidate) => candidate.block.slug === slug)
   if (!found) throw new Error(`No generated block ${slug}`)
   return found
 }
 
 const fieldsOf = (fields: Field[]): Array<Field & { name: string; defaultValue?: unknown }> =>
-  fields.flatMap(field =>
+  fields.flatMap((field) =>
     'name' in field && typeof field.name === 'string'
       ? [field as Field & { name: string }]
       : 'fields' in field && Array.isArray(field.fields)
@@ -85,7 +88,7 @@ describe('the reference blocks', () => {
   */
   it('starts Divider decorative, as the component does', () => {
     const decorative = fieldsOf(blockNamed('Divider').block.fields).find(
-      f => f.name === 'decorative',
+      (f) => f.name === 'decorative',
     )
     expect(decorative?.type).toBe('checkbox')
     expect(decorative?.defaultValue).toBe(true)
@@ -96,7 +99,7 @@ describe('the reference blocks', () => {
     // An optional group stores an object of its children's defaults, which is
     // the case `allOrNothing` has to read as untouched.
     expect(data.cta).toEqual({ url: { mode: 'internal' } })
-    expect(await checkUntouchedBlocks(blocks.map(b => b.block))).toEqual([])
+    expect(await checkUntouchedBlocks(blocks.map((b) => b.block))).toEqual([])
   })
 })
 

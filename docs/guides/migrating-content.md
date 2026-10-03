@@ -148,7 +148,7 @@ If your old CMS stored content as raw HTML and your new collection uses block-ba
 - **HTML to blocks**: write a parser that recognizes structural patterns (e.g., `<h2>` followed by `<p>` becomes a SectionIntro block). Lossy, but produces real composition.
 - **Single-block fallback**: dump the HTML into a single `Prose` block. Loses semantic structure but is one-line to implement; iterate later.
 
-Most clients start with the fallback and iterate. The constraint is whether your design system has a `Prose` (or similar) block that accepts arbitrary HTML — see [the reference DS Prose component](../../packages/reference-ds/src/components/Prose/Prose.tsx) for the shape.
+Most clients start with the fallback and iterate. The constraint is whether your design system has a `Prose` (or similar) block that accepts arbitrary HTML — see [the reference DS Prose component](../../packages/create-throughline/reference-ds/src/components/Prose/Prose.tsx) for the shape.
 
 ## Preserve `publishedAt` for SEO and ordering
 

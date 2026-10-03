@@ -1,43 +1,32 @@
-# @forumone/throughline-reference-ds
+# The reference design system
 
-A competent, brand-neutral reference design system that demonstrates contract compliance for Throughline. Twelve components, a CSS-variable token layer, a generated AI-ready manifest, and Storybook.
+A brand-neutral reference design system that demonstrates contract compliance for Throughline: twelve components, a CSS-variable token layer, a generated manifest, and Storybook.
 
-## What this package provides
+**Private, and part of `@forumone/create-throughline`.** From 1.0 it is not published. It is two things:
 
-Twelve components covering the common editorial surface:
+- **The scaffold's design system.** `create-throughline` vendors its source into a new project's `design-system/` (`pnpm --filter @forumone/create-throughline sync-reference-ds`), and CI fails when the copy drifts. Change it here, then sync.
+- **A test fixture.** `@forumone/throughline/components` runs its tests against this manifest, and CI builds this Storybook and validates the manifest against it.
 
-| Component | Purpose |
-| --- | --- |
-| `Hero` | Page opener with headline, body, CTAs, optional media — three variants |
-| `SectionIntro` | h2-level section opener with optional eyebrow and body |
-| `Prose` | Typographic container for long-form rich-text content |
-| `MediaBlock` | Single image or video with optional caption and aspect ratios |
-| `Card` | Linked or static content card with image, title, description, link |
-| `CardGrid` | 2/3/4-column responsive layout for Cards |
-| `CTASection` | Page-bottom call to action with one or two buttons |
-| `Stats` | 2–4 headline metrics as a semantic `<dl>` |
-| `FAQ` | Disclosure-style Q&A using native `<details>`/`<summary>` |
-| `Quote` | Pullquote or testimonial with optional attribution |
-| `Divider` | Decorative or semantic horizontal rule |
-| `Spacer` | Explicit token-sized vertical spacing |
+Its last published version, `0.3.7`, stays on npm.
 
-Every component ships a `ComponentContract` that conforms to `@forumone/throughline-design-contract@^0.2.0`. The package exposes the aggregated manifest at the `./manifest` subpath so any MCP server or client app can read it directly.
+## The components
 
-## Three ways to use this package
+| Component      | Purpose                                                                |
+| -------------- | ---------------------------------------------------------------------- |
+| `Hero`         | Page opener with headline, body, CTAs, optional media — three variants |
+| `SectionIntro` | h2-level section opener with optional eyebrow and body                 |
+| `Prose`        | Typographic container for long-form rich-text content                  |
+| `MediaBlock`   | Single image or video with optional caption and aspect ratios          |
+| `Card`         | Linked or static content card with image, title, description, link     |
+| `CardGrid`     | 2/3/4-column responsive layout for Cards                               |
+| `CTASection`   | Page-bottom call to action with one or two buttons                     |
+| `Stats`        | 2–4 headline metrics as a semantic `<dl>`                              |
+| `FAQ`          | Disclosure-style Q&A using native `<details>`/`<summary>`              |
+| `Quote`        | Pullquote or testimonial with optional attribution                     |
+| `Divider`      | Decorative or semantic horizontal rule                                 |
+| `Spacer`       | Explicit token-sized vertical spacing                                  |
 
-**As a starting point.** Copy components into your own design system. Customize freely; keep what works.
-
-**As a test fixture.** Core framework packages (Component Server, Publishing Server) consume this DS to verify their behaviour against a realistic, contract-compliant design system.
-
-**As a demo.** Stand up a Throughline site in minutes using only these twelve components — useful for prototypes, internal tools, and pitches.
-
-## Installation
-
-```bash
-pnpm add @forumone/throughline-reference-ds
-```
-
-Peers: `react` + `react-dom` 18 or 19.
+Every component ships a `ComponentContract` that conforms to `@forumone/throughline-design-system/contract`. The aggregated manifest is at the `./manifest` subpath.
 
 ## Using components
 
@@ -83,8 +72,8 @@ Every token is exposed as a CSS variable on `:root`. Override them to rebrand wi
 
 ```css
 :root {
-  --color-brand-primary: #7E33FF;
-  --color-brand-primary-hover: #6420CC;
+  --color-brand-primary: #7e33ff;
+  --color-brand-primary-hover: #6420cc;
   --font-family-sans: 'DM Sans', system-ui, sans-serif;
 }
 ```
