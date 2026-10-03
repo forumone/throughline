@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createSchedulePublishTool } from './schedule-publish.js'
 import { anonymousContext, attachComponentValidator, callTool, makeDeps } from './_test-helpers.js'
-import { APPROVALS_RESOLVER_SYMBOL } from '../pipeline/steps/approval.js'
+import { APPROVALS_RESOLVER_SYMBOL } from '../../approvals/symbol.js'
 
 const passingDoc = {
   _status: 'draft',

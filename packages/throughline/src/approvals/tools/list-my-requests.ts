@@ -1,20 +1,22 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import { unwrapRelationshipId, withMeta } from '@forumone/throughline'
-import type { McpToolDefinition } from '@forumone/throughline'
+import { withMeta } from '../../index.js'
+import type { McpToolDefinition } from '../../index.js'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
 import { APPROVALS_TOOLS } from './descriptors.js'
 
-export interface ListPendingApprovalsDeps {
+export interface ListMyRequestsDeps {
   payload: Payload
   options: ApprovalsPluginOptions & { tokenSecret: string }
 }
 
-export function createListPendingApprovalsTool(
-  deps: ListPendingApprovalsDeps,
-): McpToolDefinition {
+export function createListMyRequestsTool(deps: ListMyRequestsDeps): McpToolDefinition {
   const inputSchema = withMeta({
+    status: z
+      .enum(['pending', 'granted', 'declined', 'changes-requested', 'expired'])
+      .optional()
+      .describe('Filter by status. Defaults to all.'),
     limit: z
       .number()
       .int()
@@ -25,37 +27,37 @@ export function createListPendingApprovalsTool(
   })
 
   return {
-    ...APPROVALS_TOOLS.listPendingApprovals,
+    ...APPROVALS_TOOLS.listMyRequests,
     inputSchema,
     handler: async (input, ctx) => {
-      if (!ctx.user) return { error: 'Must be authenticated to list pending approvals' }
-      const userGroups = ctx.user.groups
-      if (userGroups.length === 0) return { pending: [] }
+      if (!ctx.user) return { error: 'Must be authenticated to list approval requests' }
 
       const result = await deps.payload.find({
         collection: deps.options.collectionSlug ?? DEFAULT_APPROVALS_SLUG,
-        where: {
-          and: [
-            { status: { equals: 'pending' } },
-            { approverGroups: { in: userGroups } },
-          ],
-        },
+        where: input.status
+          ? {
+              and: [
+                { requestedBy: { equals: ctx.user.id } },
+                { status: { equals: input.status } },
+              ],
+            }
+          : { requestedBy: { equals: ctx.user.id } },
         limit: input.limit ?? 25,
         sort: '-requestedAt',
       })
 
       const docs = result.docs as Array<Record<string, unknown>>
       return {
-        pending: docs.map((doc) => ({
+        requests: docs.map((doc) => ({
           approvalId: String(doc['id']),
+          status: doc['status'],
           targetCollection: doc['targetCollection'],
           targetId: doc['targetId'],
           targetTitle: doc['targetTitle'],
-          changesSummary: doc['changesSummary'],
-          requestedBy: unwrapRelationshipId(doc['requestedBy']),
           requestedAt: doc['requestedAt'],
+          decidedAt: doc['decidedAt'],
+          decisionNotes: doc['decisionNotes'],
           expiresAt: doc['expiresAt'],
-          previewUrl: doc['previewUrl'],
         })),
       }
     },

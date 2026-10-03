@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
-import type { AuditWriter } from '@forumone/throughline/audit'
-import type { Logger, McpToolContext, McpToolDefinition } from '@forumone/throughline'
+import type { AuditWriter } from '../../audit/index.js'
+import type { Logger, McpToolContext, McpToolDefinition } from '../../index.js'
 import type { ApprovalsPluginOptions, ResolvedApprover } from '../options.js'
 
 const noopLogger: Logger = {

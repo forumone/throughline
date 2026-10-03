@@ -1,16 +1,8 @@
 import type { Payload } from 'payload'
-import type { ActiveApproval, ApprovalResolver } from '@forumone/throughline/publishing'
+import type { ActiveApproval, ApprovalResolver } from '../publishing/index.js'
 import { DEFAULT_APPROVALS_SLUG } from './collection.js'
+import { APPROVALS_RESOLVER_SYMBOL } from './symbol.js'
 
-/**
- * Symbol under which the resolver is attached to the Payload instance.
- * Publishing's `approvalStep` looks here when its `options.approvalResolver`
- * is not set; this is the wiring point that lets clients add the approvals
- * plugin without re-configuring publishing.
- */
-export const APPROVALS_RESOLVER_SYMBOL = Symbol.for(
-  '@forumone/throughline/approvals-resolver',
-)
 
 export interface CreateApprovalResolverOptions {
   payload: Payload

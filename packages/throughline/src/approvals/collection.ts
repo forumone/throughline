@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { type PluginAdminOptions, resolveAdminGroup } from '@forumone/throughline'
+import { type PluginAdminOptions, resolveAdminGroup } from '../index.js'
 
 export interface CreateApprovalsCollectionOptions {
   /** Override the collection slug. Default: 'approvals'. */

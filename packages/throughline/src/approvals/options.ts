@@ -1,10 +1,10 @@
-import { checkEnvValue, type McpToolCollector } from '@forumone/throughline'
+import { checkEnvValue, type McpToolCollector } from '../index.js'
 import type { Inngest } from 'inngest'
 import type {
   BaseCorePluginOptions,
   CollectionPluginOptions,
   EnvRequirement,
-} from '@forumone/throughline'
+} from '../index.js'
 
 export interface ApproverGroup {
   /** Group slug, referenced by the policy.approverGroups field on requests. */
