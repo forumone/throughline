@@ -1,5 +1,30 @@
 # @forumone/throughline
 
+## 1.1.0
+
+### Minor Changes
+
+- c897829: Every tool the suite serves records a `system.error` when it throws. Editorial (`find_content_needing_attention`, `get_content_calendar`, `list_my_work`, `search_content`), references (`find_references`, `can_delete`), `check_slug` and `list_job_failures` were added to the MCP collector without an audit writer, so a crash in them reached the log and nowhere else. They now record one, under four new `mcp_server` values: `editorial`, `references`, `fields`, `observability`.
+
+  **Upgrading: a migration.** The audit collection's `mcpServer` select gains four options, which on Postgres is four values on `enum_audit_events_mcp_server`. Run `migrate:create` (with `BLOB_READ_WRITE_TOKEN` set if you use the storage plugin) and apply it before deploying; nothing else changes. A plugin registered by hand without `auditPlugin` still works, and only logs a crash.
+
+### Patch Changes
+
+- 3406ccb: Approvals on Postgres, and approvals when an event cannot be sent:
+
+  - **Confirming a decision from an approval email works on Postgres.** The action endpoint wrote the token's approver id as a string into `decidedBy`, a relationship to a users collection whose ids are numbers there, so every emailed decision failed on Confirm. It now writes the id in the users collection's type, as `request_approval` and `respond_to_approval` do since 1.0.1.
+  - **A stored request or a recorded decision is reported as one when its event cannot be sent.** `request_approval`, `respond_to_approval` and the email action endpoint wrote first and then threw if `approval/requested`, `approval/decided` or `approval/discussed` failed to send, reporting an action that had landed as failed. The tools now return it with a `warnings` entry, and the endpoint shows the approver their confirmation and logs the warning — the same rule publishing follows. `sendEventSafely` moved to a shared module for it.
+
+- 8212772: `throughline-payload` fails a Payload CLI run that exits 0 without finishing.
+
+  Intermittently the Payload CLI's config `import()` never settles, and node exits
+  by itself with status 0 having printed nothing and done nothing
+  (payloadcms/payload#17757). A `migrate` that does that reports success over an
+  unmigrated database. Every Payload command that completes calls `process.exit`,
+  so the runner now preloads a guard that turns an exit nobody asked for into
+  status 70, with a message saying to run it again.
+  - @forumone/throughline-design-system@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes
