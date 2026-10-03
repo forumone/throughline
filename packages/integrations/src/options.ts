@@ -1,4 +1,4 @@
-import type { WorkflowFailureHandler } from '@forumone/throughline-workflows'
+import type { WorkflowFailureHandler } from '@forumone/throughline/jobs'
 import type { McpToolCollector } from '@forumone/throughline'
 import type { Inngest } from 'inngest'
 import type { BaseCorePluginOptions, CollectionPluginOptions } from '@forumone/throughline'

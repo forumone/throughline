@@ -21,9 +21,17 @@
       "types": "./dist/editorial/index.d.ts",
       "default": "./dist/editorial/index.js"
     },
+    "./approvals": {
+      "types": "./dist/approvals/index.d.ts",
+      "default": "./dist/approvals/index.js"
+    },
     "./audit": {
       "types": "./dist/audit/index.d.ts",
       "default": "./dist/audit/index.js"
+    },
+    "./integrations": {
+      "types": "./dist/integrations/index.d.ts",
+      "default": "./dist/integrations/index.js"
     },
     "./jobs": {
       "types": "./dist/jobs/index.d.ts",
@@ -32,6 +40,10 @@
     "./jobs/inngest": {
       "types": "./dist/jobs/inngest/index.d.ts",
       "default": "./dist/jobs/inngest/index.js"
+    },
+    "./jobs/payload": {
+      "types": "./dist/jobs/payload/index.d.ts",
+      "default": "./dist/jobs/payload/index.js"
     },
     "./media": {
       "types": "./dist/media/index.d.ts",
@@ -48,6 +60,10 @@
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
+    },
+    "./cache-tags": {
+      "types": "./dist/cache-tags.d.ts",
+      "default": "./dist/cache-tags.js"
     },
     "./client": {
       "types": "./dist/exports/client.d.ts",

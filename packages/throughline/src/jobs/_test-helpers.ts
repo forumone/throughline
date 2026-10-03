@@ -1,0 +1,203 @@
+import type { Inngest, InngestFunction } from 'inngest'
+import type { Payload } from 'payload'
+import { inngestJobs } from './inngest/adapter.js'
+import type { Job } from './types.js'
+
+/**
+ * A job as the Inngest function a site registers: what
+ * `inngestJobs(inngest).toFunction(job(options))` builds.
+ *
+ * The 0.x `create…Function` factories were exactly this, and these suites were
+ * written against them. They are gone in 1.0; each call site here became
+ * `asInngestFunction(<the job>, <the factory's options>)`, so every assertion
+ * still runs, through the path a site takes.
+ */
+export function asInngestFunction<Options>(
+  job: (options: Options) => Job,
+  options: Options & { inngest: Inngest },
+): InngestFunction.Any {
+  return inngestJobs(options.inngest).toFunction(job(options))
+}
+
+interface CreatedFunction {
+  id: string
+  options: Record<string, unknown>
+  handler: HandlerFn
+}
+
+type HandlerFn = (ctx: HandlerCtx) => Promise<unknown>
+
+export interface HandlerCtx {
+  event: { name: string; data: unknown; ts?: number }
+  step: {
+    run: <T>(name: string, fn: () => Promise<T>) => Promise<T>
+    sleepUntil: (name: string, until: Date) => Promise<void>
+    sendEvent: (name: string, event: { name: string; data: unknown }) => Promise<void>
+  }
+  logger: { info: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void; debug: (...args: unknown[]) => void }
+}
+
+/**
+ * Minimal fake Inngest client. Captures `createFunction` definitions so
+ * tests can run their handlers directly, and records `send` events so
+ * tests can assert on the fan-out.
+ */
+export interface FakeInngest {
+  inngest: Inngest
+  functions: CreatedFunction[]
+  sends: Array<{ name: string; data: unknown }>
+  /** Every `step.sleepUntil`, in order. The fake does not actually wait. */
+  sleeps: Array<{ name: string; until: Date }>
+  invoke: (
+    fnId: string,
+    event: { name: string; data: unknown; ts?: number },
+    logger?: Partial<HandlerCtx['logger']>,
+  ) => Promise<unknown>
+}
+
+export function createFakeInngest(): FakeInngest {
+  const functions: CreatedFunction[] = []
+  const sends: Array<{ name: string; data: unknown }> = []
+  const sleeps: Array<{ name: string; until: Date }> = []
+
+  const inngest = {
+    createFunction: (
+      options: Record<string, unknown> & { id: string },
+      handler: HandlerFn,
+    ): InngestFunction.Any => {
+      functions.push({ id: options.id, options, handler })
+      return { id: () => options.id } as unknown as InngestFunction.Any
+    },
+    send: async (event: { name: string; data: unknown } | Array<{ name: string; data: unknown }>) => {
+      const arr = Array.isArray(event) ? event : [event]
+      for (const item of arr) sends.push(item)
+    },
+  } as unknown as Inngest
+
+  return {
+    inngest,
+    functions,
+    sends,
+    sleeps,
+    invoke: async (fnId, event, logger) => {
+      const fn = functions.find((f) => f.id === fnId)
+      if (!fn) throw new Error(`Function "${fnId}" not registered`)
+      const ctx: HandlerCtx = {
+        event,
+        step: {
+          run: async (_name, run) => run(),
+          sleepUntil: async (name, until) => {
+            sleeps.push({ name, until })
+          },
+          sendEvent: async (_name, sent) => {
+            sends.push(sent)
+          },
+        },
+        logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {}, ...logger },
+      }
+      return fn.handler(ctx)
+    },
+  }
+}
+
+interface FindArgs {
+  collection: string
+  where?: { and?: Array<Record<string, Record<string, unknown>>> }
+  limit?: number
+  sort?: string
+  draft?: boolean
+}
+
+interface FindByIdArgs {
+  collection: string
+  id: string
+  draft?: boolean
+}
+
+interface UpdateArgs {
+  collection: string
+  id: string
+  data: Record<string, unknown>
+}
+
+export interface FakePayloadHandle {
+  payload: Payload
+  finds: FindArgs[]
+  findByIds: FindByIdArgs[]
+  updates: UpdateArgs[]
+  setDocs: (docs: Array<Record<string, unknown>>) => void
+}
+
+export function createFakePayload(initialDocs: Array<Record<string, unknown>> = []): FakePayloadHandle {
+  let docs = [...initialDocs]
+  const finds: FindArgs[] = []
+  const findByIds: FindByIdArgs[] = []
+  const updates: UpdateArgs[] = []
+
+  const payload = {
+    find: async (args: FindArgs) => {
+      finds.push(args)
+      const matched = docs.filter((doc) =>
+        (args.where?.and ?? []).every((condition) => matchCondition(doc, condition)),
+      )
+      return {
+        docs: matched.slice(0, args.limit ?? matched.length),
+        totalDocs: matched.length,
+        page: 1,
+        totalPages: 1,
+        limit: args.limit ?? matched.length,
+        hasNextPage: false,
+        hasPrevPage: false,
+        nextPage: null,
+        prevPage: null,
+        pagingCounter: 1,
+      }
+    },
+    // `disableErrors` semantics: a missing document is `null`, not a throw.
+    findByID: async (args: FindByIdArgs) => {
+      findByIds.push(args)
+      return docs.find((d) => String(d['id']) === args.id) ?? null
+    },
+    update: async (args: UpdateArgs) => {
+      updates.push(args)
+      docs = docs.map((doc) =>
+        String(doc['id']) === args.id ? { ...doc, ...args.data } : doc,
+      )
+      return docs.find((d) => String(d['id']) === args.id)
+    },
+  } as unknown as Payload
+
+  return {
+    payload,
+    finds,
+    findByIds,
+    updates,
+    setDocs: (next) => {
+      docs = next
+    },
+  }
+}
+
+function matchCondition(
+  doc: Record<string, unknown>,
+  condition: Record<string, Record<string, unknown>>,
+): boolean {
+  const [field, ops] = Object.entries(condition)[0] ?? ['', {}]
+  if (!field) return true
+  const value = doc[field]
+  for (const [op, operand] of Object.entries(ops)) {
+    if (op === 'equals' && value !== operand) return false
+    if (op === 'less_than') {
+      if (!(typeof value === 'string' && value < String(operand))) return false
+    }
+    if (op === 'less_than_equal') {
+      if (!(typeof value === 'string' && value <= String(operand))) return false
+    }
+    if (op === 'exists') {
+      const present = value !== undefined && value !== null && value !== ''
+      if (operand === true && !present) return false
+      if (operand === false && present) return false
+    }
+  }
+  return true
+}

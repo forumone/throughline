@@ -3,20 +3,21 @@ import { serve } from 'inngest/next'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { cacheTags } from '@/lib/cache-tags'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+import { createInngestClient, inngestJobs } from '@forumone/throughline/jobs/inngest'
 import {
-  createAuditEventEchoFunction,
-  createExecuteScheduledPublishesFunction,
-  createExpireStaleApprovalsFunction,
   createHealthcheckFailureHandler,
-  createHealthcheckFunction,
-  createPayloadReachableCheck,
-  createPublishAtScheduledTimeFunction,
-  createRevalidateOnPublishFunction,
   createTerminalFailureHandler,
+} from '@forumone/throughline/jobs'
+import {
+  executeScheduledPublishesJob,
+  getPublishingService,
+  publishAtScheduledTimeJob,
+  revalidateOnPublishJob,
   type ScheduledPublishRequest,
-} from '@forumone/throughline-workflows'
-import { getPublishingService } from '@forumone/throughline/publishing'
+} from '@forumone/throughline/publishing'
+import { expireStaleApprovalsJob } from '@forumone/throughline/approvals'
+import { auditEventEchoJob } from '@forumone/throughline/audit'
+import { createPayloadReachableCheck, healthcheckJob } from '@forumone/throughline/integrations'
 import { getEmailFunctions } from '@forumone/throughline-email'
 import { getFormsFunctions } from '@forumone/throughline-forms'
 import {
@@ -28,11 +29,18 @@ const inngest = createInngestClient({ id: '{{projectName}}' })
 const payload = await getPayload({ config })
 
 /*
-A workflow that runs out of retries is logged, recorded in the `job-failures`
-collection, and posted to ERROR_WEBHOOK_URL if that is set. Passed to every
-factory below: a factory without it fails silently into Inngest's dashboard.
+A job that runs out of retries is logged, recorded in the `job-failures`
+collection, and posted to ERROR_WEBHOOK_URL if that is set. Given once, to the
+jobs adapter, which hands it to every platform job below.
 */
 const onTerminalFailure = createTerminalFailureHandler({ payload })
+
+/*
+The platform's jobs, on Inngest. Each keeps the function id it has always had,
+so a run in flight survives an upgrade. A site on Payload Jobs registers the
+same jobs with `payloadJobs()` from `@forumone/throughline/jobs/payload`.
+*/
+const jobs = inngestJobs(inngest, { onFailure: onTerminalFailure, payload })
 
 const emailFunctions = getEmailFunctions(payload) ?? []
 const formsFunctions = getFormsFunctions(payload) ?? []
@@ -81,40 +89,28 @@ const integrationFunctions =
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
-    createRevalidateOnPublishFunction({
-      inngest,
-      payload,
-      urlBuilders,
-      cacheTags,
-      onTerminalFailure,
-    }),
-    // On time: sleeps until each document's scheduled time.
-    createPublishAtScheduledTimeFunction({
-      inngest,
-      payload,
-      collections: scheduledCollections,
-      publish: publishScheduled,
-      onTerminalFailure,
-    }),
-    // The backstop, for a schedule whose wake-up event never arrived.
-    createExecuteScheduledPublishesFunction({
-      inngest,
-      payload,
-      collections: scheduledCollections,
-      publish: publishScheduled,
-      schedule: '17 3 * * *',
-      overdueByMs: 60 * 60 * 1000,
-      onTerminalFailure,
-    }),
-    createExpireStaleApprovalsFunction({ inngest, payload, onTerminalFailure }),
-    createAuditEventEchoFunction({ inngest, onTerminalFailure }),
-    createHealthcheckFunction({
-      inngest,
-      payload,
-      checks: [createPayloadReachableCheck()],
-      onFailure: createHealthcheckFailureHandler({ payload }),
-      onTerminalFailure,
-    }),
+    ...jobs.functions([
+      revalidateOnPublishJob({ urlBuilders, cacheTags }),
+      // On time: sleeps until each document's scheduled time.
+      publishAtScheduledTimeJob({
+        collections: scheduledCollections,
+        publish: publishScheduled,
+      }),
+      // The backstop, for a schedule whose wake-up event never arrived.
+      executeScheduledPublishesJob({
+        collections: scheduledCollections,
+        publish: publishScheduled,
+        schedule: '17 3 * * *',
+        overdueByMs: 60 * 60 * 1000,
+      }),
+      expireStaleApprovalsJob({}),
+      auditEventEchoJob({}),
+      healthcheckJob({
+        checks: [createPayloadReachableCheck()],
+        // The healthcheck's own: called on the first failing run, not after retries.
+        onFailure: createHealthcheckFailureHandler({ payload }),
+      }),
+    ]),
     ...emailFunctions,
     ...formsFunctions,
     ...integrationFunctions,

@@ -1,6 +1,6 @@
 import { checkEnvValue } from '@forumone/throughline'
 import type { Inngest } from 'inngest'
-import type { WorkflowFailureHandler } from '@forumone/throughline-workflows'
+import type { WorkflowFailureHandler } from '@forumone/throughline/jobs'
 import type { BaseCorePluginOptions, EnvRequirement } from '@forumone/throughline'
 import type { EmailBrandTokens } from './tokens.js'
 

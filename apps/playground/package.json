@@ -25,7 +25,6 @@
     "@forumone/throughline-design-contract": "workspace:*",
     "@forumone/throughline-integrations": "workspace:*",
     "@forumone/throughline-reference-ds": "workspace:*",
-    "@forumone/throughline-workflows": "workspace:*",
     "@payloadcms/db-postgres": "^3.83.0",
     "@payloadcms/next": "^3.83.0",
     "@payloadcms/plugin-mcp": "3.90.2",

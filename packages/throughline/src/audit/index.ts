@@ -9,3 +9,11 @@ export type { AuditWriter, AuditWriterOptions, AuditEventInput, AuditActor } fro
 
 export { AUDIT_ACTIONS, AUDIT_MCP_SERVERS } from './types.js'
 export type { AuditAction, AuditMcpServer } from './types.js'
+
+// The job that fans an audit event out to its follow-ons (approval emails).
+export { auditEventEchoJob } from './jobs/audit-event-echo.js'
+export type {
+  AuditEchoEvent,
+  AuditEchoHandler,
+  AuditEventEchoOptions,
+} from '../jobs/workflow-types.js'

@@ -31,7 +31,6 @@
     "@forumone/throughline-email": "^{{version_email}}",
     "@forumone/throughline-forms": "^{{version_forms}}",
     "@forumone/throughline-integrations": "^{{version_integrations}}",
-    "@forumone/throughline-workflows": "^{{version_workflows}}",
     {{#if useReferenceDs}}"@forumone/throughline-design-contract": "^{{version_design_contract}}",
     "{{designSystemName}}": "workspace:*",
     {{/if}}"@payloadcms/db-postgres": "^3.89.0",

@@ -9,7 +9,7 @@ import { createSyncEndpoint } from './endpoints/sync.js'
 import { createStatusWriter } from './sync/status.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { Integration, IntegrationContext } from './types.js'
-import { createTerminalFailureHandler, type Job, type JobContext } from '@forumone/throughline-workflows'
+import { createTerminalFailureHandler, type Job, type JobContext } from '@forumone/throughline/jobs'
 import {
   INTEGRATIONS_TOOL_DESCRIPTORS,
   createGetIntegrationStatusTool,

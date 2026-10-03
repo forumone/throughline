@@ -77,7 +77,9 @@ async function exportsOf(file: string, seen = new Set<string>()): Promise<Set<st
 
 /**
  * `import { a, type B, c as d } from '@forumone/throughline-x'` -> ['x', '', ['a', 'B', 'c']],
- * and `'@forumone/throughline-x/testing'` -> ['x', 'testing', [...]].
+ * `'@forumone/throughline-x/testing'` -> ['x', 'testing', [...]], and
+ * `'@forumone/throughline/jobs/inngest'` -> ['throughline', 'jobs/inngest', [...]]: the 1.0
+ * package, whose name has no suffix and whose subpaths can nest.
  */
 function throughlineImports(file: string, text: string): Array<[string, string, string[]]> {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -85,18 +87,37 @@ function throughlineImports(file: string, text: string): Array<[string, string, 
   for (const statement of source.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier))
       continue
-    const match = /^@forumone\/throughline-([a-z-]+)(?:\/([a-z-]+))?$/.exec(
+    const match = /^@forumone\/throughline(?:-([a-z-]+))?(?:\/([a-z/-]+))?$/.exec(
       statement.moduleSpecifier.text,
     )
     const bindings = statement.importClause?.namedBindings
     if (!match || !bindings || !ts.isNamedImports(bindings)) continue
     found.push([
-      match[1]!,
+      match[1] ?? 'throughline',
       match[2] ?? '',
       bindings.elements.map((element) => (element.propertyName ?? element.name).text),
     ])
   }
   return found
+}
+
+/**
+ * The source file a package's `exports` entry points at, as an installed site
+ * would resolve it: `./dist/jobs/inngest/index.js` -> `src/jobs/inngest/index.ts`.
+ * Undefined for a subpath the package does not export.
+ */
+async function entryFor(pkg: string, subpath: string): Promise<string | undefined> {
+  const manifest = JSON.parse(await readFile(join(PACKAGES_DIR, pkg, 'package.json'), 'utf-8')) as {
+    exports?: Record<string, string | { import?: string; default?: string }>
+  }
+  const entry = manifest.exports?.[subpath ? `./${subpath}` : '.']
+  const target = typeof entry === 'string' ? entry : (entry?.import ?? entry?.default)
+  if (!target) return undefined
+  const base = join(PACKAGES_DIR, pkg, target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, ''))
+  for (const candidate of [base, `${base}.ts`, `${base}.tsx`]) {
+    if (/\.tsx?$/.test(candidate) && existsSync(candidate)) return candidate
+  }
+  return undefined
 }
 
 for (const useReferenceDs of [true, false]) {
@@ -137,18 +158,14 @@ for (const useReferenceDs of [true, false]) {
       for (const file of files) {
         const text = await readFile(join(target, file), 'utf-8')
         for (const [pkg, subpath, names] of throughlineImports(file, text)) {
-          const specifier = `@forumone/throughline-${pkg}${subpath ? `/${subpath}` : ''}`
-          const entry = join(PACKAGES_DIR, pkg, 'src', subpath, 'index.ts')
-          expect(existsSync(entry), `${file} imports ${specifier}`).toBe(true)
-          if (subpath) {
-            // A subpath the package does not export resolves nowhere once
-            // installed, whatever its source tree holds.
-            const manifest = JSON.parse(
-              await readFile(join(PACKAGES_DIR, pkg, 'package.json'), 'utf-8'),
-            ) as { exports?: Record<string, unknown> }
-            expect(manifest.exports?.[`./${subpath}`], `${specifier} is not exported`).toBeDefined()
-          }
-          const exported = await exportsOf(entry)
+          const name =
+            pkg === 'throughline' ? '@forumone/throughline' : `@forumone/throughline-${pkg}`
+          const specifier = `${name}${subpath ? `/${subpath}` : ''}`
+          // Through the package's `exports`: a subpath it does not export
+          // resolves nowhere once installed, whatever its source tree holds.
+          const entry = await entryFor(pkg, subpath)
+          expect(entry, `${file} imports ${specifier}, which is not exported`).toBeDefined()
+          const exported = await exportsOf(entry!)
           for (const name of names) {
             checked += 1
             if (!exported.has(name)) missing.push(`${file}: ${name} from ${specifier}`)

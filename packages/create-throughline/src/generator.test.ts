@@ -108,10 +108,10 @@ describe('generate (with reference DS)', () => {
         }
       }
     }
-    // Nine in apps/web (@forumone/throughline, seven plugins still outside it,
+    // Eight in apps/web (@forumone/throughline, six plugins still outside it,
     // and design-contract), one in the design system. Falls as the 1.0
     // consolidation folds each plugin in.
-    expect(ranges).toHaveLength(10)
+    expect(ranges).toHaveLength(9)
     // A hand-typed range left them at ^0.2.0 — patches only, for a 0.x version —
     // while the packages reached 0.9. Every range must be read, not typed.
     for (const [name, range] of ranges) {
@@ -239,12 +239,13 @@ describe('generate (with reference DS)', () => {
   it('inngest endpoint registers all framework functions', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
-    expect(route).toContain('createRevalidateOnPublishFunction')
-    expect(route).toContain('createExecuteScheduledPublishesFunction')
-    expect(route).toContain('createPublishAtScheduledTimeFunction')
-    expect(route).toContain('createExpireStaleApprovalsFunction')
-    expect(route).toContain('createAuditEventEchoFunction')
-    expect(route).toContain('createHealthcheckFunction')
+    expect(route).toContain('...jobs.functions([')
+    expect(route).toContain('revalidateOnPublishJob(')
+    expect(route).toContain('executeScheduledPublishesJob(')
+    expect(route).toContain('publishAtScheduledTimeJob(')
+    expect(route).toContain('expireStaleApprovalsJob(')
+    expect(route).toContain('auditEventEchoJob(')
+    expect(route).toContain('healthcheckJob(')
     expect(route).toContain('getEmailFunctions')
     expect(route).toContain('getFormsFunctions')
     expect(route).toContain('getIntegrationRegistry')
@@ -262,12 +263,10 @@ describe('generate (with reference DS)', () => {
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
     const tags = await readFile(join(target, 'apps/web/src/lib/cache-tags.ts'), 'utf-8')
 
-    expect(tags).toContain("from '@forumone/throughline-workflows/cache-tags'")
+    expect(tags).toContain("from '@forumone/throughline/cache-tags'")
     expect(tags).toContain('export const cacheTags = createCacheTags(')
     expect(route).toContain("import { cacheTags } from '@/lib/cache-tags'")
-    expect(route).toMatch(
-      /createRevalidateOnPublishFunction\(\{\s+inngest,\s+payload,\s+urlBuilders,\s+cacheTags,\s+onTerminalFailure,\s+\}\)/,
-    )
+    expect(route).toContain('revalidateOnPublishJob({ urlBuilders, cacheTags })')
     expect(route).toMatch(/const urlBuilders = \{\s+pages:/)
     expect(config).toContain("import { cacheTags } from './lib/cache-tags'")
     expect(config).toContain('createTagRevalidationHooks({ cacheTags })')
@@ -280,8 +279,9 @@ describe('generate (with reference DS)', () => {
     const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
     expect(route).toContain('const onTerminalFailure = createTerminalFailureHandler({ payload })')
     expect(route).toContain('onFailure: createHealthcheckFailureHandler({ payload })')
-    // Every framework factory gets the handler: the declaration, then six uses.
-    expect(route.match(/onTerminalFailure[,\s}]/g)?.length).toBe(1 + 6)
+    // Every platform job gets the handler, through the adapter: declared once, used once.
+    expect(route).toContain('inngestJobs(inngest, { onFailure: onTerminalFailure, payload })')
+    expect(route.match(/onTerminalFailure[,\s}]/g)?.length).toBe(1 + 1)
 
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
     expect(config).toContain('jobFailuresPlugin({})')

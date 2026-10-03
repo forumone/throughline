@@ -5,26 +5,30 @@ Inngest client, the field kit, media hardening and reference tracking, error rep
 checks and a logger. Each part lives on its own subpath.
 
 > **1.0 is in progress.** This package is being assembled from the 0.x packages: so far
-> `@forumone/throughline-core`, `-plugin-contract` and `-publishing`; the other plugins move in over
-> the next releases. [`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md) maps every
+> `@forumone/throughline-core`, `-plugin-contract`, `-publishing` and `-workflows`; the other plugins
+> move in over the next releases. [`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md) maps every
 > 0.x import to its 1.0 path. Pre-releases publish as `1.0.0-next.N` under the `next` dist-tag.
 
 ## What's inside
 
-| Subpath           | Holds                                                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| (root)            | `assertEnvironment`, `checkEnvValue`, `hardenCoreCollections`, `mcpApiKeyAccess`, `withMeta`, `auditContext`, the logger, utilities, and the plugin types |
-| `/publishing`     | `publishingPlugin`, the publishing service, `isDraftWrite`, the built-in accessibility checks; see [docs/publishing.md](docs/publishing.md)               |
-| `/editorial`      | `editorialPlugin`: content health, the content calendar, "Your work", command palette search, and their MCP tools                                         |
-| `/audit`          | `auditPlugin`, `createAuditCollection`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, `AUDIT_MCP_SERVERS`                                       |
-| `/jobs`           | `CoreEvents`, `FrameworkEvents` (module-augmentation seam)                                                                                                |
-| `/jobs/inngest`   | `createInngestClient`, `resolveInngestEnv`, `registrableInngestFunctions`                                                                                 |
-| `/media`          | Blob client-upload hardening, and reference tracking: `referencesPlugin`, `findReferences`, the delete and trash guards                                   |
-| `/fields`         | The field kit: `slugField`, `publishingFields`, `revisedAtField`, `unlistedField`, `characterCountPlugin`, `fieldsPlugin`                                 |
-| `/observability`  | `jobFailuresPlugin`, `getJobFailureWriter`, `createErrorReporter`, `reportError`, `buildRequestErrorReport`                                               |
-| `/testing`        | `describeAnonymousAccess`, `checkAnonymousAccess`: test helpers for a site                                                                                |
-| `/client`, `/rsc` | The admin's client and server components, named in Payload's import map                                                                                   |
-| bin               | `throughline-payload`, see [below](#running-the-payload-cli-throughline-payload)                                                                          |
+| Subpath           | Holds                                                                                                                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (root)            | `assertEnvironment`, `checkEnvValue`, `hardenCoreCollections`, `mcpApiKeyAccess`, `withMeta`, `auditContext`, the logger, utilities, and the plugin types                              |
+| `/publishing`     | `publishingPlugin`, the publishing service, `isDraftWrite`, the accessibility checks, and the revalidation and scheduled-publishing jobs; see [docs/publishing.md](docs/publishing.md) |
+| `/editorial`      | `editorialPlugin`: content health, the content calendar, "Your work", command palette search, and their MCP tools                                                                      |
+| `/approvals`      | `expireStaleApprovalsJob`, for now; the approvals plugin follows                                                                                                                       |
+| `/audit`          | `auditPlugin`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, and `auditEventEchoJob`                                                                                         |
+| `/integrations`   | `healthcheckJob` and its checks, for now; the integrations plugin follows                                                                                                              |
+| `/jobs`           | `defineJob`, the job types, the failure handlers, and `CoreEvents` for module augmentation; see [docs/jobs.md](docs/jobs.md)                                                           |
+| `/jobs/inngest`   | `inngestJobs`, `createInngestClient`, `resolveInngestEnv`, `registrableInngestFunctions`                                                                                               |
+| `/jobs/payload`   | `payloadJobs`                                                                                                                                                                          |
+| `/media`          | Blob client-upload hardening, and reference tracking: `referencesPlugin`, `findReferences`, the delete and trash guards                                                                |
+| `/fields`         | The field kit: `slugField`, `publishingFields`, `revisedAtField`, `unlistedField`, `characterCountPlugin`, `fieldsPlugin`                                                              |
+| `/observability`  | `jobFailuresPlugin`, `getJobFailureWriter`, `createErrorReporter`, `reportError`, `buildRequestErrorReport`                                                                            |
+| `/testing`        | `describeAnonymousAccess`, `checkAnonymousAccess`: test helpers for a site                                                                                                             |
+| `/cache-tags`     | `createCacheTags`, which imports nothing, for front-end readers                                                                                                                        |
+| `/client`, `/rsc` | The admin's client and server components, named in Payload's import map                                                                                                                |
+| bin               | `throughline-payload`, see [below](#running-the-payload-cli-throughline-payload)                                                                                                       |
 
 The MCP collector (`createMcpToolCollector`) is on the root until `throughline()` wires it.
 
@@ -86,7 +90,7 @@ The `audit-events` collection sits in the admin sidebar's `Throughline` group by
 The audit log records who did what through an MCP tool. A background job that
 ran out of retries is not that, so it has its own collection:
 `jobFailuresPlugin()` adds `job-failures` and attaches a writer that
-`@forumone/throughline-workflows`' failure handlers find. Adding it to an
+the failure handlers in `/jobs` find. Adding it to an
 existing site is a schema change — run `payload migrate:create` afterwards.
 
 Error reports go to a webhook, not to a vendor SDK: `reportError` posts JSON to
