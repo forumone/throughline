@@ -1,5 +1,12 @@
 # @forumone/throughline-forms
 
+## 0.7.10-next.1
+
+### Patch Changes
+
+- Updated dependencies [825f4e9]
+  - @forumone/throughline@1.0.0-next.1
+
 ## 0.7.10-next.0
 
 ### Patch Changes
