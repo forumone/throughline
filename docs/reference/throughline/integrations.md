@@ -1,6 +1,6 @@
 # Integrations: `@forumone/throughline/integrations`
 
-This was `/integrations` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `/integrations` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 Plugin architecture for connecting Throughline-powered Payload sites to external systems. Ships the `Integration` contract every future integration follows, the registry, the per-instance configuration collection, five MCP tools, and a generic outbound webhook integration as the reference implementation.
 
@@ -54,11 +54,7 @@ The other server packages do one job well. This is a **framework within the fram
 
 ## Installation
 
-```bash
-pnpm add @forumone/throughline@next
-```
-
-Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Needs `auditPlugin` from `@forumone/throughline/audit` registered first. `react` and `@payloadcms/ui` are optional peers, needed only to render the Sync now button — a host that never loads `@forumone/throughline/client` needs neither.
+Part of [`@forumone/throughline`](../throughline.md#installation), which lists the optional peers each subpath needs. `throughline({ integrations: { … } })` registers it, after the audit log; registered by hand, it needs `auditPlugin` from `/audit` first. `react` and `@payloadcms/ui` are needed only to render the Sync now button. Every integration must define `createJobs`: `throughline()` collects them into `suite.jobs`, and throws for one that has only `createFunctions`.
 
 ## Usage
 
@@ -116,9 +112,9 @@ await ctx.updateStatus(instance.id, ...statusFromProblems(problems))
 
 It returns `['success']` for an empty list and `['partial', report]` otherwise. The report comes from `problemReport(problems, { maxLength })`, which joins the lines with `|` and caps the result at 500 characters by default. A report over the cap is cut short and ends with the total, e.g. `… (40 problems in all)`. Pass the same `problemReport` string to the audit event's `errorMessage` so the two say the same thing.
 
-## Wiring Inngest functions
+## Wiring jobs
 
-Integration `createFunctions` returns Inngest functions, but **this plugin does not serve them**. The client app's Inngest endpoint composes them with its own functions. See [`docs/integrations-wiring.md`](../../docs/integrations-wiring.md) in the repository root for the pattern.
+An integration's `createJobs` returns jobs, and **this plugin does not serve them**. `throughline()` puts them in `suite.jobs`, which the site serves from its Inngest endpoint, or which `payloadJobs()` registers. See [jobs](jobs.md).
 
 ## Why configuration is admin-only
 
@@ -149,17 +145,18 @@ The HMAC is computed over the entire request body (a JSON-stringified envelope o
 
 ## Options
 
-| Option           | Type                                        | Default          | Notes                                                                                                                                                                               |
-| ---------------- | ------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `inngest`        | `Inngest`                                   | required         | Throws at validate if missing                                                                                                                                                       |
-| `integrations`   | `Integration[]`                             | `[]`             | Appended to the built-in webhook integration                                                                                                                                        |
-| `collectionSlug` | `string`                                    | `'integrations'` |                                                                                                                                                                                     |
-| `admin.group`    | `string \| Record<string, string> \| false` | `'Throughline'`  | Sidebar group for the collection. `false` leaves it ungrouped. [Reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group) |
-| `mcpTools`       | `McpToolCollector`                          | —                | The host's collector. Without it these five tools are unreachable. This plugin serves no HTTP endpoint of its own and takes no `routePrefix`                                        |
-| `enabled`        | `boolean`                                   | `true`           | Set to false to no-op                                                                                                                                                               |
-| `logger`         | `Logger`                                    | `defaultLogger`  |                                                                                                                                                                                     |
+| Option           | Type                                        | Default          | Notes                                                                                                                                        |
+| ---------------- | ------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inngest`        | `Inngest`                                   | required         | Throws at validate if missing                                                                                                                |
+| `integrations`   | `Integration[]`                             | `[]`             | Appended to the built-in webhook integration                                                                                                 |
+| `collectionSlug` | `string`                                    | `'integrations'` |                                                                                                                                              |
+| `admin.group`    | `string \| Record<string, string> \| false` | `'Throughline'`  | Sidebar group for the collection. `false` leaves it ungrouped. [Reference](../throughline.md#admin-sidebar-group)                            |
+| `mcpTools`       | `McpToolCollector`                          | —                | The host's collector. Without it these five tools are unreachable. This plugin serves no HTTP endpoint of its own and takes no `routePrefix` |
+| `enabled`        | `boolean`                                   | `true`           | Set to false to no-op                                                                                                                        |
+| `logger`         | `Logger`                                    | `defaultLogger`  |                                                                                                                                              |
 
 ## Related
 
-- `@forumone/throughline` — required peer; provides audit log and MCP handler
-- `/publishing`, `/approvals`, `/audit` — emit events this package's webhook can deliver
+- [Publishing](publishing.md), [Approvals](approvals.md), [Audit](audit.md): emit the events the webhook can deliver
+- [Jobs](jobs.md): what `createJobs` returns
+- Guide: [Adding an integration](../../guides/adding-an-integration.md)

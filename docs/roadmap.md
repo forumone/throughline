@@ -474,7 +474,8 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [x] Import codemod (`throughline migrate-imports`) covering every 0.x import path, including the P1/P2 temporary homes. On forumone-2026: 163 files rewritten, five imports left for the `throughline()` call to replace
 - [ ] Migration guide in `docs/guides/upgrading.md`, and reference docs for the three packages
     - [x] `docs/guides/upgrading.md`, and `upgrading-core-packages.md` for releases after it
-    - [ ] reference docs for the three packages
+    - [x] reference docs for the three packages: `docs/reference` is the one home, a page per package and per plugin, and the 0.x pages stay on `v0`
+    - [ ] the rest of `docs/` on the 1.0 names: guides, concepts, operations and the root README still name 0.x packages
 - [ ] PR snapshots (`pr` dist-tag) and `next` snapshots on merge
 - [ ] forumone-2026's `chore/throughline-next` builds against each `next.N`
 - [ ] Exit pre-release mode and release `1.0.0`

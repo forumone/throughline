@@ -1,6 +1,6 @@
 # Generating Payload blocks: `/generate`, `/render`, `/client`, `/testing`
 
-This was `@forumone/throughline-design-system/generate` in 0.x, which was never published; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `@forumone/throughline-design-system/generate` in 0.x, which was never published; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 Turns a Throughline design-system manifest into Payload blocks, and those blocks back into React props.
 

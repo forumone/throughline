@@ -167,7 +167,7 @@ PAYLOAD_CLI_GRACE_MS=5000       # wait between SIGTERM and SIGKILL
 PAYLOAD_CLI_TIMEOUT_MS=0 pnpm --dir apps/web generate:types
 ```
 
-See the [core reference](../reference/core.md#throughline-payload-bin).
+See [the `throughline-payload` bin](../reference/throughline.md#throughline-payload-bin).
 
 ## Where files live
 

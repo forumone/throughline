@@ -1,6 +1,6 @@
 # The contract: `/contract` and `/lint`
 
-This was `@forumone/throughline-design-contract` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `@forumone/throughline-design-contract` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 The contract every AI-ready design system satisfies to be consumable by Throughline.
 
@@ -174,8 +174,9 @@ const availableStoryIds = new Set(
 const issues = lintManifest(contractManifest, { availableStoryIds })
 ```
 
-## Related packages
+## Related
 
-- `@forumone/throughline-reference-ds` — a reference design system that satisfies this contract (C3).
-- `@forumone/throughline-components` — the Component Server MCP that consumes manifests (C5).
-- `@forumone/throughline-plugin-contract` — the plugin contract for packages that extend Payload.
+- [Generating Payload blocks](generate.md): the rest of this package
+- [Components](../throughline/components.md) in `@forumone/throughline`: serves the manifest over MCP
+- [`@forumone/create-throughline`](../create-throughline.md): its reference design system satisfies this contract
+- Guide: [Authoring component contracts](../../guides/authoring-component-contracts.md)

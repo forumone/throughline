@@ -96,7 +96,7 @@ authenticated and every tool was gated off. Check the **Tools** panel on the key
 document — every checkbox there should be ticked on a new key. If the panel is
 missing entirely, a server is registered *after* `mcpPlugin` in the host's plugin
 array, so its tools were declared into an array that had already been read. See
-[the core reference](../reference/core.md#mcp-handing-tools-to-payloads-server).
+[`throughline()`](../reference/throughline.md#throughline), which registers every plugin before handing `suite.mcpTools` to `mcpPlugin`.
 
 ## Test the connection
 
