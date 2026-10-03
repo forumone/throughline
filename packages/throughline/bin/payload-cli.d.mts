@@ -22,6 +22,9 @@ export const PID_FILE_NAME: string
 export const DEFAULT_TIMEOUT_MS: number
 export const DEFAULT_GRACE_MS: number
 export const TIMEOUT_EXIT_CODE: number
+export const EXIT_GUARD: string
+
+export function payloadArgv(bin: string, args: readonly string[]): string[]
 
 export function norm(value: string | undefined): string
 export function parseArgs(argv: readonly string[]): { mode: 'reap' | 'run'; args: string[] }
