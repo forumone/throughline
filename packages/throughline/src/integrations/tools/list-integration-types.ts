@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { McpToolDefinition } from '../../index.js'
+import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
 import type { IntegrationRegistry } from '../registry.js'
 import { INTEGRATIONS_TOOLS } from './descriptors.js'
 

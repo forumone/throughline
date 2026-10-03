@@ -1,7 +1,8 @@
-import type { WorkflowFailureHandler } from '../jobs/index.js'
-import type { McpToolCollector } from '../index.js'
+import type { WorkflowFailureHandler } from '../jobs/workflow-types.js'
+import type { McpToolCollector } from '../mcp/collector.js'
 import type { Inngest } from 'inngest'
-import type { BaseCorePluginOptions, CollectionPluginOptions } from '../index.js'
+import type { BaseCorePluginOptions } from '../plugin-contract/index.js'
+import type { CollectionPluginOptions } from '../plugin-contract/admin.js'
 import type { Integration } from './types.js'
 
 export const DEFAULT_INTEGRATIONS_SLUG = 'integrations'

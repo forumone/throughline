@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Config } from 'payload'
 import type { Inngest } from 'inngest'
-import { DEFAULT_ADMIN_GROUP } from '../index.js'
+import { DEFAULT_ADMIN_GROUP } from '../plugin-contract/admin.js'
 import { integrationsPlugin } from './plugin.js'
 import { DEFAULT_INTEGRATIONS_SLUG, type IntegrationsPluginOptions } from './options.js'
 

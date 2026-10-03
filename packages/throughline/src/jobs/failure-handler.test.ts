@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Config, Payload } from 'payload'
-import { jobFailuresPlugin } from '../observability/index.js'
+import { jobFailuresPlugin } from '../observability/plugin.js'
 import { type Logger } from '../plugin-contract/index.js'
 import { createHealthcheckFailureHandler, createTerminalFailureHandler } from './failure-handler.js'
 import { healthcheckJob } from '../integrations/jobs/healthcheck.js'

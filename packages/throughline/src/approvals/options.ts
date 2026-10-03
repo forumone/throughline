@@ -1,10 +1,9 @@
-import { checkEnvValue, type McpToolCollector } from '../index.js'
+import { checkEnvValue } from '../env/index.js'
+import { type McpToolCollector } from '../mcp/collector.js'
 import type { Inngest } from 'inngest'
-import type {
-  BaseCorePluginOptions,
-  CollectionPluginOptions,
-  EnvRequirement,
-} from '../index.js'
+import type { BaseCorePluginOptions } from '../plugin-contract/index.js'
+import type { CollectionPluginOptions } from '../plugin-contract/admin.js'
+import type { EnvRequirement } from '../plugin-contract/env.js'
 
 export interface ApproverGroup {
   /** Group slug, referenced by the policy.approverGroups field on requests. */

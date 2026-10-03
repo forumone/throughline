@@ -1,4 +1,6 @@
-# @forumone/throughline-approvals
+# Approvals: `@forumone/throughline/approvals`
+
+This was `/approvals` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
 
 Conversational approval workflow server for Throughline. Provides the resolver the publishing server consumes plus MCP tools and email-action endpoints for requesting and responding to approvals.
 
@@ -21,18 +23,19 @@ Conversational approval workflow server for Throughline. Provides the resolver t
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline-approvals
+pnpm add @forumone/throughline@next
 ```
 
-Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log).
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Needs `auditPlugin` from `@forumone/throughline/audit` registered first.
 
 ## Usage
 
 ```ts
 import { buildConfig } from 'payload'
-import { auditPlugin, createInngestClient } from '@forumone/throughline-core'
-import { approvalsPlugin } from '@forumone/throughline-approvals'
-import { publishingPlugin } from '@forumone/throughline-publishing'
+import { auditPlugin } from '@forumone/throughline/audit'
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+import { approvalsPlugin } from '@forumone/throughline/approvals'
+import { publishingPlugin } from '@forumone/throughline/publishing'
 
 const inngest = createInngestClient({ id: 'my-site' })
 
@@ -74,11 +77,11 @@ The approvals collection sits in the admin sidebar's `Throughline` group by defa
 
 ## Environment
 
-`approvalsEnv` declares what the plugin reads from the environment and refuses to start without — `APPROVAL_TOKEN_SECRET`, 32+ characters, used when `tokenSecret` is omitted. Pass it to `assertEnvironment` from `@forumone/throughline-core` at the top of `payload.config.ts` and a missing secret is reported together with every other missing variable, instead of as this plugin's own error at init. The init check still runs, driven by the same declaration.
+`approvalsEnv` declares what the plugin reads from the environment and refuses to start without — `APPROVAL_TOKEN_SECRET`, 32+ characters, used when `tokenSecret` is omitted. Pass it to `assertEnvironment` from `@forumone/throughline` at the top of `payload.config.ts` and a missing secret is reported together with every other missing variable, instead of as this plugin's own error at init. The init check still runs, driven by the same declaration.
 
 ```ts
-import { assertEnvironment } from '@forumone/throughline-core'
-import { approvalsEnv } from '@forumone/throughline-approvals'
+import { assertEnvironment } from '@forumone/throughline'
+import { approvalsEnv } from '@forumone/throughline/approvals'
 
 assertEnvironment(approvalsEnv /*, every other plugin's list, and the site's own */)
 ```
@@ -94,7 +97,7 @@ If you need a custom resolver (e.g. you store approvals in an external system), 
 - **First-decision-wins.** Multi-party approvals (e.g. legal AND communications must both approve) are deferred to Phase 2. The Phase 1 model handles "any one approver from the configured groups," which covers the most common case.
 - **Approvals are tied to content, not to a timestamp.** `request_approval` stores `documentContentHash(document)` in `targetVersion`, and publishing's approval step recomputes the same hash from the document it is about to publish. So an approval granted against one draft does not apply to a subsequent edit — but it does survive a save that changed nothing, and it comes back if an edit is reverted.
 
-  This is what lets **autosave and approvals both be on**. The binding used to be `updatedAt`, which moves on every save: an editor fixing a typo while an approver read the request invalidated the approval, and autosave did that every couple of seconds. See the note under `documentContentHash` in `@forumone/throughline-core` for what counts as content — in short, everything except `id`, `createdAt`, `updatedAt`, `_status` and the other storage bookkeeping, at every level of the document.
+  This is what lets **autosave and approvals both be on**. The binding used to be `updatedAt`, which moves on every save: an editor fixing a typo while an approver read the request invalidated the approval, and autosave did that every couple of seconds. See the note under `documentContentHash` in `@forumone/throughline` for what counts as content — in short, everything except `id`, `createdAt`, `updatedAt`, `_status` and the other storage bookkeeping, at every level of the document.
 
   Both sides must load the document the same way for the hashes to agree; both use `payload.findByID({ collection, id, draft: true })`. A populated relationship and a bare relationship id are different values, so a caller hashing a document fetched at a different depth would match nothing.
 
@@ -114,10 +117,10 @@ The confirmation page is intentionally minimal. Clients that want a branded acti
 
 ## The `_meta` payload
 
-`request_approval` and `respond_to_approval` accept the framework's `_meta` payload (via `withMeta` from `@forumone/throughline-core`). Audit records carry the prompt and reasoning fields for later "why was this approved?" queries.
+`request_approval` and `respond_to_approval` accept the framework's `_meta` payload (via `withMeta` from `@forumone/throughline`). Audit records carry the prompt and reasoning fields for later "why was this approved?" queries.
 
-## Related packages
+## Related
 
-- `@forumone/throughline-core` — required peer; provides the audit log and MCP handler this plugin builds on
-- `@forumone/throughline-publishing` — peer plugin that consumes the resolver this plugin attaches
-- `@forumone/throughline-email` (C11) — will subscribe to `approval/requested` and `approval/decided` to send notifications
+- `@forumone/throughline` — required peer; provides the audit log and MCP handler this plugin builds on
+- `/publishing` — peer plugin that consumes the resolver this plugin attaches
+- `/email` (C11) — will subscribe to `approval/requested` and `approval/decided` to send notifications

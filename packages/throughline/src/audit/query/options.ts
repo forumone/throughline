@@ -1,6 +1,6 @@
-import type { McpToolCollector } from '../../index.js'
+import type { McpToolCollector } from '../../mcp/collector.js'
 import type { PayloadRequest } from 'payload'
-import type { BaseCorePluginOptions } from '../../index.js'
+import type { BaseCorePluginOptions } from '../../plugin-contract/index.js'
 
 /*
 `routePrefix` is omitted rather than ignored. This server's only endpoint was

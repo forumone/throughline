@@ -42,10 +42,11 @@ function declarationsIn(source: string): Declared[] {
   })
 }
 
+/** Each list, and the file under `packages/` that declares it. */
 const PLUGIN_LISTS = {
-  approvalsEnv: 'approvals',
-  emailEnv: 'email',
-  formsEnv: 'forms',
+  approvalsEnv: 'throughline/src/approvals/options.ts',
+  emailEnv: 'throughline/src/email/options.ts',
+  formsEnv: 'forms/src/options.ts',
 } as const
 
 describe('the scaffold checks its environment at startup', () => {
@@ -76,10 +77,10 @@ describe('the scaffold checks its environment at startup', () => {
     workflow = await readFile(join(target, '.github/workflows/ci.yml'), 'utf-8')
 
     const fromPlugins: Declared[] = []
-    for (const pkg of Object.values(PLUGIN_LISTS)) {
-      const source = await readFile(join(PACKAGES_DIR, pkg, 'src', 'options.ts'), 'utf-8')
+    for (const file of Object.values(PLUGIN_LISTS)) {
+      const source = await readFile(join(PACKAGES_DIR, file), 'utf-8')
       const found = declarationsIn(source)
-      expect(found.length, `${pkg} declares its environment`).toBeGreaterThan(0)
+      expect(found.length, `${file} declares its environment`).toBeGreaterThan(0)
       fromPlugins.push(...found)
     }
     const call = /assertEnvironment\(([\s\S]*?)\n\)/.exec(config)?.[1] ?? ''
@@ -137,8 +138,8 @@ describe('the scaffold checks its environment at startup', () => {
       'utf-8',
     )
     const table = doc.slice(doc.indexOf('### What the plugins declare'))
-    for (const pkg of Object.values(PLUGIN_LISTS)) {
-      const source = await readFile(join(PACKAGES_DIR, pkg, 'src', 'options.ts'), 'utf-8')
+    for (const file of Object.values(PLUGIN_LISTS)) {
+      const source = await readFile(join(PACKAGES_DIR, file), 'utf-8')
       for (const { name, minLength } of declarationsIn(source)) {
         expect(table, name).toMatch(new RegExp(`\\|\\s*\`${name}\`\\s*\\|\\s*${minLength ?? '—'}\\s*\\|`))
       }

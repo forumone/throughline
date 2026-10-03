@@ -1,7 +1,8 @@
-import type { CorePlugin, McpToolDefinition } from '../index.js'
-import { getPluginRegistry } from '../index.js'
-import { createNamedLogger, defaultLogger } from '../index.js'
-import { getAuditWriter } from '../audit/index.js'
+import type { CorePlugin } from '../plugin-contract/index.js'
+import type { McpToolDefinition } from '../plugin-contract/mcp.js'
+import { getPluginRegistry } from '../plugin-contract/registry.js'
+import { createNamedLogger, defaultLogger } from '../logger/index.js'
+import { getAuditWriter } from '../audit/plugin.js'
 import { type IntegrationsPluginOptions, validateOptions, DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 import { IntegrationRegistry } from './registry.js'
 import { createIntegrationsCollection } from './collection.js'
@@ -9,7 +10,8 @@ import { createSyncEndpoint } from './endpoints/sync.js'
 import { createStatusWriter } from './sync/status.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { Integration, IntegrationContext } from './types.js'
-import { createTerminalFailureHandler, type Job, type JobContext } from '../jobs/index.js'
+import { createTerminalFailureHandler } from '../jobs/failure-handler.js'
+import { type Job, type JobContext } from '../jobs/types.js'
 import {
   INTEGRATIONS_TOOL_DESCRIPTORS,
   createGetIntegrationStatusTool,

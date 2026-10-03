@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { ActiveApproval, ApprovalResolver } from '../publishing/index.js'
+import type { ActiveApproval, ApprovalResolver } from '../publishing/options.js'
 import { DEFAULT_APPROVALS_SLUG } from './collection.js'
 import { APPROVALS_RESOLVER_SYMBOL } from './symbol.js'
 

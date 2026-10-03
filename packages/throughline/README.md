@@ -4,10 +4,10 @@ Throughline for Payload CMS: the audit log, MCP authentication and tools, the jo
 Inngest client, the field kit, media hardening and reference tracking, error reporting, environment
 checks and a logger. Each part lives on its own subpath.
 
-> **1.0 is in progress.** This package is being assembled from the 0.x packages: so far
-> `@forumone/throughline-core`, `-plugin-contract`, `-publishing` and `-workflows`; the other plugins
-> move in over the next releases. [`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md) maps every
-> 0.x import to its 1.0 path. Pre-releases publish as `1.0.0-next.N` under the `next` dist-tag.
+> **1.0 is in progress.** Every 0.x server package has moved in: core, plugin-contract, publishing,
+> workflows, audit, approvals, components, integrations and email. `throughline()` comes next.
+> [`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md) maps every 0.x import to its 1.0 path.
+> Pre-releases publish as `1.0.0-next.N` under the `next` dist-tag.
 
 ## What's inside
 
@@ -16,9 +16,11 @@ checks and a logger. Each part lives on its own subpath.
 | (root)            | `assertEnvironment`, `checkEnvValue`, `hardenCoreCollections`, `mcpApiKeyAccess`, `withMeta`, `auditContext`, the logger, utilities, and the plugin types                              |
 | `/publishing`     | `publishingPlugin`, the publishing service, `isDraftWrite`, the accessibility checks, and the revalidation and scheduled-publishing jobs; see [docs/publishing.md](docs/publishing.md) |
 | `/editorial`      | `editorialPlugin`: content health, the content calendar, "Your work", command palette search, and their MCP tools                                                                      |
-| `/approvals`      | `expireStaleApprovalsJob`, for now; the approvals plugin follows                                                                                                                       |
-| `/audit`          | `auditPlugin`, `createAuditWriter`, `getAuditWriter`, `AUDIT_ACTIONS`, and `auditEventEchoJob`                                                                                         |
-| `/integrations`   | `healthcheckJob` and its checks, for now; the integrations plugin follows                                                                                                              |
+| `/approvals`      | `approvalsPlugin`, signed action links, `expireStaleApprovalsJob`; see [docs/approvals.md](docs/approvals.md)                                                                          |
+| `/audit`          | `auditPlugin`, `getAuditWriter`, `AUDIT_ACTIONS`, `auditQueryPlugin` and its tools, `auditEventEchoJob`; see [docs/audit.md](docs/audit.md)                                            |
+| `/components`     | `componentsPlugin`: the design-system manifest over MCP; see [docs/components.md](docs/components.md)                                                                                  |
+| `/integrations`   | `integrationsPlugin`, the registry, the webhook integration, manual sync, `healthcheckJob`; see [docs/integrations.md](docs/integrations.md)                                           |
+| `/email`          | `emailPlugin`, the Resend client, the approval notifications and their templates; see [docs/email.md](docs/email.md)                                                                   |
 | `/jobs`           | `defineJob`, the job types, the failure handlers, and `CoreEvents` for module augmentation; see [docs/jobs.md](docs/jobs.md)                                                           |
 | `/jobs/inngest`   | `inngestJobs`, `createInngestClient`, `resolveInngestEnv`, `registrableInngestFunctions`                                                                                               |
 | `/jobs/payload`   | `payloadJobs`                                                                                                                                                                          |
@@ -230,7 +232,7 @@ Each plugin that falls back to `process.env` exports what it needs as data — `
 
 ```ts
 import { assertEnvironment } from '@forumone/throughline'
-import { approvalsEnv } from '@forumone/throughline-approvals'
+import { approvalsEnv } from '@forumone/throughline/approvals'
 import { emailEnv } from '@forumone/throughline/email'
 
 assertEnvironment(

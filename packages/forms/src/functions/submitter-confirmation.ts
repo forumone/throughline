@@ -1,6 +1,6 @@
 import type { Inngest, InngestFunction } from 'inngest'
 import type { Payload } from 'payload'
-import type { EmailClient } from '@forumone/throughline-email'
+import type { EmailClient } from '@forumone/throughline/email'
 import { SubmitterConfirmationEmail } from '../templates/index.js'
 import type { ResolvedFormsConfig } from '../options.js'
 import { findFieldValue, readSubmissionRows } from './_shared.js'

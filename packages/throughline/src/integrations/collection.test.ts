@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ADMIN_GROUP } from '../index.js'
+import { DEFAULT_ADMIN_GROUP } from '../plugin-contract/admin.js'
 import { createIntegrationsCollection } from './collection.js'
 import { IntegrationRegistry } from './registry.js'
 import type { Integration } from './types.js'

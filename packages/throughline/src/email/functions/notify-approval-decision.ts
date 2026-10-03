@@ -1,10 +1,7 @@
 import type { Inngest } from 'inngest'
-import {
-  defineJob,
-  type Job,
-  type JobContext,
-  type WorkflowFailureHandler,
-} from '../../jobs/index.js'
+import { defineJob } from '../../jobs/define.js'
+import { type Job, type JobContext } from '../../jobs/types.js'
+import { type WorkflowFailureHandler } from '../../jobs/workflow-types.js'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'

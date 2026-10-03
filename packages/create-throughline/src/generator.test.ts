@@ -108,10 +108,10 @@ describe('generate (with reference DS)', () => {
         }
       }
     }
-    // Eight in apps/web (@forumone/throughline, six plugins still outside it,
-    // and design-contract), one in the design system. Falls as the 1.0
-    // consolidation folds each plugin in.
-    expect(ranges).toHaveLength(9)
+    // Three in apps/web (@forumone/throughline, forms, which 1.0 drops, and
+    // design-contract), one in the design system. Falls as the 1.0
+    // consolidation folds each package in.
+    expect(ranges).toHaveLength(4)
     // A hand-typed range left them at ^0.2.0 — patches only, for a 0.x version —
     // while the packages reached 0.9. Every range must be read, not typed.
     for (const [name, range] of ranges) {
@@ -183,7 +183,7 @@ describe('generate (with reference DS)', () => {
     // query string against `/api/approvals/decision`, which nothing serves.
     expect(config).toContain('generateActionToken(')
     expect(config).toContain('buildActionUrl(process.env.NEXT_PUBLIC_SERVER_URL!, token)')
-    expect(config).toContain("from '@forumone/throughline-approvals'")
+    expect(config).toContain("from '@forumone/throughline/approvals'")
     expect(config).not.toContain('/api/approvals/decision')
   })
 

@@ -1,4 +1,6 @@
-# @forumone/throughline-integrations
+# Integrations: `@forumone/throughline/integrations`
+
+This was `/integrations` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
 
 Plugin architecture for connecting Throughline-powered Payload sites to external systems. Ships the `Integration` contract every future integration follows, the registry, the per-instance configuration collection, five MCP tools, and a generic outbound webhook integration as the reference implementation.
 
@@ -10,13 +12,13 @@ Plugin architecture for connecting Throughline-powered Payload sites to external
 - **A Sync now button**, in the document's sidebar beside those status fields, and the `POST /api/<slug>/:id/sync` endpoint behind it. See below.
 - **Five MCP tools**, handed to the host's collector at `onInit` and served by `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody:
 
-| Tool | Use it for | Access |
-|---|---|---|
-| `list_integrations` | "What integrations are configured?" / "Which are healthy?" | admin / editor |
-| `get_integration_status` | One instance's last-sync info | admin / editor |
-| `trigger_sync` | Manual delivery to verify connectivity after a config change | admin only |
-| `test_integration` | Run the integration's healthcheck (no event emitted) | admin / editor |
-| `list_integration_types` | "What kinds of integrations are supported here?" | any caller |
+| Tool                     | Use it for                                                   | Access         |
+| ------------------------ | ------------------------------------------------------------ | -------------- |
+| `list_integrations`      | "What integrations are configured?" / "Which are healthy?"   | admin / editor |
+| `get_integration_status` | One instance's last-sync info                                | admin / editor |
+| `trigger_sync`           | Manual delivery to verify connectivity after a config change | admin only     |
+| `test_integration`       | Run the integration's healthcheck (no event emitted)         | admin / editor |
+| `list_integration_types` | "What kinds of integrations are supported here?"             | any caller     |
 
 - **Webhook integration** — generic outbound HTTPS POST with HMAC-SHA256 signing, configurable event filter, retries (5x), timeout, and a HEAD-based healthcheck. RFC 4231 known-answer test vectors pin the wire format so refactoring can never silently break receivers.
 
@@ -32,13 +34,13 @@ POST /api/integrations/:id/sync      { "reason": "optional" }
 
 authenticated by the Payload session cookie — no API key in the operator's path — and admin-only, matching `trigger_sync`. The endpoint and the tool both call `requestManualSync()`, which is the single definition of what a trigger checks and what event it sends; neither re-implements the rules.
 
-| Answer | Means |
-|---|---|
-| `202` | Queued. The run has **not** happened yet. |
-| `403` | Not an admin. |
-| `404` | No instance with that id. |
-| `409` | The instance is disabled. Enable it first. |
-| `502` | Inngest would not take the event — nothing was queued. |
+| Answer | Means                                                  |
+| ------ | ------------------------------------------------------ |
+| `202`  | Queued. The run has **not** happened yet.              |
+| `403`  | Not an admin.                                          |
+| `404`  | No instance with that id.                              |
+| `409`  | The instance is disabled. Enable it first.             |
+| `502`  | Inngest would not take the event — nothing was queued. |
 
 `202`, not `200`: it fires an event and returns. The button says the run was queued, then watches `lastSyncAt` for two minutes and reports the outcome when it moves — against the value the endpoint returned rather than what the page last rendered, so a cron run that lands mid-wait is not mistaken for this one. Giving up watching is not failing, and the copy says so.
 
@@ -53,33 +55,31 @@ The other server packages do one job well. This is a **framework within the fram
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline-integrations
+pnpm add @forumone/throughline@next
 ```
 
-Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Required runtime peer: `@forumone/throughline-core` (audit log). `react` and `@payloadcms/ui` are optional peers, needed only to render the Sync now button — a host that never loads `@forumone/throughline-integrations/client` needs neither.
+Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Needs `auditPlugin` from `@forumone/throughline/audit` registered first. `react` and `@payloadcms/ui` are optional peers, needed only to render the Sync now button — a host that never loads `@forumone/throughline/client` needs neither.
 
 ## Usage
 
 ```ts
 import { buildConfig } from 'payload'
-import { auditPlugin, createInngestClient } from '@forumone/throughline-core'
-import { integrationsPlugin } from '@forumone/throughline-integrations'
+import { auditPlugin } from '@forumone/throughline/audit'
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+import { integrationsPlugin } from '@forumone/throughline/integrations'
 
 const inngest = createInngestClient({ id: 'my-site' })
 
 export default buildConfig({
   // collections, db, secret...
-  plugins: [
-    auditPlugin({ inngest }),
-    integrationsPlugin({ inngest }),
-  ],
+  plugins: [auditPlugin({ inngest }), integrationsPlugin({ inngest })],
 })
 ```
 
 ## Adding integrations
 
 ```ts
-import { integrationsPlugin } from '@forumone/throughline-integrations'
+import { integrationsPlugin } from '@forumone/throughline/integrations'
 import { salesforceIntegration } from '@your-org/throughline-salesforce'
 
 integrationsPlugin({
@@ -95,8 +95,8 @@ The webhook integration is registered automatically. Additional integrations are
 An integration records each run on its instance with `ctx.updateStatus`, which writes the `lastSyncAt` / `lastSyncStatus` / `lastError` fields the admin shows:
 
 ```ts
-await ctx.updateStatus(instance.id, 'success')                 // clears lastError
-await ctx.updateStatus(instance.id, 'failed', 'HTTP 502')      // replaces lastError
+await ctx.updateStatus(instance.id, 'success') // clears lastError
+await ctx.updateStatus(instance.id, 'failed', 'HTTP 502') // replaces lastError
 await ctx.updateStatus(instance.id, 'partial', '3 of 40 skipped')
 ```
 
@@ -105,7 +105,7 @@ await ctx.updateStatus(instance.id, 'partial', '3 of 40 skipped')
 A run that imports many records and skips some should collect one line per skipped record and let `statusFromProblems` choose the status:
 
 ```ts
-import { statusFromProblems } from '@forumone/throughline-integrations'
+import { statusFromProblems } from '@forumone/throughline/integrations'
 
 const problems = [
   ...rejected.map((r) => `record ${r.id}: ${r.reason}`),
@@ -114,7 +114,7 @@ const problems = [
 await ctx.updateStatus(instance.id, ...statusFromProblems(problems))
 ```
 
-It returns `['success']` for an empty list and `['partial', report]` otherwise. The report comes from `problemReport(problems, { maxLength })`, which joins the lines with ` | ` and caps the result at 500 characters by default. A report over the cap is cut short and ends with the total, e.g. `… (40 problems in all)`. Pass the same `problemReport` string to the audit event's `errorMessage` so the two say the same thing.
+It returns `['success']` for an empty list and `['partial', report]` otherwise. The report comes from `problemReport(problems, { maxLength })`, which joins the lines with `|` and caps the result at 500 characters by default. A report over the cap is cut short and ends with the total, e.g. `… (40 problems in all)`. Pass the same `problemReport` string to the audit event's `errorMessage` so the two say the same thing.
 
 ## Wiring Inngest functions
 
@@ -128,13 +128,13 @@ This asymmetry is intentional and is why `trigger_sync` is admin-only too — ma
 
 ## Webhook details
 
-| Field | Behaviour |
-|---|---|
-| `targetUrl` | Required, must be `https://`. Validated at write time. |
-| `signingSecret` | Required, ≥ 32 characters. Used as the HMAC-SHA256 key. |
-| `eventFilter` | Optional list of event names; empty list = deliver all subscribed events. |
-| `includeFullPayload` | If false (default), only `id`, `slug`, and `*Id` fields go in the body. |
-| `timeoutSeconds` | Per-request timeout. Default 10. |
+| Field                | Behaviour                                                                 |
+| -------------------- | ------------------------------------------------------------------------- |
+| `targetUrl`          | Required, must be `https://`. Validated at write time.                    |
+| `signingSecret`      | Required, ≥ 32 characters. Used as the HMAC-SHA256 key.                   |
+| `eventFilter`        | Optional list of event names; empty list = deliver all subscribed events. |
+| `includeFullPayload` | If false (default), only `id`, `slug`, and `*Id` fields go in the body.   |
+| `timeoutSeconds`     | Per-request timeout. Default 10.                                          |
 
 Outbound headers:
 
@@ -149,17 +149,17 @@ The HMAC is computed over the entire request body (a JSON-stringified envelope o
 
 ## Options
 
-| Option | Type | Default | Notes |
-|---|---|---|---|
-| `inngest` | `Inngest` | required | Throws at validate if missing |
-| `integrations` | `Integration[]` | `[]` | Appended to the built-in webhook integration |
-| `collectionSlug` | `string` | `'integrations'` | |
-| `admin.group` | `string \| Record<string, string> \| false` | `'Throughline'` | Sidebar group for the collection. `false` leaves it ungrouped. [Reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group) |
-| `mcpTools` | `McpToolCollector` | — | The host's collector. Without it these five tools are unreachable. This plugin serves no HTTP endpoint of its own and takes no `routePrefix` |
-| `enabled` | `boolean` | `true` | Set to false to no-op |
-| `logger` | `Logger` | `defaultLogger` | |
+| Option           | Type                                        | Default          | Notes                                                                                                                                                                               |
+| ---------------- | ------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inngest`        | `Inngest`                                   | required         | Throws at validate if missing                                                                                                                                                       |
+| `integrations`   | `Integration[]`                             | `[]`             | Appended to the built-in webhook integration                                                                                                                                        |
+| `collectionSlug` | `string`                                    | `'integrations'` |                                                                                                                                                                                     |
+| `admin.group`    | `string \| Record<string, string> \| false` | `'Throughline'`  | Sidebar group for the collection. `false` leaves it ungrouped. [Reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group) |
+| `mcpTools`       | `McpToolCollector`                          | —                | The host's collector. Without it these five tools are unreachable. This plugin serves no HTTP endpoint of its own and takes no `routePrefix`                                        |
+| `enabled`        | `boolean`                                   | `true`           | Set to false to no-op                                                                                                                                                               |
+| `logger`         | `Logger`                                    | `defaultLogger`  |                                                                                                                                                                                     |
 
-## Related packages
+## Related
 
-- `@forumone/throughline-core` — required peer; provides audit log and MCP handler
-- `@forumone/throughline-publishing`, `@forumone/throughline-approvals`, `@forumone/throughline-audit` — emit events this package's webhook can deliver
+- `@forumone/throughline` — required peer; provides audit log and MCP handler
+- `/publishing`, `/approvals`, `/audit` — emit events this package's webhook can deliver

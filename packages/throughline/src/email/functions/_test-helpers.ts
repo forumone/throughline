@@ -82,7 +82,9 @@ export function createFakeEmailClient(): FakeEmailClient {
  * against. They are gone in 1.0; each call site became
  * `notifyFunction(<the job>, <the factory's deps>)`.
  */
-export function notifyFunction<Deps extends { inngest: Inngest; id?: string; onFailure?: WorkflowFailureHandler }>(
+export function notifyFunction<
+  Deps extends { inngest: Inngest; id?: string; onFailure?: WorkflowFailureHandler },
+>(
   job: (resolve: (context: JobContext) => Deps, id?: string) => Job,
   deps: Deps,
 ): InngestFunction.Any {

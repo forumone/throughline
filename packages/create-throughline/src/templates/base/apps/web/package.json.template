@@ -25,12 +25,7 @@
   },
   "dependencies": {
     "@forumone/throughline": "^{{version_throughline}}",
-    "@forumone/throughline-approvals": "^{{version_approvals}}",
-    "@forumone/throughline-audit": "^{{version_audit}}",
-    "@forumone/throughline-components": "^{{version_components}}",
-    "@forumone/throughline-email": "^{{version_email}}",
     "@forumone/throughline-forms": "^{{version_forms}}",
-    "@forumone/throughline-integrations": "^{{version_integrations}}",
     {{#if useReferenceDs}}"@forumone/throughline-design-contract": "^{{version_design_contract}}",
     "{{designSystemName}}": "workspace:*",
     {{/if}}"@payloadcms/db-postgres": "^3.89.0",

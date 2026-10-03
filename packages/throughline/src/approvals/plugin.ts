@@ -1,7 +1,7 @@
-import type { CorePlugin } from '../index.js'
-import { getPluginRegistry } from '../index.js'
-import { createNamedLogger, defaultLogger } from '../index.js'
-import { getAuditWriter } from '../audit/index.js'
+import type { CorePlugin } from '../plugin-contract/index.js'
+import { getPluginRegistry } from '../plugin-contract/registry.js'
+import { createNamedLogger, defaultLogger } from '../logger/index.js'
+import { getAuditWriter } from '../audit/plugin.js'
 import { type ApprovalsPluginOptions, validateOptions } from './options.js'
 import { createApprovalsCollection } from './collection.js'
 import { attachApprovalResolver, createApprovalResolver } from './resolver.js'
@@ -15,7 +15,7 @@ import {
   createRespondToApprovalTool,
 } from './tools/index.js'
 
-const PLUGIN_ID = '@forumone/throughline-approvals'
+const PLUGIN_ID = '@forumone/throughline/approvals'
 const PLUGIN_VERSION = '0.1.0'
 const ACTION_HANDLER_SYMBOL = Symbol.for('@forumone/throughline/approvals-action-handler')
 

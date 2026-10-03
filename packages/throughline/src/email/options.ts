@@ -1,7 +1,8 @@
-import { checkEnvValue } from '../index.js'
+import { checkEnvValue } from '../env/index.js'
 import type { Inngest } from 'inngest'
-import type { WorkflowFailureHandler } from '../jobs/index.js'
-import type { BaseCorePluginOptions, EnvRequirement } from '../index.js'
+import type { WorkflowFailureHandler } from '../jobs/workflow-types.js'
+import type { BaseCorePluginOptions } from '../plugin-contract/index.js'
+import type { EnvRequirement } from '../plugin-contract/env.js'
 import type { EmailBrandTokens } from './tokens.js'
 
 export type ApprovalActionKind = 'approve' | 'decline' | 'changes' | 'discuss'

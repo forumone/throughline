@@ -196,7 +196,7 @@ export interface ExecuteScheduledPublishesOptions extends BaseWorkflowOptions {
    * write skips composition, accessibility and approval gating:
    *
    * ```ts
-   * import { getPublishingService } from '../publishing/index.js'
+   * import { getPublishingService } from '@forumone/throughline/publishing'
    *
    * publish: async ({ collection, id, reasoning }) => {
    *   const outcome = await getPublishingService(payload).publish({

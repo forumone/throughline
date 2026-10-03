@@ -1,4 +1,6 @@
-# @forumone/throughline-email
+# Email: `@forumone/throughline/email`
+
+This was `/email` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
 
 Transactional email for the Throughline framework. Pairs Resend with React Email templates that read brand tokens from the plugin options, and ships three Inngest functions that subscribe to the notification events the audit-event-echo workflow fires.
 
@@ -9,13 +11,13 @@ After this package, the approval workflow is end-to-end: a marketer requests app
 - **`emailPlugin`** — registers an email client and the three notification Inngest functions on the Payload instance via Symbols.
 - **`createEmailClient`** — Resend wrapper that lazy-imports both `resend` and `@react-email/render` and produces both HTML and plaintext from the same React tree on every send.
 - **Three React Email templates** — `ApprovalRequestEmail`, `ApprovalDecisionEmail` (granted / declined / changes-requested variants), `ApprovalExpiredEmail`. Themed via `EmailBrandTokens`.
-- **Three notification functions** — `createNotifyApprovalRequestFunction`, `createNotifyApprovalDecisionFunction`, `createNotifyApprovalExpiredFunction`.
+- **Three notification jobs** — `notifyApprovalRequestJob`, `notifyApprovalDecisionJob`, `notifyApprovalExpiredJob`, which the plugin registers with Inngest for `getEmailFunctions`, or which `emailJobs` hands to any adapter.
 - **Brand tokens** — neutral defaults (black on white, system sans, "Your Site"); deployments override via `emailPlugin({ tokens })`.
 
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline-email
+pnpm add @forumone/throughline@next
 ```
 
 Peers: `payload@^3.89.0`, `inngest@^4.0.0`, `react@^18 || ^19`. The plugin lazy-loads `resend` and `@react-email/render` on first send, so a misconfigured deploy fails on first email rather than at boot.
@@ -26,8 +28,9 @@ In your Payload config:
 
 ```ts
 import { buildConfig } from 'payload'
-import { auditPlugin, createInngestClient } from '@forumone/throughline-core'
-import { emailPlugin } from '@forumone/throughline-email'
+import { auditPlugin } from '@forumone/throughline/audit'
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+import { emailPlugin } from '@forumone/throughline/email'
 
 const inngest = createInngestClient({ id: 'my-site' })
 
@@ -68,7 +71,7 @@ import { serve } from 'inngest/next'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { inngest } from '@/lib/inngest'
-import { getEmailFunctions } from '@forumone/throughline-email'
+import { getEmailFunctions } from '@forumone/throughline/email'
 
 const payload = await getPayload({ config })
 const emailFunctions = getEmailFunctions(payload)
@@ -79,7 +82,7 @@ export const { GET, POST, PUT } = serve({
 })
 ```
 
-The plugin registers functions into the Payload instance via Symbol; the endpoint reads them via `getEmailFunctions`. Same shape used by `@forumone/throughline-integrations`.
+The plugin registers functions into the Payload instance via Symbol; the endpoint reads them via `getEmailFunctions`. Same shape used by `/integrations`.
 
 ## How the events flow
 
@@ -96,8 +99,8 @@ Tokens are merged onto neutral defaults; pass only what you want to override:
 ```ts
 emailPlugin({
   tokens: {
-    brandName: 'Acme Foundation',     // header + From name + footer
-    brandPrimary: '#5B21B6',           // approve button + discuss link
+    brandName: 'Acme Foundation', // header + From name + footer
+    brandPrimary: '#5B21B6', // approve button + discuss link
     fontFamilySans: '"Roobert", system-ui, sans-serif',
   },
   // ...
@@ -116,26 +119,26 @@ Every email renders to both HTML and plaintext from the same React tree (React E
 
 ## Environment
 
-`emailEnv` declares what the plugin reads from the environment and refuses to start without — `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS`, used when `apiKey` / `fromAddress` are omitted. Pass it to `assertEnvironment` from `@forumone/throughline-core` at the top of `payload.config.ts` so both are reported together with every other missing variable. The plugin's own init check reads the same declaration.
+`emailEnv` declares what the plugin reads from the environment and refuses to start without — `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS`, used when `apiKey` / `fromAddress` are omitted. Pass it to `assertEnvironment` from `@forumone/throughline` at the top of `payload.config.ts` so both are reported together with every other missing variable. The plugin's own init check reads the same declaration.
 
 ## Options reference
 
-| Option | Default | Notes |
-|---|---|---|
-| `inngest` | required | Fires no events itself; needed to register the three functions |
-| `apiKey` | `RESEND_API_KEY` env | Throws at init if neither is set |
-| `fromAddress` | `EMAIL_FROM_ADDRESS` env | Required |
-| `fromName` | `EMAIL_FROM_NAME` env → `tokens.brandName` → `'Your Site'` | |
-| `replyTo` | `EMAIL_REPLY_TO` env | Optional |
-| `tokens` | `defaultTokens` (merged onto) | Partial override |
-| `approvalsCollectionSlug` | `'approvals'` | Match what your approvals plugin uses |
-| `resolveApprover` | required | `(userId) => {email, name}` |
-| `resolveRequester` | required | `(userId) => {email, name}` |
-| `buildActionUrl` | required | Per-action URL builder; wrap your approvals plugin's HMAC token |
-| `buildPreviewUrl` | optional | Used only when the approval record has no `previewUrl` |
+| Option                    | Default                                                    | Notes                                                           |
+| ------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
+| `inngest`                 | required                                                   | Fires no events itself; needed to register the three functions  |
+| `apiKey`                  | `RESEND_API_KEY` env                                       | Throws at init if neither is set                                |
+| `fromAddress`             | `EMAIL_FROM_ADDRESS` env                                   | Required                                                        |
+| `fromName`                | `EMAIL_FROM_NAME` env → `tokens.brandName` → `'Your Site'` |                                                                 |
+| `replyTo`                 | `EMAIL_REPLY_TO` env                                       | Optional                                                        |
+| `tokens`                  | `defaultTokens` (merged onto)                              | Partial override                                                |
+| `approvalsCollectionSlug` | `'approvals'`                                              | Match what your approvals plugin uses                           |
+| `resolveApprover`         | required                                                   | `(userId) => {email, name}`                                     |
+| `resolveRequester`        | required                                                   | `(userId) => {email, name}`                                     |
+| `buildActionUrl`          | required                                                   | Per-action URL builder; wrap your approvals plugin's HMAC token |
+| `buildPreviewUrl`         | optional                                                   | Used only when the approval record has no `previewUrl`          |
 
-## Related packages
+## Related
 
-- `@forumone/throughline-core` — required peer; provides logger and audit infrastructure
-- `@forumone/throughline-approvals` — owns the approvals collection this package reads
-- `@forumone/throughline-workflows` — `audit-event-echo` is the upstream fan-out; `expire-stale-approvals` fires the expiration event this package subscribes to
+- `@forumone/throughline` — required peer; provides logger and audit infrastructure
+- `/approvals` — owns the approvals collection this package reads
+- `/jobs` — `audit-event-echo` is the upstream fan-out; `expire-stale-approvals` fires the expiration event this package subscribes to

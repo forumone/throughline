@@ -1,6 +1,8 @@
-# @forumone/throughline-audit
+# Audit queries: `@forumone/throughline/audit`
 
-Read-only MCP query tools over the Throughline audit log. Pairs with the writer in `@forumone/throughline-core`: `auditPlugin` writes records, `auditQueryPlugin` exposes them as conversational query tools.
+This was `/audit` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+
+Read-only MCP query tools over the Throughline audit log. Pairs with the writer in `@forumone/throughline`: `auditPlugin` writes records, `auditQueryPlugin` exposes them as conversational query tools.
 
 ## What this package provides
 
@@ -8,30 +10,31 @@ Five MCP tools, handed to the host's collector at `onInit` and served by
 `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody.
 All are read-only and emit no audit events of their own.
 
-| Tool | Use it for | Default access |
-|---|---|---|
-| `query_audit` | General-purpose filter (collection, document, actor, action, server, date range, failures) | admin / editor |
-| `get_change_history` | Chronological history of one document, with diffs | admin / editor |
-| `who_changed_what` | A user's recent activity. Defaults to the authenticated caller, so anyone can ask about their own changes | self always; others require admin / editor |
-| `what_changed_in_range` | Counts grouped by action / actor / collection / server over a date range | admin / editor |
-| `get_recent_failures` | `success=false` events in the last N hours, optionally filtered by server | admin / editor |
+| Tool                    | Use it for                                                                                                | Default access                             |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `query_audit`           | General-purpose filter (collection, document, actor, action, server, date range, failures)                | admin / editor                             |
+| `get_change_history`    | Chronological history of one document, with diffs                                                         | admin / editor                             |
+| `who_changed_what`      | A user's recent activity. Defaults to the authenticated caller, so anyone can ask about their own changes | self always; others require admin / editor |
+| `what_changed_in_range` | Counts grouped by action / actor / collection / server over a date range                                  | admin / editor                             |
+| `get_recent_failures`   | `success=false` events in the last N hours, optionally filtered by server                                 | admin / editor                             |
 
 Each tool returns conversational output: relative times ("2 hours ago"), named actors (`userName` then `apiKeyName` then `system` then `unknown`), and prose summaries.
 
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline-audit
+pnpm add @forumone/throughline@next
 ```
 
-Peers: `payload@^3.89.0`. Required runtime peer: `@forumone/throughline-core` (the audit log writer).
+Peers: `payload@^3.89.0`. Needs `auditPlugin` from `@forumone/throughline/audit` registered first.
 
 ## Usage
 
 ```ts
 import { buildConfig } from 'payload'
-import { auditPlugin, createInngestClient } from '@forumone/throughline-core'
-import { auditQueryPlugin } from '@forumone/throughline-audit'
+import { auditPlugin } from '@forumone/throughline/audit'
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+import { auditQueryPlugin } from '@forumone/throughline/audit'
 
 const inngest = createInngestClient({ id: 'my-site' })
 
@@ -39,7 +42,7 @@ export default buildConfig({
   // collections, db, secret...
   plugins: [
     auditPlugin({ inngest }), // writes
-    auditQueryPlugin({}),     // reads
+    auditQueryPlugin({}), // reads
   ],
 })
 ```
@@ -74,15 +77,15 @@ auditQueryPlugin({
 
 ## Options
 
-| Option | Type | Default | Notes |
-|---|---|---|---|
-| `mcpTools` | `McpToolCollector` | — | The host's collector. Without it these five tools are unreachable |
-| `collectionSlug` | `string` | `audit-events` | Must match the slug used by core's `auditPlugin` |
-| `readAccess` | `(req) => boolean` | admin / editor | Custom predicate for read-side access |
-| `enabled` | `boolean` | `true` | Set to `false` to no-op the plugin |
-| `logger` | `Logger` | `defaultLogger` | Standard Throughline logger |
+| Option           | Type               | Default         | Notes                                                             |
+| ---------------- | ------------------ | --------------- | ----------------------------------------------------------------- |
+| `mcpTools`       | `McpToolCollector` | —               | The host's collector. Without it these five tools are unreachable |
+| `collectionSlug` | `string`           | `audit-events`  | Must match the slug used by core's `auditPlugin`                  |
+| `readAccess`     | `(req) => boolean` | admin / editor  | Custom predicate for read-side access                             |
+| `enabled`        | `boolean`          | `true`          | Set to `false` to no-op the plugin                                |
+| `logger`         | `Logger`           | `defaultLogger` | Standard Throughline logger                                       |
 
-## Related packages
+## Related
 
-- `@forumone/throughline-core` — required peer; provides the audit collection, writer, and event taxonomy
-- `@forumone/throughline-publishing`, `@forumone/throughline-approvals` — write audit events that this package surfaces
+- `@forumone/throughline` — required peer; provides the audit collection, writer, and event taxonomy
+- `/publishing`, `/approvals` — write audit events that this package surfaces

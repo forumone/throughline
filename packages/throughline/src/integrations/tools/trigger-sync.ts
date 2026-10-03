@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
-import type { McpToolDefinition } from '../../index.js'
+import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
 import { deniedEnvelope, isIntegrationsAdmin } from './access.js'
 import { INTEGRATIONS_TOOLS } from './descriptors.js'
 import { requestManualSync } from '../sync/manual-sync.js'

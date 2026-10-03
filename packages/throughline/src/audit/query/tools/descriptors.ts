@@ -1,4 +1,4 @@
-import type { McpToolDescriptor } from '../../../index.js'
+import type { McpToolDescriptor } from '../../../mcp/collector.js'
 
 /*
 This server's tools, by name and description, knowable without a Payload.

@@ -3,14 +3,14 @@ import type { Logger } from '../plugin-contract/index.js'
 import {
   buildHealthcheckFailureReport,
   buildJobFailureReport,
-  getJobFailureWriter,
   reportError,
   summariseReport,
   type ErrorReporter,
   type HealthcheckFailureReport,
   type JobFailureReport,
-  type JobFailureWriter,
-} from '../observability/index.js'
+} from '../observability/report.js'
+import { getJobFailureWriter } from '../observability/plugin.js'
+import { type JobFailureWriter } from '../observability/writer.js'
 import { defaultLogger } from '../logger/index.js'
 import type { HealthcheckOptions, WorkflowFailureHandler } from './workflow-types.js'
 

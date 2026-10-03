@@ -1,7 +1,8 @@
 import type { Field } from 'payload'
 import type { Inngest } from 'inngest'
-import type { Job, JobContext, WorkflowFailureHandler } from '../jobs/index.js'
-import type { McpToolDefinition } from '../index.js'
+import type { Job, JobContext } from '../jobs/types.js'
+import type { WorkflowFailureHandler } from '../jobs/workflow-types.js'
+import type { McpToolDefinition } from '../plugin-contract/mcp.js'
 
 export type IntegrationCategory =
   | 'crm'

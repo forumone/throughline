@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Payload } from 'payload'
-import { documentContentHash } from '../index.js'
+import { documentContentHash } from '../utils/content-hash.js'
 import { createRequestApprovalTool } from './tools/request-approval.js'
 import { createApprovalResolver } from './resolver.js'
 import { callTool, makeDeps } from './tools/_test-helpers.js'

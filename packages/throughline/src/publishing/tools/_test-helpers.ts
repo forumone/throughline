@@ -1,8 +1,9 @@
 import { vi } from 'vitest'
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
-import type { AuditWriter } from '../../audit/index.js'
-import type { Logger, McpToolContext, McpToolDefinition } from '../../index.js'
+import type { AuditWriter } from '../../audit/writer.js'
+import type { Logger } from '../../plugin-contract/index.js'
+import type { McpToolContext, McpToolDefinition } from '../../plugin-contract/mcp.js'
 import type { PublishingPluginOptions } from '../options.js'
 
 const noopLogger: Logger = {

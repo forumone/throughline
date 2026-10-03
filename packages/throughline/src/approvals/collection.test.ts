@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ADMIN_GROUP } from '../index.js'
+import { DEFAULT_ADMIN_GROUP } from '../plugin-contract/admin.js'
 import {
   DEFAULT_APPROVALS_SLUG,
   createApprovalsCollection,

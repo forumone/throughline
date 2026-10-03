@@ -87,28 +87,27 @@ describe('a terminal-failure handler', () => {
   silent: they were three of the five forumone-2026 functions with no
   "(failure)" registration. `emailPlugin` now passes one.
   */
-  it.each([
-    notifyApprovalRequestJob,
-    notifyApprovalDecisionJob,
-    notifyApprovalExpiredJob,
-  ])('is registered when given, and changes nothing else', (build) => {
-    const onFailure = async () => undefined
-    const fake = createFakeInngest()
-    notifyFunction(build, {
-      inngest: fake.inngest,
-      payload: createFakePayload({}),
-      client: createFakeEmailClient(),
-      tokens: defaultTokens,
-      options,
-      onFailure,
-    })
-    const { onFailure: given, ...rest } = (fake.functions[0]?.options ?? {}) as Record<
-      string,
-      unknown
-    >
-    expect(given).toBe(onFailure)
-    expect(Object.fromEntries(Object.entries(rest).sort(([a], [b]) => a.localeCompare(b)))).toEqual(
-      registered(build),
-    )
-  })
+  it.each([notifyApprovalRequestJob, notifyApprovalDecisionJob, notifyApprovalExpiredJob])(
+    'is registered when given, and changes nothing else',
+    (build) => {
+      const onFailure = async () => undefined
+      const fake = createFakeInngest()
+      notifyFunction(build, {
+        inngest: fake.inngest,
+        payload: createFakePayload({}),
+        client: createFakeEmailClient(),
+        tokens: defaultTokens,
+        options,
+        onFailure,
+      })
+      const { onFailure: given, ...rest } = (fake.functions[0]?.options ?? {}) as Record<
+        string,
+        unknown
+      >
+      expect(given).toBe(onFailure)
+      expect(
+        Object.fromEntries(Object.entries(rest).sort(([a], [b]) => a.localeCompare(b))),
+      ).toEqual(registered(build))
+    },
+  )
 })

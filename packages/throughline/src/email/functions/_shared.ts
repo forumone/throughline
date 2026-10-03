@@ -1,4 +1,4 @@
-export { unwrapRelationshipId } from '../../index.js'
+export { unwrapRelationshipId } from '../../utils/relationships.js'
 
 import type { ApprovalTargetKind } from '../templates/index.js'
 

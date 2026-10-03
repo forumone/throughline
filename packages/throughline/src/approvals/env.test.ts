@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Inngest } from 'inngest'
-import { assertEnvironment, EnvironmentError } from '../index.js'
-import { approvalsEnv } from './index.js'
+import { assertEnvironment, EnvironmentError } from '../env/index.js'
+import { approvalsEnv } from './options.js'
 import { validateOptions } from './options.js'
 
 /*

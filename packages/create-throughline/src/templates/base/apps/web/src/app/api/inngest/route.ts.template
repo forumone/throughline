@@ -18,12 +18,9 @@ import {
 import { expireStaleApprovalsJob } from '@forumone/throughline/approvals'
 import { auditEventEchoJob } from '@forumone/throughline/audit'
 import { createPayloadReachableCheck, healthcheckJob } from '@forumone/throughline/integrations'
-import { getEmailFunctions } from '@forumone/throughline-email'
+import { getEmailFunctions } from '@forumone/throughline/email'
 import { getFormsFunctions } from '@forumone/throughline-forms'
-import {
-  getIntegrationContext,
-  getIntegrationRegistry,
-} from '@forumone/throughline-integrations'
+import { getIntegrationContext, getIntegrationRegistry } from '@forumone/throughline/integrations'
 
 const inngest = createInngestClient({ id: '{{projectName}}' })
 const payload = await getPayload({ config })

@@ -1,4 +1,4 @@
-import { documentContentHash } from '../../../index.js'
+import { documentContentHash } from '../../../utils/content-hash.js'
 import type { ApprovalResolver } from '../../options.js'
 import type { PipelineStep } from '../types.js'
 import { APPROVALS_RESOLVER_SYMBOL } from '../../../approvals/symbol.js'

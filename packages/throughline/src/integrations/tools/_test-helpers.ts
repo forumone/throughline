@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import type { Inngest } from 'inngest'
-import type { McpToolContext } from '../../index.js'
+import type { McpToolContext } from '../../plugin-contract/mcp.js'
 
 export interface FakeInstance {
   id: string

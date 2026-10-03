@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import type { McpToolDefinition } from '../../../index.js'
+import type { McpToolDefinition } from '../../../plugin-contract/mcp.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
 import { AUDIT_TOOLS } from './descriptors.js'
 

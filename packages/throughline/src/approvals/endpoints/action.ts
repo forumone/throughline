@@ -1,5 +1,5 @@
 import type { Endpoint, Payload } from 'payload'
-import type { AuditWriter } from '../../audit/index.js'
+import type { AuditWriter } from '../../audit/writer.js'
 import type { ApprovalsPluginOptions } from '../options.js'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import {

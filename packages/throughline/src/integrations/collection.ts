@@ -1,5 +1,5 @@
 import type { Access, CollectionConfig, Endpoint, FieldAccess } from 'payload'
-import { type PluginAdminOptions, resolveAdminGroup } from '../index.js'
+import { type PluginAdminOptions, resolveAdminGroup } from '../plugin-contract/admin.js'
 import type { IntegrationRegistry } from './registry.js'
 import { DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 

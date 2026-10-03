@@ -1,4 +1,4 @@
-import type { AuthenticatedUser, McpToolContext } from '../../index.js'
+import type { AuthenticatedUser, McpToolContext } from '../../plugin-contract/mcp.js'
 import type { PublishingActor } from '../service.js'
 
 /*

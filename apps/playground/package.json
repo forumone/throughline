@@ -19,11 +19,7 @@
   },
   "dependencies": {
     "@forumone/throughline": "workspace:*",
-    "@forumone/throughline-approvals": "workspace:*",
-    "@forumone/throughline-audit": "workspace:*",
-    "@forumone/throughline-components": "workspace:*",
     "@forumone/throughline-design-contract": "workspace:*",
-    "@forumone/throughline-integrations": "workspace:*",
     "@forumone/throughline-reference-ds": "workspace:*",
     "@payloadcms/db-postgres": "^3.83.0",
     "@payloadcms/next": "^3.83.0",

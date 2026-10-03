@@ -1,4 +1,6 @@
-# @forumone/throughline-components
+# Components: `@forumone/throughline/components`
+
+This was `/components` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
 
 MCP server that exposes a design system manifest as conversational primitives. Drop it into a Payload + Throughline app and Claude can list components, read contracts, suggest components for an intent, validate compositions, and surface anti-patterns — against any design system that satisfies the Throughline contract.
 
@@ -8,32 +10,33 @@ Seven MCP tools, handed to the host's collector at `onInit` and served by
 `@payloadcms/plugin-mcp` on one `/api/mcp`. Pass `mcpTools` or they reach nobody.
 This plugin serves no HTTP endpoint of its own, and so takes no `routePrefix`.
 
-| Tool | Purpose |
-|---|---|
-| `list_components` | Discover what components exist (optionally filtered by category) |
-| `get_contract` | Full `ComponentContract` for a named component |
-| `get_variants` | Available variants and when to use each |
-| `get_tokens` | Tokens a component consumes + configurable token-backed props |
-| `suggest_for_intent` | Ranked component recommendations for a natural-language intent |
+| Tool                   | Purpose                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| `list_components`      | Discover what components exist (optionally filtered by category)              |
+| `get_contract`         | Full `ComponentContract` for a named component                                |
+| `get_variants`         | Available variants and when to use each                                       |
+| `get_tokens`           | Tokens a component consumes + configurable token-backed props                 |
+| `suggest_for_intent`   | Ranked component recommendations for a natural-language intent                |
 | `validate_composition` | Errors + warnings for a proposed block list against the design system's rules |
-| `find_anti_pattern` | Surfaces structural anti-patterns (multiple Heroes, Hero at the bottom, etc.) |
+| `find_anti_pattern`    | Surfaces structural anti-patterns (multiple Heroes, Hero at the bottom, etc.) |
 
-Every consequential call writes to the audit log via `@forumone/throughline-core`'s audit writer.
+Every consequential call writes to the audit log via `@forumone/throughline`'s audit writer.
 
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline-components
+pnpm add @forumone/throughline@next
 ```
 
-Peer: `payload@^3.89.0`. Required runtime: `@forumone/throughline-core` (the components plugin asserts the `audit-log` capability at init).
+Peer: `payload@^3.89.0`. Needs `auditPlugin` from `@forumone/throughline/audit` (the components plugin asserts the `audit-log` capability at init).
 
 ## Usage
 
 ```ts
 import { buildConfig } from 'payload'
-import { auditPlugin, createInngestClient } from '@forumone/throughline-core'
-import { componentsPlugin } from '@forumone/throughline-components'
+import { auditPlugin } from '@forumone/throughline/audit'
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
+import { componentsPlugin } from '@forumone/throughline/components'
 import manifest from '@my-company/design-system/manifest' with { type: 'json' }
 
 const inngest = createInngestClient({ id: 'my-site' })
@@ -41,7 +44,7 @@ const inngest = createInngestClient({ id: 'my-site' })
 export default buildConfig({
   // collections, db, secret...
   plugins: [
-    auditPlugin({ inngest }),       // must come first (componentsPlugin requires audit-log)
+    auditPlugin({ inngest }), // must come first (componentsPlugin requires audit-log)
     componentsPlugin({
       manifest: { type: 'object', manifest },
       matching: { strategy: 'tfidf' },
@@ -88,7 +91,7 @@ The current shipping strategy is **TF-IDF**: zero external dependencies, weights
 
 ```ts
 componentsPlugin({
-  manifest: { /* ... */ },
+  manifest: {/* ... */},
   matching: { strategy: 'tfidf', maxRecommendations: 5 },
 })
 ```
@@ -114,7 +117,7 @@ The two tools are complementary. Use `validate_composition` to gate publishing a
 
 ## The `_meta` parameter
 
-`suggest_for_intent`, `validate_composition`, and `find_anti_pattern` all accept the framework's `_meta` payload (via `withMeta` from `@forumone/throughline-core`):
+`suggest_for_intent`, `validate_composition`, and `find_anti_pattern` all accept the framework's `_meta` payload (via `withMeta` from `@forumone/throughline`):
 
 ```jsonc
 {
@@ -122,15 +125,15 @@ The two tools are complementary. Use `validate_composition` to gate publishing a
   "_meta": {
     "userPrompt": "I want a hero for the new climate program",
     "reasoning": "The marketer asked for a page opener, not a section header",
-    "changesSummary": "Recommended Hero (split variant) for the program landing"
-  }
+    "changesSummary": "Recommended Hero (split variant) for the program landing",
+  },
 }
 ```
 
 The audit writer reads these fields and stores them on every record so "why did Claude recommend Hero for the contact page?" is answerable later.
 
-## Related packages
+## Related
 
 - `@forumone/throughline-design-contract` — the manifest schema this plugin reads
 - `@forumone/throughline-reference-ds` — reference DS used as a test fixture and a starting point for clients
-- `@forumone/throughline-core` — required peer; provides the audit log, MCP handler, and `withMeta` helper this plugin builds on
+- `@forumone/throughline` — required peer; provides the audit log, MCP handler, and `withMeta` helper this plugin builds on

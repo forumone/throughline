@@ -1,4 +1,4 @@
-import type { McpToolContext } from '../../index.js'
+import type { McpToolContext } from '../../plugin-contract/mcp.js'
 
 export function isIntegrationsReader(ctx: McpToolContext): boolean {
   if (!ctx.user) return false
@@ -12,4 +12,4 @@ export function isIntegrationsAdmin(ctx: McpToolContext): boolean {
 }
 
 // `deniedEnvelope` lives in core: three servers had identical copies.
-export { deniedEnvelope } from '../../index.js'
+export { deniedEnvelope } from '../../mcp/envelope.js'

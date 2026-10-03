@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { type PluginAdminOptions, resolveAdminGroup } from '../index.js'
+import { type PluginAdminOptions, resolveAdminGroup } from '../plugin-contract/admin.js'
 
 export interface CreateApprovalsCollectionOptions {
   /** Override the collection slug. Default: 'approvals'. */

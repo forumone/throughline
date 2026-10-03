@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { documentContentHash } from '../../../index.js'
+import { documentContentHash } from '../../../utils/content-hash.js'
 import { approvalStep } from './approval.js'
 import { makeContext } from '../_test-helpers.js'
 import type { ApprovalResolver } from '../../options.js'

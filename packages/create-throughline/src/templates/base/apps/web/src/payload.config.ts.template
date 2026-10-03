@@ -8,17 +8,17 @@ import { assertEnvironment, createMcpToolCollector, mcpApiKeyAccess } from '@for
 import { auditPlugin } from '@forumone/throughline/audit'
 import { createInngestClient } from '@forumone/throughline/jobs/inngest'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
-import { componentsPlugin } from '@forumone/throughline-components'
+import { componentsPlugin } from '@forumone/throughline/components'
 import { publishingPlugin } from '@forumone/throughline/publishing'
 import {
   approvalsEnv,
   approvalsPlugin,
   buildActionUrl,
   generateActionToken,
-} from '@forumone/throughline-approvals'
-import { auditQueryPlugin } from '@forumone/throughline-audit'
-import { integrationsPlugin } from '@forumone/throughline-integrations'
-import { emailEnv, emailPlugin } from '@forumone/throughline-email'
+} from '@forumone/throughline/approvals'
+import { auditQueryPlugin } from '@forumone/throughline/audit'
+import { integrationsPlugin } from '@forumone/throughline/integrations'
+import { emailEnv, emailPlugin } from '@forumone/throughline/email'
 import { formsEnv, formsPlugin } from '@forumone/throughline-forms'
 import { createTagRevalidationHooks } from '@forumone/throughline/publishing'
 import { cacheTags } from './lib/cache-tags'

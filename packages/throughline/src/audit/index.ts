@@ -18,7 +18,7 @@ export type {
   AuditEventEchoOptions,
 } from '../jobs/workflow-types.js'
 
-// From @forumone/throughline-audit (index.ts).
+// The query plugin and its MCP tools, which were `@forumone/throughline-audit`.
 export { auditQueryPlugin } from './query/plugin.js'
 export type { AuditQueryPluginOptions } from './query/options.js'
 

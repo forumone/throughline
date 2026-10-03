@@ -1,7 +1,8 @@
-import type { CorePlugin, McpToolDefinition } from '../../index.js'
-import { getPluginRegistry } from '../../index.js'
-import { createNamedLogger, defaultLogger } from '../../index.js'
-import { getAuditWriter } from '../index.js'
+import type { CorePlugin } from '../../plugin-contract/index.js'
+import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
+import { getPluginRegistry } from '../../plugin-contract/registry.js'
+import { createNamedLogger, defaultLogger } from '../../logger/index.js'
+import { getAuditWriter } from '../plugin.js'
 import { DEFAULT_AUDIT_SLUG } from '../collection.js'
 import { type AuditQueryPluginOptions, validateOptions } from './options.js'
 import {
@@ -13,7 +14,7 @@ import {
   createWhoChangedWhatTool,
 } from './tools/index.js'
 
-const PLUGIN_ID = '@forumone/throughline-audit'
+const PLUGIN_ID = '@forumone/throughline/audit-query'
 const PLUGIN_VERSION = '0.1.0'
 /**
  * Read-only MCP server over the audit log. Pairs with `auditPlugin` from
