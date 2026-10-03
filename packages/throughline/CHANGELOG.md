@@ -1,5 +1,34 @@
 # @forumone/throughline
 
+## 1.0.0-next.2
+
+### Major Changes
+
+- dcf84fc: `resend`, `@react-email/components` and `@react-email/render` are optional peers rather than dependencies, and `inngest` is an optional peer. `payload` is the only required one. Each optional peer is loaded only by the subpath that uses it, and the root loads none: the approval emails import their templates when they send, so registering the suite with `throughline()` no longer loads React or React Email. A missing optional peer fails when its feature runs, with an error naming the package to install.
+- e7d34fa: Smaller gaps closed before 1.0:
+
+  - `Integration.createFunctions` is optional. `throughline()` runs `createJobs` and never called it.
+  - `auditQuery.readAccess` now applies: it takes the tool's context, `(ctx) => boolean`, and replaces the admin/editor rule for the five audit tools. It was declared with a `PayloadRequest` and read by nothing.
+  - `job-failures` takes an `admin` sidebar group like every other Throughline collection, and gets the suite's from `throughline()`.
+  - An accessibility issue of severity `warning` reaches the publish result's `warnings` instead of being dropped.
+  - The webhook integration no longer subscribes to `form/submission.received`, which nothing sends since forms left the suite; the stored filter option stays. Stale text naming forms, the "Approvals Server" and 0.x paths is corrected.
+
+- 673ff70: `throughline()`: one call for the whole suite (`docs/spec/1.0-throughline-call.md`). It returns `{ plugin, mcpTools, jobs }`: one Payload plugin that registers every enabled Throughline plugin in order, the tool array for `mcpPlugin`, and every job the options call for. Audit, job failures and `check_slug` are always on; every other plugin is on when its key is present. Shared values are given once: `approvals.collectionSlug` reaches the collection, the emails and the expiry job, and `collections` reaches publishing, "Your work" and scheduled publishing. Its defaults are what every site wrote by hand: scheduled publishes go through the publishing pipeline (`publishScheduledThroughPipeline`), approval links are signed with approvals' secret, and a failing healthcheck is recorded in `job-failures`. On Payload Jobs it registers its jobs itself. It refuses an integration with no `createJobs`.
+
+  **Internal now:** `getPluginRegistry`, `resolveAdminGroup`, `DEFAULT_ADMIN_GROUP`, `PluginRegistry*`, `createMcpToolCollector` and the collector's option types, `toPayloadMcpTool(s)`, `getEmailFunctions`, `getIntegrationRegistry` and `getIntegrationContext`. Use `throughline()`. `McpToolCollector` and `PayloadMcpTool` stay exported as types.
+
+  `HealthcheckOptions.onFailure` receives `{ payload }` as a second argument, and `createHealthcheckFailureHandler()` made without a `payload` records on the run's own.
+
+- 6c1409a: The trust boundary now covers every write that changes what the public sees. A create with `_status: 'published'` is refused (create a draft, then publish), and so is a non-draft save that changes a live document (save a draft, then publish). Before, both went live with no pipeline, approval or audit row, so "requires approval" held only for a page's first publish. Data a system derives from a live page and writes back to it, such as an audio URL, passes with `context: DERIVED_WRITE_CONTEXT` from `/publishing`, which can never change `_status`, create, or promote a draft.
+
+### Minor Changes
+
+- 2e49ee7: `throughline migrate-imports [paths…] [--dry-run]`, a new bin: rewrites every 0.x `@forumone/throughline-*` import to its 1.0 home, by `docs/spec/1.0-exports.md`. It splits an import by where each name went, keeps `type` and aliases, rewrites admin component paths (`importMap.js` included), and points mocks, dynamic imports and module augmentation at the 1.0 counterpart for you to check. Names 1.0 removed or made internal are left in place and listed with what to use instead, as are the `package.json` dependencies to swap, and it exits 1 while anything is left. Run on forumone-2026, it rewrites 163 files and leaves the five imports `throughline()` replaces.
+
+### Patch Changes
+
+- @forumone/throughline-design-system@1.0.0-next.2
+
 ## 1.0.0-next.1
 
 ### Patch Changes
