@@ -21,3 +21,26 @@ export function unwrapRelationshipId(value: unknown): string | null {
   }
   return null
 }
+
+/** What `relationshipIdFor` reads off a Payload instance. */
+export interface IdTypeSource {
+  collections: Record<string, { customIDType?: 'number' | 'text' } | undefined>
+  db: { defaultIDType: 'number' | 'text' }
+}
+
+/**
+ * An id as a relationship to `relationTo` stores it: a number when that
+ * collection's ids are numbers, the string otherwise.
+ *
+ * The other direction from `unwrapRelationshipId`. An MCP tool's caller arrives
+ * as `ctx.user.id`, a string, because `AuthenticatedUser` is shaped for every
+ * adapter. On Postgres the `users` ids are serial numbers, and Payload refuses
+ * `"1"` for a relationship to them — "The following field is invalid" — so
+ * `request_approval` could not store a request at all, and `respond_to_approval`
+ * could not record who decided. A collection with its own id field says so in
+ * `customIDType`; otherwise the adapter's default applies.
+ */
+export function relationshipIdFor(payload: IdTypeSource, relationTo: string, id: string): string | number {
+  const type = payload.collections[relationTo]?.customIDType ?? payload.db.defaultIDType
+  return type === 'number' && /^\d+$/.test(id) ? Number(id) : id
+}
