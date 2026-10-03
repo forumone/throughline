@@ -140,25 +140,46 @@ const isAdmin: Access = ({ req: { user } }) =>
   Array.isArray(user.roles) &&
   (user.roles as unknown[]).includes('admin')
 
+// Only an admin may set a role or a group, so nobody can grant themselves one.
+const adminOnlyField = ({ req: { user } }: { req: { user?: unknown } }) =>
+  Array.isArray((user as { roles?: unknown } | undefined)?.roles) &&
+  ((user as { roles: unknown[] }).roles).includes('admin')
+
 // Users collection — extend with your own fields and SSO/auth provider.
 const Users: CollectionConfig = {
   slug: 'users',
   auth: true,
   admin: { useAsTitle: 'email' },
+  hooks: {
+    beforeChange: [
+      // The first account is the admin: /admin/create-first-user is how one
+      // exists at all. Every account after it starts as an editor, and an admin
+      // grants anything more.
+      async ({ data, operation, req }) => {
+        if (operation !== 'create') return data
+        const { totalDocs } = await req.payload.count({ collection: 'users', req })
+        return totalDocs === 0 ? { ...data, roles: ['admin'] } : data
+      },
+    ],
+  },
   fields: [
     { name: 'name', type: 'text' },
     {
       name: 'roles',
       type: 'select',
       hasMany: true,
-      defaultValue: ['admin'],
+      // Least privilege: an editor authors content. The scaffold used to make
+      // every new account an administrator.
+      defaultValue: ['editor'],
       options: ['admin', 'editor', 'approver'],
+      access: { create: adminOnlyField, update: adminOnlyField },
     },
     {
       name: 'groups',
       type: 'select',
       hasMany: true,
       options: ['editorial', 'legal', 'communications', 'senior'],
+      access: { create: adminOnlyField, update: adminOnlyField },
     },
   ],
 }

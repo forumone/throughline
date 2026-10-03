@@ -127,4 +127,17 @@ describe('respond_to_approval', () => {
     expect(result.error).toMatch(/own request/)
     expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
   })
+
+  it('reports a recorded decision with a warning when its event cannot be sent', async () => {
+    const deps = makeDeps({
+      payloadFindByID: vi.fn(async () => pendingApproval),
+      inngestSend: vi.fn(async () => { throw new Error('no event key') }),
+    })
+    const result = (await callTool(createRespondToApprovalTool(deps), {
+      approvalId: 'apr_1',
+      decision: 'approve',
+    })) as { success?: boolean; warnings?: string[] }
+    expect(result.success).toBe(true)
+    expect(result.warnings?.[0]).toMatch(/approval\/decided event could not be sent/)
+  })
 })

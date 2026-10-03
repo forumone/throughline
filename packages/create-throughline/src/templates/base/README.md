@@ -19,13 +19,13 @@ This is a Throughline project: a Payload CMS application with the Throughline su
 pnpm install
 
 # 2. Copy the env template
-cp .env.example .env.local
+cp .env.example apps/web/.env.local   # apps/web: `next dev` reads env files from there
 
 # 3. Generate the two secrets, PAYLOAD_SECRET and APPROVAL_TOKEN_SECRET (run it
 #    once for each)
 openssl rand -base64 48
 
-# 4. Edit .env.local and fill in:
+# 4. Edit apps/web/.env.local and fill in:
 #    - DATABASE_URI                — your Postgres connection string
 #    - PAYLOAD_SECRET               — generated above
 #    - APPROVAL_TOKEN_SECRET        — generated above
@@ -51,7 +51,8 @@ pnpm --dir apps/web generate:importmap
 # 7. Start the dev server
 pnpm dev
 
-# 8. Visit http://localhost:3000/admin and create your first user.
+# 8. Visit http://localhost:3000/admin and create your first user. It is the admin;
+#    every account after it starts as an editor, and an admin grants more.
 ```
 
 ## After admin signup

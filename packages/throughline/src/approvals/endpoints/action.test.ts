@@ -18,6 +18,9 @@ interface MakeArgsOverrides {
   approval?: Record<string, unknown>
   payloadFindByID?: ReturnType<typeof vi.fn>
   payloadUpdate?: ReturnType<typeof vi.fn>
+  inngestSend?: ReturnType<typeof vi.fn>
+  /** The database's id type: `text` as these fixtures' ids, `number` as Postgres. */
+  idType?: 'number' | 'text'
 }
 
 function makeArgs(overrides: MakeArgsOverrides = {}) {
@@ -34,12 +37,15 @@ function makeArgs(overrides: MakeArgsOverrides = {}) {
   const payloadFindByID =
     overrides.payloadFindByID ?? vi.fn(async () => approval)
   const payloadUpdate = overrides.payloadUpdate ?? vi.fn(async () => approval)
-  const inngestSend = vi.fn(async () => ({}))
+  const inngestSend = overrides.inngestSend ?? vi.fn(async () => ({}))
   const audit = vi.fn(async () => {})
 
   const payload = {
     findByID: payloadFindByID,
     update: payloadUpdate,
+    collections: {},
+    db: { defaultIDType: overrides.idType ?? 'text' },
+    logger: { warn: vi.fn() },
   } as unknown as Payload
   const inngest = { send: inngestSend } as unknown as Inngest
 
@@ -163,5 +169,36 @@ describe('createActionEndpoint', () => {
     const body = await response.text()
     expect(body).toContain('already declined')
     expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
+  })
+
+  /*
+  On Postgres the users ids are numbers, and the token carries the approver as a
+  string. Written as one, \`decidedBy\` was refused, so every emailed decision
+  failed on Confirm — the page the approver sees after clicking the link.
+  */
+  it('records the decider in the users collection\'s id type', async () => {
+    const token = await generateActionToken({ ...baseToken, approverId: '2', issuedAt: Date.now() }, SECRET)
+    const deps = makeArgs({ idType: 'number' })
+    const response = await callEndpoint(
+      deps,
+      `https://example.com/api/approvals/action?token=${encodeURIComponent(token)}&confirm=true`,
+    )
+    expect(response.status).toBe(200)
+    const updateArgs = deps.spies.payloadUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+    expect(updateArgs.data['decidedBy']).toBe(2)
+  })
+
+  // The decision is recorded and the token consumed before the event; a failed
+  // send used to turn the approver's confirmation into an error page.
+  it('confirms a recorded decision even when its event cannot be sent', async () => {
+    const token = await generateActionToken({ ...baseToken, issuedAt: Date.now() }, SECRET)
+    const deps = makeArgs({ inngestSend: vi.fn(async () => { throw new Error('no event key') }) })
+    const response = await callEndpoint(
+      deps,
+      `https://example.com/api/approvals/action?token=${encodeURIComponent(token)}&confirm=true`,
+    )
+    expect(response.status).toBe(200)
+    expect(deps.spies.payloadUpdate).toHaveBeenCalled()
+    expect(deps.spies.audit).toHaveBeenCalled()
   })
 })
