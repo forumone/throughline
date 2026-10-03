@@ -75,6 +75,30 @@ export const { GET, POST, PUT } = serve({ client: inngest, functions: jobs.funct
 
 The reasoning is in [`docs/spec/1.0-throughline-call.md`](../../docs/spec/1.0-throughline-call.md). Each plugin is still exported from its subpath for a site that wires them by hand.
 
+## Moving from 0.x: `throughline migrate-imports`
+
+```bash
+pnpm add @forumone/throughline@next @forumone/throughline-design-system@next
+pnpm exec throughline migrate-imports --dry-run   # what it would change
+pnpm exec throughline migrate-imports             # change it
+```
+
+It rewrites every import of a 0.x `@forumone/throughline-*` package to its 1.0 home, by
+[`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md):
+
+- each name goes to the entry that now exports it, so one 0.x import may become several;
+- `import type`, inline `type` and aliases are kept, and renamed names keep the local name the file
+  uses;
+- admin component paths (`'…-publishing/client#PublishButton'`) are rewritten, which covers
+  `importMap.js`; regenerate it afterwards, since its aliases are hashes of the old paths;
+- a mock, a dynamic import, a module augmentation or `export *` is pointed at the 0.x path's 1.0
+  counterpart, and listed for you to check.
+
+It leaves alone, and lists with what to do instead, a name 1.0 removed or made internal: the
+Inngest-shaped `create…Function` factories, the MCP collector and the accessors `throughline()`
+replaces. It lists the `package.json` dependencies to swap too, and it exits 1 while anything is
+left, so a migration can gate on it.
+
 ## Installation
 
 ```bash
