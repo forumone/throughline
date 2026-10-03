@@ -60,8 +60,7 @@ function update(options: {
 
   // Payload sets `_status: 'draft'` for a draft save unless the caller
   // asked for `published`; otherwise the stored status comes through.
-  const injected =
-    options.draft && options.requested !== 'published' ? 'draft' : options.requested
+  const injected = options.draft && options.requested !== 'published' ? 'draft' : options.requested
   const nextStatus = injected ?? options.latestVersion
 
   const run = () =>
@@ -83,17 +82,41 @@ const allowed = async (opts: Parameters<typeof update>[0]) =>
 const blocked = async (opts: Parameters<typeof update>[0]) =>
   expect(update(opts).run()).rejects.toThrow(/Direct writes to `_status` are not allowed/)
 
+const refusedAsLiveEdit = async (opts: Parameters<typeof update>[0]) =>
+  expect(update(opts).run()).rejects.toThrow(/This page is live\. Save your change as a draft/)
+
+const create = (data: Record<string, unknown>, context: Record<string, unknown> = {}) =>
+  (blockHook as CollectionBeforeChangeHook)({
+    operation: 'create',
+    data,
+    context,
+    req: { context: {} },
+    collection: { slug: 'pages' } as never,
+  } as HookArgs)
+
 describe('createBlockStatusWritesHook', () => {
-  it('ignores create operations', async () => {
+  // A create used to be skipped, so one carrying `published` went live with no
+  // pipeline: over REST, or through Payload's MCP `create` tools.
+  it('refuses a create that would be live at once', async () => {
+    await expect(create({ title: 'New', _status: 'published' })).rejects.toThrow(
+      /Create it as a draft, then publish it/,
+    )
+  })
+
+  it('allows a create as a draft', async () => {
+    await expect(create({ title: 'New', _status: 'draft' })).resolves.toBeDefined()
+  })
+
+  it('lets the pipeline create a published document', async () => {
     await expect(
-      (blockHook as CollectionBeforeChangeHook)({
-        operation: 'create',
-        data: { _status: 'published' },
-        context: {},
-        req: { context: {} },
-        collection: { slug: 'pages' } as never,
-      } as HookArgs),
+      create({ title: 'New', _status: 'published' }, { bypassPublishingServer: true }),
     ).resolves.toBeDefined()
+  })
+
+  it('does not let a derived write create a published document', async () => {
+    await expect(
+      create({ title: 'New', _status: 'published' }, { throughlineDerivedWrite: true }),
+    ).rejects.toThrow(/Create it as a draft/)
   })
 
   it('ignores updates on collections without drafts', async () => {
@@ -168,18 +191,46 @@ describe('what reaches the public', () => {
     })
   })
 
-  describe('ordinary edits — status unchanged, nothing pending', () => {
-    // Payload merges the stored document into `data`, so an ordinary field
-    // edit arrives carrying `_status: 'published'`. Blocking these would
-    // make published documents uneditable.
-    it('allows a non-draft edit of a published document', async () => {
-      await allowed({ latestVersion: 'published' })
+  describe('edits to a live document — through the pipeline', () => {
+    // Payload merges the stored document into `data`, so an edit arrives
+    // carrying `_status: 'published'`. Allowing it changed live content with
+    // no check, approval-required pages included. Editors save a draft and
+    // publish it, which is what the admin's buttons do.
+    it('refuses a non-draft edit of a published document', async () => {
+      await refusedAsLiveEdit({ latestVersion: 'published' })
     })
 
-    it('allows a non-draft edit that restates published', async () => {
-      await allowed({ latestVersion: 'published', requested: 'published' })
+    it('refuses a non-draft edit that restates published', async () => {
+      await refusedAsLiveEdit({ latestVersion: 'published', requested: 'published' })
     })
 
+    it('allows a non-draft write that changes nothing live', async () => {
+      await allowed({ latestVersion: 'published', liveTitle: 'A title' })
+    })
+
+    it('allows a derived write to a live document with nothing pending', async () => {
+      await allowed({ latestVersion: 'published', context: { throughlineDerivedWrite: true } })
+    })
+
+    it('does not let a derived write promote a pending draft', async () => {
+      await blocked({
+        latestVersion: 'draft',
+        live: 'published',
+        requested: 'published',
+        context: { throughlineDerivedWrite: true },
+      })
+    })
+
+    it('does not let a derived write unpublish', async () => {
+      await blocked({
+        latestVersion: 'published',
+        requested: 'draft',
+        context: { throughlineDerivedWrite: true },
+      })
+    })
+  })
+
+  describe('ordinary writes — nothing live', () => {
     it('allows a non-draft write of draft to a never-published document', async () => {
       await allowed({ latestVersion: 'draft', live: 'draft', requested: 'draft' })
     })
@@ -255,12 +306,6 @@ describe('what reaches the public', () => {
   describe('cost', () => {
     it('does not read the live row for a draft save', async () => {
       const { run, findByID } = update({ draft: true, latestVersion: 'published' })
-      await run()
-      expect(findByID).not.toHaveBeenCalled()
-    })
-
-    it('does not read the live row for an ordinary published edit', async () => {
-      const { run, findByID } = update({ latestVersion: 'published' })
       await run()
       expect(findByID).not.toHaveBeenCalled()
     })

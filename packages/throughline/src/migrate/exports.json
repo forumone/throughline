@@ -87,6 +87,7 @@
     "DEFAULT_JOB_FAILURES_SLUG": ["@forumone/throughline/observability"],
     "DEFAULT_PROBLEM_REPORT_LENGTH": ["@forumone/throughline/integrations"],
     "DEFAULT_REPORTED_HEADERS": ["@forumone/throughline/observability"],
+    "DERIVED_WRITE_CONTEXT": ["@forumone/throughline/publishing"],
     "DescribeAnonymousAccessOptions": ["@forumone/throughline/testing"],
     "DocumentActionArgs": ["@forumone/throughline/publishing"],
     "DocumentContentHashOptions": ["@forumone/throughline"],

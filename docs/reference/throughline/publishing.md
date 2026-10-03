@@ -121,14 +121,17 @@ All three run the same pipeline the admin and MCP paths use, so host code cannot
 The plugin installs two hooks on every configured collection, and they work as a pair:
 
 - `beforeOperation` records whether the update in flight is a draft write.
-- `beforeChange` rejects writes that change the **live** document's `_status`.
+- `beforeChange` rejects writes that would change the **live** document: its `_status`, its content, or whether it exists.
 
 The question they answer is not "did `_status` change" but **would this write change what the public sees**:
 
 | Write                                                                                 | Result                                                           |
 | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | Any `draft: true` save                                                                | **allowed** — writes a version, the live document is untouched   |
-| A field edit of a published document with nothing pending                             | **allowed** — status unchanged, no draft to promote              |
+| A field edit of a published document                                                  | **blocked** — save a draft, then publish                         |
+| A write that changes nothing live (Payload's "Revert to published")                   | **allowed**                                                      |
+| A create with `_status: 'published'`                                                  | **blocked** — create a draft, then publish                       |
+| A field edit carrying `DERIVED_WRITE_CONTEXT`, live with nothing pending              | **allowed** — data derived from the page, written back to it     |
 | A `_status: 'draft'` write to a document that was never published, or is already down | **allowed** — nothing is live                                    |
 | `_status: 'draft'` on a live document                                                 | **blocked** — unpublish through the pipeline                     |
 | `_status: 'published'` on a draft document                                            | **blocked** — publish through the pipeline                       |
@@ -161,7 +164,24 @@ await payload.update({
 
 It skips composition, accessibility, required-field, embargo, and approval checks. Nothing in the admin path uses it.
 
-> **Note:** the hook guards `update` only. `payload.create({ data: { _status: 'published' } })` is not intercepted, so a create can publish without the pipeline. Save as a draft and publish in a second step if that matters to you.
+A create carrying `bypassPublishingServer` may be published at once, for a seed.
+
+### Derived data on a live page
+
+Some writes to a live page are not edits: an audio rendition's URL written back after it is generated, a sync's timestamp. Running them through the pipeline would gate the page on its own side effect, so they carry `DERIVED_WRITE_CONTEXT`:
+
+```ts
+import { DERIVED_WRITE_CONTEXT } from '@forumone/throughline/publishing'
+
+await payload.update({
+  collection: 'posts',
+  id,
+  data: { narration },
+  context: DERIVED_WRITE_CONTEXT,
+})
+```
+
+It is allowed only on a document that is live with nothing pending, and only for a write that keeps it published. It cannot create, unpublish, or promote a pending draft — that is still a publish. Use it for data the site derives, never for an editor's change.
 
 ## Warnings
 

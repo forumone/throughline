@@ -65,9 +65,12 @@ afterAll(async () => {
 })
 
 async function makePage(status: 'draft' | 'published'): Promise<number | string> {
+  // A published create is a publish, so the setup makes one the way the
+  // pipeline would.
   const doc = await payload.create({
     collection: 'pages',
     data: { title: 'A page', _status: status },
+    ...(status === 'published' ? { context: BYPASS } : {}),
   })
   return doc.id
 }
@@ -199,15 +202,55 @@ describe('draft saves', () => {
   })
 })
 
-describe('ordinary edits', () => {
-  it('allows a non-draft field edit of a published document', async () => {
-    const id = await makePage('published')
-
-    await update(id, { data: { title: 'Renamed' } })
-
-    expect(await liveStatus(id)).toBe('published')
+describe('creating', () => {
+  it('refuses a create that would be live at once', async () => {
+    await expect(
+      payload.create({
+        collection: 'pages',
+        data: { title: 'Straight to live', _status: 'published' },
+      }),
+    ).rejects.toThrow(/Create it as a draft, then publish it/)
   })
 
+  it('creates a draft', async () => {
+    const doc = await payload.create({ collection: 'pages', data: { title: 'A draft' } })
+    expect(doc._status).toBe('draft')
+  })
+})
+
+describe('edits to a live document', () => {
+  it('refuses a non-draft field edit, and leaves the live content as it was', async () => {
+    const id = await makePage('published')
+
+    await expect(update(id, { data: { title: 'Renamed' } })).rejects.toThrow(/This page is live/)
+
+    expect(await liveTitle(id)).toBe('A page')
+  })
+
+  it('allows a derived write, without the pipeline', async () => {
+    const id = await makePage('published')
+
+    await update(id, { data: { title: 'Annotated' }, context: { throughlineDerivedWrite: true } })
+
+    expect(await liveStatus(id)).toBe('published')
+    expect(await liveTitle(id)).toBe('Annotated')
+  })
+
+  it('does not let a derived write promote a pending draft', async () => {
+    const id = await makePage('published')
+    await update(id, { draft: true, data: { title: 'Pending' } })
+
+    await expect(
+      update(id, {
+        data: { _status: 'published' },
+        context: { throughlineDerivedWrite: true },
+      }),
+    ).rejects.toThrow(BLOCKED)
+    expect(await liveTitle(id)).toBe('A page')
+  })
+})
+
+describe('ordinary edits', () => {
   it('allows a non-draft write to a never-published document', async () => {
     const id = await makePage('draft')
     await expect(update(id, { draft: false, data: { _status: 'draft' } })).resolves.toBeDefined()
@@ -348,7 +391,8 @@ leaves a trashed document out, so trashing a live page takes it off the site —
 which is why it is judged here at all.
 */
 describe('the trash', () => {
-  const trash = (id: number | string) => update(id, { data: { deletedAt: new Date().toISOString() } })
+  const trash = (id: number | string) =>
+    update(id, { data: { deletedAt: new Date().toISOString() } })
 
   async function isTrashed(id: number | string): Promise<boolean> {
     const doc = await payload.findByID({ collection: 'pages', id, trash: true })
@@ -412,17 +456,20 @@ describe('the trash', () => {
   })
 
   // A document published at trash time can only get there around the pipeline
-  // (the check above refuses the admin's route). Its restore changes nothing
-  // live, so the rule for an ordinary edit of a live document still applies.
-  it('lets a restore that changes nothing live through', async () => {
+  // (the check above refuses the admin's route). Restoring it puts it back on
+  // the site, which is a publish, so it gets the same answer as any other
+  // restore straight to published.
+  it('refuses to restore a document that was trashed while published', async () => {
     const id = await makePage('published')
     await update(id, {
       data: { deletedAt: new Date().toISOString() },
       context: BYPASS,
     })
 
-    await update(id, { trash: true, data: { deletedAt: null, _status: 'published' } })
-    expect(await isTrashed(id)).toBe(false)
+    await expect(
+      update(id, { trash: true, data: { deletedAt: null, _status: 'published' } }),
+    ).rejects.toThrow(/Restore it as a draft, then publish it/)
+    expect(await isTrashed(id)).toBe(true)
   })
 
   it('keeps the generic refusal for a direct publish that is not a restore', async () => {

@@ -2,7 +2,7 @@
 
 The most important concept in the framework. It's the answer to "if Claude can edit any field, what stops it from publishing junk?"
 
-The answer: **the Publishing server is the only sanctioned path to `_status: 'published'`.** Direct writes through Payload MCP are blocked. Every publish goes through a seven-stage pipeline that can refuse for a structured, surfaced reason. The pipeline is the boundary.
+The answer: **the publishing pipeline is the only sanctioned path to what the public sees.** Publishing, unpublishing, creating a document as published, and editing a live one are all refused outside it, however they arrive. Every publish goes through a seven-stage pipeline that can refuse for a structured, surfaced reason. The pipeline is the boundary.
 
 ## What the pipeline checks
 
@@ -10,22 +10,21 @@ In order, every `publish` call runs:
 
 1. **Exists** — `findByID` returns the document and the caller has read access. Cheap and first because it short-circuits a lot of error paths.
 2. **Composition** — the layout's blocks and props validate against the design system contract. Catches "Hero with two CTAs and three subtitles" violations the contract forbids.
-3. **Accessibility** — registered `AccessibilityCheck` functions run. Each returns `pass | warn | fail`. Fails block; warns are reported but don't gate. See [Customizing accessibility checks](../guides/customizing-accessibility-checks.md).
+3. **Accessibility** — the built-in and registered `AccessibilityCheck`s run. Each returns a list of issues; an `error` blocks. See [Customizing accessibility checks](../guides/customizing-accessibility-checks.md).
 4. **Required fields** — collection-level required-for-publish fields populated. Configured per collection; the example `pages` collection requires `seo.title`.
 5. **Embargo** — `policy.embargoedUntil`, if set, must be in the past. Useful for press releases, regulated industries, time-sensitive announcements.
 6. **Approval** — if `policy.requiresApproval`, an approval record exists with `status: 'granted'` for this document version.
 7. **Execute** — actually flips `_status` to `'published'`, writes `publishedAt`, fires `content/page.published` on Inngest.
 
-The first stage that fails returns a structured error like:
+The first stage that fails returns a structured result like:
 
 ```json
 {
-  "error": {
-    "code": "PUBLISH_REJECTED",
-    "stage": "approval",
-    "reason": "Page requires approval from \"editorial\".",
-    "remedy": "Call request_approval to start the workflow."
-  }
+  "published": false,
+  "failedAt": "approval",
+  "code": "approval-required",
+  "reason": "This document requires approval and no granted approval exists for the current version",
+  "suggestion": "…"
 }
 ```
 
@@ -40,19 +39,22 @@ A pipeline gives you several things "validation rules" don't:
 - **Stages can short-circuit.** Once any gate fails, the rest don't run. You don't get a flood of secondary errors caused by a primary failure.
 - **Stages are composable.** Adding a stage is registering a new check, not modifying validation logic across many fields.
 
-## Why the Payload MCP can't bypass
+## Why nothing else can bypass
 
-Throughline's `auditPlugin` installs collection hooks that block `_status` mutations through any code path other than the Publishing plugin itself. Specifically:
+`publishingPlugin` installs a `beforeChange` hook on every governed collection that asks one question of every write, from the admin, REST, GraphQL, the Local API or Payload's own MCP tools: **would this change what the public sees?** If so, and the write is not the pipeline's own, it is refused with a 400 that says what to do instead:
 
-- Payload MCP's `update` operation strips `_status` from incoming documents
-- The Payload admin UI can't edit `_status` directly on configured collections — the field is set via a button that wraps the publish endpoint
-- A REST/GraphQL client trying to PATCH `_status` gets a 403
+- **Publishing or unpublishing** — a write that changes the live document's `_status`, or promotes a pending draft.
+- **Creating a document as published** — it would be live the moment it existed. Create it as a draft, then publish it.
+- **Editing a live document** — a non-draft save that changes its content. Save a draft, then publish it. So "requires approval" holds for every change to a live page, not only the first publish.
+- **Trashing a live document, or restoring one straight to published.**
 
-The Publishing plugin uses an internal token (a Symbol-keyed bypass) to make the actual write itself. There is no public path that produces a published document without going through the pipeline.
+A draft save is always allowed: it writes a version and leaves the live page alone, which is what the admin's Save Draft and autosave do. So is a write that changes nothing live, such as Payload's "Revert to published".
+
+Two context flags let code past it. The pipeline's own write carries `bypassPublishingServer`, which seed scripts and migrations may use too. And `DERIVED_WRITE_CONTEXT`, from `/publishing`, lets a system write data it derived from a live page back to it — an audio rendition's URL, a sync timestamp — without gating the page on its own side effect. That one can never change `_status`, create, or promote a draft.
 
 ## What about humans?
 
-Humans get the same treatment. The "Publish" button in the admin UI calls the same Publishing MCP endpoint Claude would. An admin who tries to bypass the pipeline by editing the database directly bypasses the audit log too — which is generally what you want, because you'd rather an admin who's circumventing controls leave a trail in `pg_stat_activity` than blend in with normal traffic.
+Humans get the same treatment. The "Publish" button in the admin UI runs the same pipeline Claude's `publish` tool does. An admin who tries to bypass the pipeline by editing the database directly bypasses the audit log too — which is generally what you want, because you'd rather an admin who's circumventing controls leave a trail in `pg_stat_activity` than blend in with normal traffic.
 
 ## Extending the pipeline
 

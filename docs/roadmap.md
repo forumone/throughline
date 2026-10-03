@@ -477,7 +477,7 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
     - [x] reference docs for the three packages: `docs/reference` is the one home, a page per package and per plugin, and the 0.x pages stay on `v0`
     - [x] the rest of `docs/` on 1.0: getting started, guides, concepts, operations and the root README, each claim checked against the code
 - [ ] Code gaps the docs sweep found, each documented as it stands until fixed:
-    - [ ] `block-status-writes` skips `create`, so a document created as `published` (REST, or Payload's MCP CRUD) goes live with no pipeline; and a non-draft save to a live page changes live content without it, approval-required pages included
+    - [x] `block-status-writes` skips `create`, so a document created as `published` (REST, or Payload's MCP CRUD) goes live with no pipeline; and a non-draft save to a live page changes live content without it, approval-required pages included. Both refused now; derived data passes with `DERIVED_WRITE_CONTEXT`
     - [ ] an accessibility issue of severity `warning` is dropped, not reported
     - [ ] `Integration.createFunctions` is required though `throughline()` runs only `createJobs`
     - [ ] `auditQueryPlugin`'s `readAccess` is declared and read by nothing
