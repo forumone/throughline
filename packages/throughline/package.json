@@ -6,6 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
+    "throughline": "./bin/throughline.mjs",
     "throughline-payload": "./bin/throughline-payload.mjs"
   },
   "exports": {
