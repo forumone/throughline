@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Payload } from 'payload'
 import { auditContext } from '../../mcp/audit-context.js'
 import { relationshipIdFor, unwrapRelationshipId } from '../../utils/relationships.js'
+import { sendEventSafely } from '../../utils/send-event-safely.js'
 import { withMeta } from '../../mcp/meta.js'
 import { type AuditWriter } from '../../audit/writer.js'
 import type { AuditAction } from '../../audit/types.js'
@@ -86,7 +87,8 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
         },
       })
 
-      await deps.options.inngest.send({
+      // After the write, as in request_approval: the decision is recorded.
+      const warning = await sendEventSafely(deps.options.inngest, {
         name: 'approval/decided',
         data: {
           approvalId: input.approvalId,
@@ -96,7 +98,7 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
           targetCollection: String(approval['targetCollection']),
           targetId: String(approval['targetId']),
         },
-      })
+      }, 'the requester may not have been notified, and the approval/decided subscribers have not run')
 
       await deps.auditWriter({
         ...auditContext(ctx, input._meta),
@@ -116,7 +118,7 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
         success: true,
       })
 
-      return { success: true, status: newStatus, decidedAt }
+      return { success: true, status: newStatus, decidedAt, ...(warning ? { warnings: [warning] } : {}) }
     },
   }
 }

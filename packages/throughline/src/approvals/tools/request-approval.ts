@@ -4,6 +4,7 @@ import { type AuditWriter } from '../../audit/writer.js'
 import { auditContext } from '../../mcp/audit-context.js'
 import { documentContentHash } from '../../utils/content-hash.js'
 import { relationshipIdFor } from '../../utils/relationships.js'
+import { sendEventSafely } from '../../utils/send-event-safely.js'
 import { withMeta } from '../../mcp/meta.js'
 import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
@@ -110,7 +111,10 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
 
       const approvalId = String(created.id)
 
-      await deps.options.inngest.send({
+      // After the write: the request is stored whatever happens to its event, so
+      // a failed send is a warning on a call that succeeded, not a failure that
+      // invites a second request.
+      const warning = await sendEventSafely(deps.options.inngest, {
         name: 'approval/requested',
         data: {
           approvalId,
@@ -121,7 +125,7 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
           approverIds: approvers.map((a) => a.id),
           expiresAt,
         },
-      })
+      }, 'approvers may not have been notified, and the approval/requested subscribers have not run')
 
       await deps.auditWriter({
         ...auditContext(ctx, input._meta),
@@ -142,6 +146,7 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
         expiresAt,
         approvers: approvers.map((a) => ({ id: a.id, name: a.name ?? a.email })),
         previewUrl,
+        ...(warning ? { warnings: [warning] } : {}),
       }
     },
   }
