@@ -65,7 +65,7 @@ This signs the URLs in approval emails. If it changes after emails are sent, tho
 
 Missing or shorter than 32 characters? The Approvals plugin refuses to start. Declared in `approvalsEnv`.
 
-`FORMS_IP_HASH_SECRET` is not a 1.0 variable: the Forms plugin is not part of Throughline 1.0 and stays on the 0.x line (the `v0` branch).
+`FORMS_IP_HASH_SECRET` is not a 1.0 variable: the Forms plugin is not part of Throughline 1.0. Its last release is `@forumone/throughline-forms@0.7.9`, its source is on the closed `v0` branch, and 0.x receives no more releases.
 
 ## MCP keys are not environment variables
 

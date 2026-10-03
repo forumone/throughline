@@ -29,6 +29,10 @@ PAYLOAD_CLI_TIMEOUT_MS sets the wall clock; 0 disables it. The default is five
 minutes, except for the `migrate` family (`migrate`, `migrate:create`, …),
 which gets none: a large migration is legitimately long, and `migrate:create`
 can stop at an interactive prompt. Layers 1 and 3 apply regardless.
+
+One more failure is the opposite of a hang: the CLI exits 0 having done nothing
+(payloadcms/payload#17757). `payload-exit-guard.mjs` is preloaded into the child
+to make that exit non-zero — see that file.
 */
 import { execFile, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
@@ -44,6 +48,13 @@ export const DEFAULT_TIMEOUT_MS = 300_000
 export const DEFAULT_GRACE_MS = 5_000
 /** Exit code for "gave up waiting", as coreutils `timeout` uses. */
 export const TIMEOUT_EXIT_CODE = 124
+
+/** Preloaded into every run, so a CLI that exits 0 without finishing fails. */
+// A URL, not a path: `--import` refuses a Windows drive path.
+export const EXIT_GUARD = new URL('./payload-exit-guard.mjs', import.meta.url).href
+
+/** The node argv for one run of the Payload CLI at `bin`. */
+export const payloadArgv = (bin, args) => ['--import', EXIT_GUARD, bin, ...args]
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const log = (message) => process.stderr.write(`throughline-payload: ${message}\n`)
@@ -337,7 +348,7 @@ export async function main({
   if (process.platform === 'win32') {
     // No process groups and no `ps`: run it plainly rather than not at all.
     if (parsed.mode === 'reap') return
-    const child = spawn(process.execPath, [resolvePayloadBin(cwd), ...parsed.args], {
+    const child = spawn(process.execPath, payloadArgv(resolvePayloadBin(cwd), parsed.args), {
       stdio: 'inherit',
       cwd,
     })
@@ -360,7 +371,7 @@ export async function main({
   }
 
   const store = pidFileStore(root)
-  const childArgv = [bin, ...parsed.args]
+  const childArgv = payloadArgv(bin, parsed.args)
   const child = spawn(process.execPath, childArgv, { stdio: 'inherit', detached: true, cwd, env })
 
   let timer

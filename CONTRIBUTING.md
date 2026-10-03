@@ -58,7 +58,7 @@ pnpm lint
 pnpm format      # prettier --write .
 ```
 
-Run a single package's scripts with `pnpm --filter <name> <script>`, e.g. `pnpm --filter @forumone/throughline-tsconfig build`.
+Run a single package's scripts with `pnpm --filter <name> <script>`, e.g. `pnpm --filter @forumone/throughline test`.
 
 ## Publishing
 

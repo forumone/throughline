@@ -1,5 +1,7 @@
 # Claude-First CMS — Build Plan
 
+> **Historical.** This is the build plan as written, superseded where it disagrees with [the reference](../reference/) and the code. See [the spec index](README.md).
+
 A conversational content management system where marketers operate the website through Claude rather than a traditional CMS UI. This plan builds it as a reusable framework that Forum One can use as the starting point for every future client engagement, with forumone.com as the first real consumer.
 
 ## The two-track structure

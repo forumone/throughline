@@ -1,6 +1,6 @@
 # Generating Payload blocks: `/generate`, `/render`, `/client`, `/testing`
 
-This was `@forumone/throughline-design-system/generate` in 0.x, which was never published; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
+This was `@forumone/throughline-design-system-payload` in 0.x, a private package that was never published; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 Turns a Throughline design-system manifest into Payload blocks, and those blocks back into React props.
 
@@ -8,13 +8,12 @@ It is published as part of `@forumone/throughline-design-system`, built to JavaS
 
 ## Entry points
 
-| Subpath      | Runs in              | Exports                                                                                                              |
-| ------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `.`          | anywhere             | `fieldOverride` and the `Overrides` types                                                                            |
-| `./generate` | `payload.config.ts`  | `generateBlocks`, `generateBlock`, `toPayloadField`, `linkField`, `arrange`, label helpers, select-option resolution |
-| `./render`   | the render path      | `coerceBlock`, `RenderBlocks`                                                                                        |
-| `./client`   | Payload's import map | `BlockSummary`, `RowSummary`, `BlockGuidance`                                                                        |
-| `./testing`  | vitest, or a script  | `describeBlockInvariants`, `checkBlockProps` and the pure checks behind them                                         |
+| Subpath      | Runs in              | Exports                                                                                                                                                              |
+| ------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./generate` | `payload.config.ts`  | `generateBlocks`, `generateBlock`, `toPayloadField`, `linkField`, `arrange`, label helpers, select-option resolution, and `fieldOverride` with the `Overrides` types |
+| `./render`   | the render path      | `coerceBlock`, `RenderBlocks`                                                                                                                                        |
+| `./client`   | Payload's import map | `BlockSummary`, `RowSummary`, `BlockGuidance`                                                                                                                        |
+| `./testing`  | vitest, or a script  | `describeBlockInvariants`, `checkBlockProps` and the pure checks behind them                                                                                         |
 
 The overrides are the hand-written part. They cover the few places where a contract's content model and the component's props disagree, and the generator and the renderer read the same object, so a field renamed there is renamed in both.
 
