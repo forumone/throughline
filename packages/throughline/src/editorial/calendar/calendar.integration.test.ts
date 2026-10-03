@@ -1,6 +1,6 @@
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
-import { createMcpToolCollector } from '../../index.js'
-import type { McpToolContext } from '../../index.js'
+import { createMcpToolCollector } from '../../mcp/collector.js'
+import type { McpToolContext } from '../../plugin-contract/mcp.js'
 import { buildConfig, getPayload, type CollectionConfig, type Payload } from 'payload'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'

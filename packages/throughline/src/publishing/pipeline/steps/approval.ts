@@ -1,16 +1,8 @@
-import { documentContentHash } from '../../../index.js'
+import { documentContentHash } from '../../../utils/content-hash.js'
 import type { ApprovalResolver } from '../../options.js'
 import type { PipelineStep } from '../types.js'
+import { APPROVALS_RESOLVER_SYMBOL } from '../../../approvals/symbol.js'
 
-/**
- * Symbol the approvals plugin attaches its resolver under. Publishing's
- * approval step looks here when no resolver is supplied via options, which
- * lets clients add the approvals plugin without re-wiring publishing's
- * config. Keep in sync with the matching constant in the approvals package.
- */
-export const APPROVALS_RESOLVER_SYMBOL = Symbol.for(
-  '@forumone/throughline/approvals-resolver',
-)
 
 /**
  * Gates publish on a granted approval when the document's policy demands

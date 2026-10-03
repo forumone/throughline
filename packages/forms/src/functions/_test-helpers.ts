@@ -1,6 +1,6 @@
 import type { Inngest, InngestFunction } from 'inngest'
 import type { Payload } from 'payload'
-import type { EmailClient, SendEmailParams } from '@forumone/throughline-email'
+import type { EmailClient, SendEmailParams } from '@forumone/throughline/email'
 
 interface CreatedFunction {
   id: string

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Payload, PayloadRequest } from 'payload'
-import type { McpToolDefinition } from '../../index.js'
-import type { McpToolDescriptor } from '../../index.js'
+import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
+import type { McpToolDescriptor } from '../../mcp/collector.js'
 import type { HealthCheck } from './checks.js'
 import { findContentNeedingAttention, type HealthReport } from './find.js'
 

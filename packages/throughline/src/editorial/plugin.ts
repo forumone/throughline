@@ -1,6 +1,6 @@
 import type { Config, Plugin } from 'payload'
-import type { McpToolDefinition } from '../index.js'
-import type { McpToolCollector, McpToolDescriptor } from '../index.js'
+import type { McpToolDefinition } from '../plugin-contract/mcp.js'
+import type { McpToolCollector, McpToolDescriptor } from '../mcp/collector.js'
 import { EDITORIAL_CUSTOM_KEY, type EditorialRuntime } from './config.js'
 import type { CalendarOptions } from './calendar/calendar.js'
 import { calendarClock } from './calendar/month.js'

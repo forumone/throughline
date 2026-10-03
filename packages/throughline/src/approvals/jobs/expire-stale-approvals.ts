@@ -1,5 +1,5 @@
 import { failureOptions } from '../../jobs/workflow-types.js'
-import { getAuditWriter } from '../../audit/index.js'
+import { getAuditWriter } from '../../audit/plugin.js'
 import type { ExpireStaleApprovalsOptions } from '../../jobs/workflow-types.js'
 import { defineJob } from '../../jobs/define.js'
 import type { Job } from '../../jobs/types.js'

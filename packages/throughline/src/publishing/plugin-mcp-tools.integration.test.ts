@@ -1,5 +1,5 @@
-import { auditPlugin } from '../audit/index.js'
-import { createMcpToolCollector } from '../index.js'
+import { auditPlugin } from '../audit/plugin.js'
+import { createMcpToolCollector } from '../mcp/collector.js'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import type { Inngest } from 'inngest'
 import { buildConfig, getPayload, type Payload } from 'payload'

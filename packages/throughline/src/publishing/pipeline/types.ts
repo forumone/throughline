@@ -1,6 +1,6 @@
 import type { Inngest } from 'inngest'
 import type { Payload, TypedUser } from 'payload'
-import type { AuthenticatedUser } from '../../index.js'
+import type { AuthenticatedUser } from '../../plugin-contract/mcp.js'
 import type {
   AccessibilityIssue,
   PublishingPluginOptions,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { McpToolDefinition } from '../../index.js'
+import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
 import { resolvePublishingActor } from './actor.js'
 import { createGetPublishStatusTool } from './get-publish-status.js'
 import { createPublishTool } from './publish.js'

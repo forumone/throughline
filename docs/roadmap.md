@@ -460,7 +460,8 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [ ] Consolidate into `@forumone/throughline` with subpath exports, folding workflows into its owners (publishing, approvals, audit, integrations). The map is `docs/spec/1.0-exports.md` (#242).
     - [x] core and plugin-contract (#243)
     - [x] publishing, into `/publishing`, `/editorial`, `/client` and `/rsc` (#245)
-    - [x] workflows, split by owner into `/jobs`, `/jobs/inngest`, `/jobs/payload`, `/publishing`, `/approvals`, `/audit`, `/integrations` and `/cache-tags`; the six Inngest-shaped factories removed
+    - [x] workflows, split by owner into `/jobs`, `/jobs/inngest`, `/jobs/payload`, `/publishing`, `/approvals`, `/audit`, `/integrations` and `/cache-tags`; the six Inngest-shaped factories removed (#246)
+    - [x] audit, approvals, components, integrations and email; email's three Inngest-shaped factories removed, and every internal import pointed at its declaring module rather than an entry
 - [ ] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today)
 - [ ] Fold reference-ds into create-throughline as template and test fixture
 - [ ] Make plugin-contract, the capability registry and the MCP collector internal

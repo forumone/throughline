@@ -17,3 +17,18 @@ export type {
   AuditEchoHandler,
   AuditEventEchoOptions,
 } from '../jobs/workflow-types.js'
+
+// The query plugin and its MCP tools, which were `@forumone/throughline-audit`.
+export { auditQueryPlugin } from './query/plugin.js'
+export type { AuditQueryPluginOptions } from './query/options.js'
+
+export { formatAuditEvent, formatRelativeTime } from './query/formatting/index.js'
+export type { FormattedAuditEvent } from './query/formatting/index.js'
+
+export {
+  createQueryAuditTool,
+  createGetChangeHistoryTool,
+  createWhoChangedWhatTool,
+  createWhatChangedInRangeTool,
+  createGetRecentFailuresTool,
+} from './query/tools/index.js'

@@ -1,8 +1,8 @@
-import { formatZodIssues } from '../index.js'
-import type { McpToolCollector } from '../index.js'
+import { formatZodIssues } from '../utils/zod-issues.js'
+import type { McpToolCollector } from '../mcp/collector.js'
 import type { Inngest } from 'inngest'
 import { z } from 'zod'
-import type { BaseCorePluginOptions } from '../index.js'
+import type { BaseCorePluginOptions } from '../plugin-contract/index.js'
 
 export interface PublishableCollection {
   /** Slug of the collection that can be published through this server. */
