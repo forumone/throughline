@@ -24,10 +24,16 @@
     "@forumone/throughline-design-system": "0.0.0"
   },
   "changesets": [
+    "create-throughline-1.0",
     "design-system-package",
+    "migrate-imports",
+    "optional-peers",
+    "pre-1-0-gaps",
+    "throughline-call",
     "throughline-jobs",
     "throughline-package",
     "throughline-plugins",
-    "throughline-publishing"
+    "throughline-publishing",
+    "trust-boundary-live-edits"
   ]
 }
