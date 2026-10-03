@@ -5,9 +5,9 @@ import { type WorkflowFailureHandler } from '../../jobs/workflow-types.js'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'
-import { ApprovalExpiredEmail } from '../templates/index.js'
 import { DEFAULT_APPROVALS_SLUG } from '../../approvals/collection.js'
 import type { EmailPluginOptions } from '../options.js'
+import { loadTemplates } from './_shared.js'
 import { formatHumanDate, unwrapRelationshipId } from './_shared.js'
 
 export interface NotifyApprovalExpiredDeps {
@@ -75,6 +75,7 @@ export function notifyApprovalExpiredJob(
           return
         }
 
+        const { ApprovalExpiredEmail } = await loadTemplates()
         await deps.client.send({
           to: requester.email,
           subject: `Approval expired: ${targetTitle}`,

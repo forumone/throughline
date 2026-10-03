@@ -81,7 +81,17 @@ The reasoning is in [`docs/spec/1.0-throughline-call.md`](../../docs/spec/1.0-th
 pnpm add @forumone/throughline@next
 ```
 
-Peers: `payload@^3.89.0` and `inngest@^4.0.0`.
+`payload@^3.89.0` is the one required peer. The rest are optional, each needed only by the subpaths that use it, and none is loaded by the root:
+
+| Install                                                             | When the site uses                                                                                                       |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `inngest`                                                           | `/jobs/inngest`: jobs on Inngest                                                                                         |
+| `resend`, `@react-email/components`, `@react-email/render`, `react` | `/email`, or `email` in `throughline()`. Loaded when an email is sent, so a missing one says so then, naming the package |
+| `next`, `react`, `@payloadcms/ui`, `@payloadcms/next`               | `/client` and `/rsc`, which Payload's admin imports                                                                      |
+| `@vercel/blob`, `@payloadcms/plugin-cloud-storage`                  | `/media`'s client-upload hardening                                                                                       |
+| `vitest`                                                            | `/testing`                                                                                                               |
+
+`src/peers.test.ts` checks the table: a static import that would load an optional peer from somewhere else fails it.
 
 ## The audit log
 

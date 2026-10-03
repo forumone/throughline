@@ -1,6 +1,7 @@
 export { unwrapRelationshipId } from '../../utils/relationships.js'
 
 import type { ApprovalTargetKind } from '../templates/index.js'
+import { loadOptionalPeer } from '../../utils/optionalPeer.js'
 
 const COLLECTION_TO_KIND: Record<string, ApprovalTargetKind> = {
   pages: 'page',
@@ -39,4 +40,17 @@ export function formatHumanDate(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/**
+ * The email templates, loaded when an email is sent rather than when a job is
+ * declared: they bring React and React Email, which a site importing the
+ * suite's root should not load until it sends something.
+ */
+export function loadTemplates() {
+  return loadOptionalPeer(
+    '@react-email/components',
+    'Rendering an approval email',
+    () => import('../templates/index.js'),
+  )
 }

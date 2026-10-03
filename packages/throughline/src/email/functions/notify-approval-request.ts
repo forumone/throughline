@@ -5,9 +5,9 @@ import { type WorkflowFailureHandler } from '../../jobs/workflow-types.js'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'
-import { ApprovalRequestEmail } from '../templates/index.js'
 import { DEFAULT_APPROVALS_SLUG } from '../../approvals/collection.js'
 import type { EmailPluginOptions } from '../options.js'
+import { loadTemplates } from './_shared.js'
 import {
   formatHumanDate,
   readApproverIds,
@@ -115,6 +115,7 @@ export function notifyApprovalRequestJob(
             deps.options.buildActionUrl({ approvalId, action: 'discuss', approverId }),
           ])
 
+          const { ApprovalRequestEmail } = await loadTemplates()
           await deps.client.send({
             to: approver.email,
             subject: `Approval needed: ${targetTitle}`,

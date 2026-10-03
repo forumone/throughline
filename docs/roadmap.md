@@ -466,7 +466,7 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [ ] Fold reference-ds into create-throughline as template and test fixture
 - [x] Make plugin-contract, the capability registry and the MCP collector internal, with the accessors the Inngest route used (`getEmailFunctions`, `getIntegrationRegistry`, `getIntegrationContext`)
 - [x] `throughline({...})` registers every plugin in order and wires the MCP collector (spec: `docs/spec/1.0-throughline-call.md`, #250); it also lists the jobs the options call for, and the playground and scaffold use it
-- [ ] `resend`, React Email and `inngest` become optional peers, loaded only by the subpath that needs them
+- [x] `resend`, React Email and `inngest` become optional peers, loaded only by the subpath that needs them; `payload` is the one required peer, and `src/peers.test.ts` holds every entry to its table
 - [ ] One fixed version across the three published packages (changesets `fixed`)
 - [x] Bootstrap npm trusted publishing for the new package names (see the C0 note). Both publish through it: `@forumone/throughline@1.0.0-next.0` (#244) and `@forumone/throughline-design-system@1.0.0-next.0` (#249)
 - [x] Leave forms out of 1.0; tag its last 0.x source. The tag is the release's own, `@forumone/throughline-forms@0.7.9`, and `v0` keeps the source
