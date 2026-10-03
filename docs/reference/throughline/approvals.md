@@ -1,6 +1,6 @@
 # Approvals: `@forumone/throughline/approvals`
 
-This was `/approvals` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `/approvals` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 Conversational approval workflow server for Throughline. Provides the resolver the publishing server consumes plus MCP tools and email-action endpoints for requesting and responding to approvals.
 
@@ -22,11 +22,7 @@ Conversational approval workflow server for Throughline. Provides the resolver t
 
 ## Installation
 
-```bash
-pnpm add @forumone/throughline@next
-```
-
-Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Needs `auditPlugin` from `@forumone/throughline/audit` registered first.
+Part of [`@forumone/throughline`](../throughline.md#installation), which lists the optional peers each subpath needs. `throughline({ approvals: { … } })` registers it, after the audit log; registered by hand, it needs `auditPlugin` from `/audit` first. `throughline()` also gives the email plugin and the expiry job the same `collectionSlug`.
 
 ## Usage
 
@@ -73,7 +69,7 @@ export default buildConfig({
 
 ## Sidebar group
 
-The approvals collection sits in the admin sidebar's `Throughline` group by default. Pass `admin: { group: 'Workflow' }` to file it elsewhere, or `admin: { group: false }` to leave it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](https://github.com/forumone/throughline/blob/main/docs/reference/plugin-contract.md#admin-sidebar-group).
+The approvals collection sits in the admin sidebar's `Throughline` group by default. Pass `admin: { group: 'Workflow' }` to file it elsewhere, or `admin: { group: false }` to leave it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](../throughline.md#admin-sidebar-group).
 
 ## Environment
 
@@ -121,6 +117,7 @@ The confirmation page is intentionally minimal. Clients that want a branded acti
 
 ## Related
 
-- `@forumone/throughline` — required peer; provides the audit log and MCP handler this plugin builds on
-- `/publishing` — peer plugin that consumes the resolver this plugin attaches
-- `/email` (C11) — will subscribe to `approval/requested` and `approval/decided` to send notifications
+- [`@forumone/throughline`](../throughline.md): `throughline()`, the audit log and the MCP setup this builds on
+- [Publishing](publishing.md): consumes the resolver this plugin attaches
+- [Email](email.md): sends the notifications for `approval/requested` and `approval/decided`
+- Guide: [Configuring approvers](../../guides/configuring-approvers.md)

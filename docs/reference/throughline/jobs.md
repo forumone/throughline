@@ -1,6 +1,6 @@
 # Jobs: `@forumone/throughline/jobs`
 
-The platform's background work, written once against a small interface and run on either Inngest or Payload's own job queue, plus the Payload hooks that keep a Next cache honest. This was `@forumone/throughline-workflows` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+The platform's background work, written once against a small interface and run on either Inngest or Payload's own job queue, plus the Payload hooks that keep a Next cache honest. This was `@forumone/throughline-workflows` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 ## What's where
 
@@ -22,11 +22,9 @@ The failure handlers:
 
 ## Installation
 
-```bash
-pnpm add @forumone/throughline@next
-```
+Part of [`@forumone/throughline`](../throughline.md#installation). `/jobs/inngest` needs `inngest`. `next` is needed only by `revalidateOnPublishJob` and `createTagRevalidationHooks` with their default revalidators.
 
-Peers: `payload@^3.89.0`, and `inngest@^4.0.0` for `/jobs/inngest`. `next` is an **optional** peer: install it only if you use `revalidateOnPublishJob` or `createTagRevalidationHooks` with their default revalidators.
+`throughline({ jobs })` takes the adapter, and `suite.jobs` is every job its options call for: see [the table](../throughline.md#throughline-options).
 
 ## Usage
 
@@ -296,6 +294,7 @@ Every job takes a typed options object. See `src/jobs/workflow-types.ts` for the
 
 ## Related
 
-- `/publishing` emits the publishing events the revalidation and scheduling jobs subscribe to, and provides the `isDraftWrite` predicate the tag hooks use.
-- `/audit` provides the audit writer the approval-expiration job uses.
-- The approvals plugin owns the collection the expiration job reads, and `@forumone/throughline-email` subscribes to `notification/send-approval-*`.
+- [Publishing](publishing.md): emits the events the revalidation and scheduling jobs subscribe to, and provides the `isDraftWrite` predicate the tag hooks use
+- [Audit](audit.md): the writer the approval-expiration job uses
+- [Approvals](approvals.md) owns the collection the expiration job reads, and [Email](email.md) subscribes to `notification/send-approval-*`
+- Concept: [Event-driven workflows](../../concepts/event-driven-workflows.md)

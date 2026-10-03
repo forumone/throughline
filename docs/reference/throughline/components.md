@@ -1,6 +1,6 @@
 # Components: `@forumone/throughline/components`
 
-This was `/components` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `/components` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 MCP server that exposes a design system manifest as conversational primitives. Drop it into a Payload + Throughline app and Claude can list components, read contracts, suggest components for an intent, validate compositions, and surface anti-patterns — against any design system that satisfies the Throughline contract.
 
@@ -24,11 +24,7 @@ Every consequential call writes to the audit log via `@forumone/throughline`'s a
 
 ## Installation
 
-```bash
-pnpm add @forumone/throughline@next
-```
-
-Peer: `payload@^3.89.0`. Needs `auditPlugin` from `@forumone/throughline/audit` (the components plugin asserts the `audit-log` capability at init).
+Part of [`@forumone/throughline`](../throughline.md#installation), which lists the optional peers each subpath needs. `throughline({ components: { … } })` registers it, after the audit log; registered by hand, it needs `auditPlugin` from `/audit` first. The plugin asserts the `audit-log` capability at init.
 
 ## Usage
 
@@ -134,6 +130,6 @@ The audit writer reads these fields and stores them on every record so "why did 
 
 ## Related
 
-- `@forumone/throughline-design-system/contract` — the manifest schema this plugin reads
-- `@forumone/throughline-reference-ds` — reference DS used as a test fixture and a starting point for clients
-- `@forumone/throughline` — required peer; provides the audit log, MCP handler, and `withMeta` helper this plugin builds on
+- [`/contract`](../design-system/contract.md) in `@forumone/throughline-design-system`: the manifest schema this plugin reads
+- [`@forumone/create-throughline`](../create-throughline.md): its reference design system is this plugin's test fixture, and a new project's starting point
+- [`@forumone/throughline`](../throughline.md): the audit log and `withMeta`

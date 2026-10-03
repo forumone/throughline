@@ -1,6 +1,6 @@
 # Email: `@forumone/throughline/email`
 
-This was `/email` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `/email` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 Transactional email for the Throughline framework. Pairs Resend with React Email templates that read brand tokens from the plugin options, and ships three Inngest functions that subscribe to the notification events the audit-event-echo workflow fires.
 
@@ -16,11 +16,9 @@ After this package, the approval workflow is end-to-end: a marketer requests app
 
 ## Installation
 
-```bash
-pnpm add @forumone/throughline@next
-```
+Part of [`@forumone/throughline`](../throughline.md#installation). It needs `resend`, `@react-email/components`, `@react-email/render` and `react`, loaded on first send, so a missing one fails that send and names the package rather than failing the boot.
 
-Peers: `payload@^3.89.0`, `inngest@^4.0.0`, `react@^18 || ^19`. The plugin lazy-loads `resend` and `@react-email/render` on first send, so a misconfigured deploy fails on first email rather than at boot.
+`throughline({ email: { … } })` registers it with approvals' collection slug, and signs its action links with approvals' secret unless you pass `buildActionUrl`. The three notification jobs are in `suite.jobs`.
 
 ## Usage
 
@@ -139,6 +137,6 @@ Every email renders to both HTML and plaintext from the same React tree (React E
 
 ## Related
 
-- `@forumone/throughline` — required peer; provides logger and audit infrastructure
-- `/approvals` — owns the approvals collection this package reads
-- `/jobs` — `audit-event-echo` is the upstream fan-out; `expire-stale-approvals` fires the expiration event this package subscribes to
+- [Approvals](approvals.md): owns the collection this reads
+- [Jobs](jobs.md): `audit-event-echo` is the upstream fan-out; `expire-stale-approvals` fires the expiration event this subscribes to
+- Guide: [Theming emails](../../guides/theming-emails.md)

@@ -98,7 +98,7 @@ The plugin returns a *new* config — never mutates the incoming one in place �
 
 Every plugin that declares a collection — `auditPlugin`, `approvalsPlugin`, `integrationsPlugin`, `formsPlugin` — accepts `admin: { group?: string | false }` and applies it to each collection it builds. With no option they all land in one `Throughline` sidebar group, so a fresh site's sidebar leads with its own content rather than the audit log. Pass a group name to file them elsewhere, or `false` to leave them ungrouped. A host that wants different groups for different plugins passes a different value to each.
 
-`@payloadcms/plugin-mcp`'s `payload-mcp-api-keys` is Payload's collection, not ours; group it through that plugin's `overrideApiKeyCollection`. See the [plugin-contract reference](../reference/plugin-contract.md#admin-sidebar-group).
+`@payloadcms/plugin-mcp`'s `payload-mcp-api-keys` is Payload's collection, not ours; group it through that plugin's `overrideApiKeyCollection`. See [Admin sidebar group](../reference/throughline.md#admin-sidebar-group).
 
 ## What plugins should not do
 

@@ -164,7 +164,7 @@ const Programs: CollectionConfig = {
 pnpm --filter <your-web-app-package> payload generate:types
 ```
 
-This rewrites `apps/web/src/payload-types.ts`. The `payload` script runs the CLI through `throughline-payload`, so a hung run is killed after five minutes rather than spinning on after you give up on it; see the [core reference](../reference/core.md#throughline-payload-bin). Use the generated `Program` type in your route.
+This rewrites `apps/web/src/payload-types.ts`. The `payload` script runs the CLI through `throughline-payload`, so a hung run is killed after five minutes rather than spinning on after you give up on it; see the [core reference](../reference/throughline.md#throughline-payload-bin). Use the generated `Program` type in your route.
 
 ## 7. Try it from Claude
 

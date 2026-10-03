@@ -116,7 +116,7 @@ const myCollection: CollectionConfig = {
 }
 ```
 
-Don't write `group: options.admin?.group` directly: Payload reads `admin.group: false` as "hide from the nav", and the option's `false` means "ungrouped". `resolveAdminGroup` does that translation. See the [plugin-contract reference](../reference/plugin-contract.md#admin-sidebar-group).
+Don't write `group: options.admin?.group` directly: Payload reads `admin.group: false` as "hide from the nav", and the option's `false` means "ungrouped". `resolveAdminGroup` does that translation. See [Admin sidebar group](../reference/throughline.md#admin-sidebar-group).
 
 ## Options validation
 

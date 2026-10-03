@@ -1,6 +1,6 @@
 # Publishing: `@forumone/throughline/publishing`
 
-This was `@forumone/throughline-publishing` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `@forumone/throughline-publishing` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 Policy-gated publishing server for Throughline. The trust boundary that decides what's allowed to ship.
 
@@ -15,11 +15,7 @@ Policy-gated publishing server for Throughline. The trust boundary that decides 
 
 ## Installation
 
-```bash
-pnpm add @forumone/throughline@next
-```
-
-Peers: `payload@^3.89.0`, `inngest@^4.0.0`. Needs `auditPlugin` from `@forumone/throughline/audit` registered first. The admin controls additionally use `@payloadcms/ui` and `react`, both already present in any Payload 3 admin.
+Part of [`@forumone/throughline`](../throughline.md#installation), which lists the optional peers each subpath needs. `throughline({ publishing: { … } })` registers it, after the audit log; registered by hand, it needs `auditPlugin` from `/audit` first. Its `collections` come from `throughline()`'s own; the [options table](../throughline.md#throughline-options) has the keys it adds for revalidation and scheduling. The admin controls use `@payloadcms/ui` and `react`, both already present in any Payload admin.
 
 ## Usage
 

@@ -1,6 +1,6 @@
 # Audit queries: `@forumone/throughline/audit`
 
-This was `/audit` in 0.x; [`docs/spec/1.0-exports.md`](../../../docs/spec/1.0-exports.md) maps its imports.
+This was `/audit` in 0.x; [`docs/spec/1.0-exports.md`](../../spec/1.0-exports.md) maps its imports.
 
 Read-only MCP query tools over the Throughline audit log. Pairs with the writer in `@forumone/throughline`: `auditPlugin` writes records, `auditQueryPlugin` exposes them as conversational query tools.
 
@@ -22,11 +22,7 @@ Each tool returns conversational output: relative times ("2 hours ago"), named a
 
 ## Installation
 
-```bash
-pnpm add @forumone/throughline@next
-```
-
-Peers: `payload@^3.89.0`. Needs `auditPlugin` from `@forumone/throughline/audit` registered first.
+Part of [`@forumone/throughline`](../throughline.md#installation). The audit log itself, `auditPlugin`, is always on under `throughline()`, and the writer is described [there](../throughline.md#the-audit-log). The query tools on this page are on when `auditQuery` is present: `throughline({ auditQuery: {} })`, which gives them the audit log's slug.
 
 ## Usage
 
@@ -87,5 +83,5 @@ auditQueryPlugin({
 
 ## Related
 
-- `@forumone/throughline` — required peer; provides the audit collection, writer, and event taxonomy
-- `/publishing`, `/approvals` — write audit events that this package surfaces
+- [`@forumone/throughline`](../throughline.md#the-audit-log): the audit collection, writer and event taxonomy
+- [Publishing](publishing.md), [Approvals](approvals.md): write the events this surfaces
