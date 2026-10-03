@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { type PluginAdminOptions, resolveAdminGroup } from '@forumone/throughline-plugin-contract'
+import { type PluginAdminOptions, resolveAdminGroup } from '@forumone/throughline'
 
 export interface CreateApprovalsCollectionOptions {
   /** Override the collection slug. Default: 'approvals'. */

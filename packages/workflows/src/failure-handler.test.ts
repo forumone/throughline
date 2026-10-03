@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Config, Payload } from 'payload'
-import { jobFailuresPlugin, type Logger } from '@forumone/throughline-core'
+import { jobFailuresPlugin } from '@forumone/throughline/observability'
+import { type Logger } from '@forumone/throughline'
 import { createHealthcheckFailureHandler, createTerminalFailureHandler } from './failure-handler.js'
 import { createHealthcheckFunction } from './healthcheck.js'
 import { createExpireStaleApprovalsFunction } from './expire-stale-approvals.js'

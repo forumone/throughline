@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import { withMeta } from '@forumone/throughline-core'
+import type { McpToolDefinition } from '@forumone/throughline'
+import { withMeta } from '@forumone/throughline'
 import type { FormsPluginOptions } from '../options.js'
 import { validateDestinationLabel } from '../destinations.js'
 import {

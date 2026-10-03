@@ -1,4 +1,4 @@
-import { describeAnonymousAccess } from '@forumone/throughline-core/testing'
+import { describeAnonymousAccess } from '@forumone/throughline/testing'
 import config from '../payload.config'
 
 /*

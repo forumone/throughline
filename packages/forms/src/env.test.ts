@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Inngest } from 'inngest'
-import { assertEnvironment, EnvironmentError } from '@forumone/throughline-core'
+import { assertEnvironment, EnvironmentError } from '@forumone/throughline'
 import { formsEnv } from './index.js'
 import { validateOptions } from './options.js'
 

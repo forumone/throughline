@@ -3,6 +3,8 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
 const SCOPE_PREFIX = '@forumone/throughline-'
+/** The one package whose name has no suffix: `version_throughline`. */
+const BARE_NAME = '@forumone/throughline'
 
 /**
  * The version of every Throughline package the scaffold depends on, keyed for
@@ -29,7 +31,7 @@ export async function loadPackageVersions(templatesDir: string): Promise<Record<
   return templateKeys(await readWorkspaceVersions(resolve(templatesDir, '..', '..', '..')))
 }
 
-/** `{ '@forumone/throughline-core': '0.9.1', … }` from a `packages/` directory. */
+/** `{ '@forumone/throughline': '1.0.0', … }` from a `packages/` directory. */
 export async function readWorkspaceVersions(packagesDir: string): Promise<Record<string, string>> {
   const versions: Record<string, string> = {}
   const entries = await readdir(packagesDir, { withFileTypes: true }).catch(() => [])
@@ -46,23 +48,28 @@ export async function readWorkspaceVersions(packagesDir: string): Promise<Record
       version?: string
       private?: boolean
     }
-    if (!name?.startsWith(SCOPE_PREFIX) || !version || isPrivate) continue
+    if (!name || !isThroughline(name) || !version || isPrivate) continue
     versions[name] = version
   }
   if (Object.keys(versions).length === 0) {
     throw new Error(
       `create-throughline: no package versions found. Expected versions.json beside the ` +
-        `templates, or @forumone/throughline-* packages in ${packagesDir}.`,
+        `templates, or @forumone/throughline packages in ${packagesDir}.`,
     )
   }
   return versions
 }
 
+function isThroughline(name: string): boolean {
+  return name === BARE_NAME || name.startsWith(SCOPE_PREFIX)
+}
+
 function templateKeys(versions: Record<string, string>): Record<string, string> {
   const keys: Record<string, string> = {}
   for (const [name, version] of Object.entries(versions)) {
-    if (!name.startsWith(SCOPE_PREFIX)) continue
-    keys[`version_${name.slice(SCOPE_PREFIX.length).replace(/-/g, '_')}`] = version
+    if (name === BARE_NAME) keys['version_throughline'] = version
+    else if (name.startsWith(SCOPE_PREFIX))
+      keys[`version_${name.slice(SCOPE_PREFIX.length).replace(/-/g, '_')}`] = version
   }
   return keys
 }

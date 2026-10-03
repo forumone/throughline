@@ -24,10 +24,10 @@
     "test:smoke:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
+    "@forumone/throughline": "^{{version_throughline}}",
     "@forumone/throughline-approvals": "^{{version_approvals}}",
     "@forumone/throughline-audit": "^{{version_audit}}",
     "@forumone/throughline-components": "^{{version_components}}",
-    "@forumone/throughline-core": "^{{version_core}}",
     "@forumone/throughline-email": "^{{version_email}}",
     "@forumone/throughline-forms": "^{{version_forms}}",
     "@forumone/throughline-integrations": "^{{version_integrations}}",

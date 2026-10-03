@@ -1,10 +1,10 @@
-import { checkEnvValue, type McpToolCollector } from '@forumone/throughline-core'
+import { checkEnvValue, type McpToolCollector } from '@forumone/throughline'
 import type { Inngest } from 'inngest'
 import type {
   BaseCorePluginOptions,
   CollectionPluginOptions,
   EnvRequirement,
-} from '@forumone/throughline-plugin-contract'
+} from '@forumone/throughline'
 
 export type DestinationType = 'email' | 'webhook'
 
@@ -66,7 +66,7 @@ export interface FormsPluginOptions extends BaseCorePluginOptions, CollectionPlu
    * Where to put this server's MCP tools so Payload's own MCP plugin can serve
    * them.
    *
-   * `createMcpToolCollector()` from `@forumone/throughline-core`. The host hands
+   * `createMcpToolCollector()` from `@forumone/throughline`. The host hands
    * its array to `@payloadcms/plugin-mcp` at config time and this plugin fills
    * it at `onInit` — which is the first moment the tools can exist, since they
    * close over `payload`, and still before any request reads the array.
@@ -93,7 +93,7 @@ const IP_HASH_SECRET_ENV = {
 /**
  * What `formsPlugin` reads from the environment when the matching option is
  * omitted, and refuses to start without. Hand it to `assertEnvironment` from
- * `@forumone/throughline-core` so a site reports it with everything else.
+ * `@forumone/throughline` so a site reports it with everything else.
  *
  * Leave it out if you pass `ipHashSecret` yourself from somewhere other than
  * `FORMS_IP_HASH_SECRET`.

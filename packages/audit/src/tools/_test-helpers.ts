@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { McpToolContext } from '@forumone/throughline-plugin-contract'
+import type { McpToolContext } from '@forumone/throughline'
 
 export interface FakeAuditDoc {
   id: string

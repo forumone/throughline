@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import type { McpToolDefinition } from '@forumone/throughline'
 import { deniedEnvelope, isAuditReader } from './access.js'
 import { AUDIT_TOOLS } from './descriptors.js'
 

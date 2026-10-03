@@ -3,7 +3,7 @@ import { serve } from 'inngest/next'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { cacheTags } from '@/lib/cache-tags'
-import { createInngestClient } from '@forumone/throughline-core'
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
 import {
   createAuditEventEchoFunction,
   createExecuteScheduledPublishesFunction,

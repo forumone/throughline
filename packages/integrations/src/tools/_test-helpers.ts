@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import type { Inngest } from 'inngest'
-import type { McpToolContext } from '@forumone/throughline-plugin-contract'
+import type { McpToolContext } from '@forumone/throughline'
 
 export interface FakeInstance {
   id: string

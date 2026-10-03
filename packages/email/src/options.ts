@@ -1,7 +1,7 @@
-import { checkEnvValue } from '@forumone/throughline-core'
+import { checkEnvValue } from '@forumone/throughline'
 import type { Inngest } from 'inngest'
 import type { WorkflowFailureHandler } from '@forumone/throughline-workflows'
-import type { BaseCorePluginOptions, EnvRequirement } from '@forumone/throughline-plugin-contract'
+import type { BaseCorePluginOptions, EnvRequirement } from '@forumone/throughline'
 import type { EmailBrandTokens } from './tokens.js'
 
 export type ApprovalActionKind = 'approve' | 'decline' | 'changes' | 'discuss'
@@ -92,7 +92,7 @@ const FROM_ADDRESS_ENV = {
 /**
  * What `emailPlugin` reads from the environment when the matching option is
  * omitted, and refuses to start without. Hand it to `assertEnvironment` from
- * `@forumone/throughline-core` so a site reports it with everything else.
+ * `@forumone/throughline` so a site reports it with everything else.
  *
  * Leave it out if you pass `apiKey` and `fromAddress` yourself. The optional
  * `EMAIL_FROM_NAME` and `EMAIL_REPLY_TO` are not requirements.

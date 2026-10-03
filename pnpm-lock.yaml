@@ -30,6 +30,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@forumone/throughline':
+        specifier: workspace:*
+        version: link:../../packages/throughline
       '@forumone/throughline-approvals':
         specifier: workspace:*
         version: link:../../packages/approvals
@@ -39,18 +42,12 @@ importers:
       '@forumone/throughline-components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@forumone/throughline-core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@forumone/throughline-design-contract':
         specifier: workspace:*
         version: link:../../packages/design-contract
       '@forumone/throughline-integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../../packages/plugin-contract
       '@forumone/throughline-publishing':
         specifier: workspace:*
         version: link:../../packages/publishing
@@ -121,12 +118,9 @@ importers:
 
   packages/approvals:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
+        version: link:../throughline
       '@forumone/throughline-publishing':
         specifier: workspace:*
         version: link:../publishing
@@ -161,12 +155,9 @@ importers:
 
   packages/audit:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
+        version: link:../throughline
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -195,15 +186,12 @@ importers:
 
   packages/components:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
+        version: link:../throughline
       '@forumone/throughline-design-contract':
         specifier: workspace:*
         version: link:../design-contract
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -226,61 +214,6 @@ importers:
       payload:
         specifier: ^3.83.0
         version: 3.90.2(graphql@16.14.2)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.6.0
-        version: 5.9.3
-      vitest:
-        specifier: ^4.1.10
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(happy-dom@20.14.5)(jsdom@29.1.1)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(sass@1.77.4)(tsx@4.23.15)(yaml@2.9.1))
-
-  packages/core:
-    dependencies:
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
-      zod:
-        specifier: ^3.23.0
-        version: 3.25.76
-      zod-to-json-schema:
-        specifier: ^3.25.2
-        version: 3.25.2(zod@3.25.76)
-    devDependencies:
-      '@forumone/throughline-eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@forumone/throughline-tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-      '@payloadcms/db-sqlite':
-        specifier: ^3.83.0
-        version: 3.90.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))(pg@8.20.0)
-      '@payloadcms/plugin-cloud-storage':
-        specifier: ^3.83.0
-        version: 3.90.2(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
-      '@payloadcms/ui':
-        specifier: ^3.83.0
-        version: 3.90.2(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
-      '@types/node':
-        specifier: ^24.13.2
-        version: 24.19.0
-      '@types/react':
-        specifier: ^19.2.0
-        version: 19.3.0
-      '@vercel/blob':
-        specifier: 2.3.1
-        version: 2.3.1
-      eslint:
-        specifier: ^10.11.0
-        version: 10.11.0
-      inngest:
-        specifier: ^4.2.0
-        version: 4.21.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(express@5.2.1)(hono@4.13.5)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(react@19.3.0)(typescript@5.9.3)(zod@3.25.76)
-      payload:
-        specifier: ^3.83.0
-        version: 3.90.2(graphql@16.14.2)(typescript@5.9.3)
-      react:
-        specifier: 19.3.0
-        version: 19.3.0
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
@@ -389,12 +322,9 @@ importers:
 
   packages/email:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
+        version: link:../throughline
       '@forumone/throughline-workflows':
         specifier: workspace:*
         version: link:../workflows
@@ -468,15 +398,12 @@ importers:
 
   packages/forms:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
+        version: link:../throughline
       '@forumone/throughline-email':
         specifier: workspace:*
         version: link:../email
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
       '@react-email/components':
         specifier: ^0.5.4
         version: 0.5.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -523,12 +450,9 @@ importers:
 
   packages/integrations:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
+        version: link:../throughline
       '@forumone/throughline-workflows':
         specifier: workspace:*
         version: link:../workflows
@@ -570,31 +494,6 @@ importers:
         specifier: ^4.1.10
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(happy-dom@20.14.5)(jsdom@29.1.1)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(sass@1.77.4)(tsx@4.23.15)(yaml@2.9.1))
 
-  packages/plugin-contract:
-    dependencies:
-      payload:
-        specifier: ^3.89.0
-        version: 3.90.2(graphql@16.14.2)(typescript@5.9.3)
-      zod:
-        specifier: ^3.23.0
-        version: 3.25.76
-    devDependencies:
-      '@forumone/throughline-eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@forumone/throughline-tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-      '@types/node':
-        specifier: ^24.13.2
-        version: 24.19.0
-      eslint:
-        specifier: ^10.11.0
-        version: 10.11.0
-      typescript:
-        specifier: ^5.6.0
-        version: 5.9.3
-
   packages/prettier-config:
     dependencies:
       prettier:
@@ -603,12 +502,9 @@ importers:
 
   packages/publishing:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
-      '@forumone/throughline-plugin-contract':
-        specifier: workspace:*
-        version: link:../plugin-contract
+        version: link:../throughline
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -729,13 +625,65 @@ importers:
         specifier: ^4.1.10
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(happy-dom@20.14.5)(jsdom@29.1.1)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(sass@1.77.4)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/throughline:
+    dependencies:
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+      zod-to-json-schema:
+        specifier: ^3.25.2
+        version: 3.25.2(zod@3.25.76)
+    devDependencies:
+      '@forumone/throughline-eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@forumone/throughline-tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@payloadcms/db-sqlite':
+        specifier: ^3.83.0
+        version: 3.90.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))(pg@8.20.0)
+      '@payloadcms/plugin-cloud-storage':
+        specifier: ^3.83.0
+        version: 3.90.2(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+      '@payloadcms/ui':
+        specifier: ^3.83.0
+        version: 3.90.2(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.2)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+      '@types/node':
+        specifier: ^24.13.2
+        version: 24.19.0
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.3.0
+      '@vercel/blob':
+        specifier: 2.3.1
+        version: 2.3.1
+      eslint:
+        specifier: ^10.11.0
+        version: 10.11.0
+      inngest:
+        specifier: ^4.2.0
+        version: 4.21.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(express@5.2.1)(hono@4.13.5)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(react@19.3.0)(typescript@5.9.3)(zod@3.25.76)
+      payload:
+        specifier: ^3.83.0
+        version: 3.90.2(graphql@16.14.2)(typescript@5.9.3)
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.19.0)(happy-dom@20.14.5)(jsdom@29.1.1)(vite@8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(sass@1.77.4)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/tsconfig: {}
 
   packages/workflows:
     dependencies:
-      '@forumone/throughline-core':
+      '@forumone/throughline':
         specifier: workspace:*
-        version: link:../core
+        version: link:../throughline
       '@forumone/throughline-publishing':
         specifier: workspace:*
         version: link:../publishing
@@ -10906,7 +10854,7 @@ snapshots:
 
   '@types/busboy@1.5.4':
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
 
   '@types/chai@5.2.3':
     dependencies:
@@ -10915,7 +10863,7 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
 
   '@types/debug@4.1.13':
     dependencies:
@@ -10949,7 +10897,7 @@ snapshots:
 
   '@types/memcached@2.2.10':
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
 
   '@types/ms@2.1.0': {}
 
@@ -10975,13 +10923,13 @@ snapshots:
 
   '@types/pg@8.15.6':
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
       pg-protocol: 1.16.1
       pg-types: 2.2.0
 
   '@types/pg@8.20.0':
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
       pg-protocol: 1.16.1
       pg-types: 2.2.0
 
@@ -11009,7 +10957,7 @@ snapshots:
 
   '@types/ws@8.18.2':
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
 
   '@typescript-eslint/eslint-plugin@8.71.0(@typescript-eslint/parser@8.71.0(eslint@10.11.0)(typescript@5.9.3))(eslint@10.11.0)(typescript@5.9.3)':
     dependencies:
@@ -11487,7 +11435,7 @@ snapshots:
 
   buffer-image-size@0.6.4:
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
 
   bundle-name@4.1.1:
     dependencies:
@@ -12539,7 +12487,7 @@ snapshots:
 
   happy-dom@20.14.5:
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.2
       buffer-image-size: 0.6.4
@@ -13998,7 +13946,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.2
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
       long: 5.3.2
 
   protobufjs@8.0.1:
@@ -14013,7 +13961,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
-      '@types/node': 20.19.43
+      '@types/node': 24.19.0
       long: 5.3.2
 
   proxy-addr@2.0.7:

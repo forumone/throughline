@@ -227,7 +227,7 @@ export interface MissingAltCheckOptions {
    * check is `costly`.
    */
   onlyInUse?: boolean
-  /** Finds the ids in use. `findReferencedIds` from `@forumone/throughline-core`. */
+  /** Finds the ids in use. `findReferencedIds` from `@forumone/throughline/media`. */
   inUse?: (payload: Payload, collection: CollectionSlug) => Promise<Set<string>>
   label?: string
   description?: string
@@ -241,7 +241,7 @@ export function missingAltCheck(options: MissingAltCheckOptions = {}): HealthChe
   const onlyInUse = options.onlyInUse ?? true
   if (onlyInUse && !options.inUse) {
     throw new Error(
-      'missingAltCheck: onlyInUse needs `inUse`, e.g. findReferencedIds from @forumone/throughline-core.',
+      'missingAltCheck: onlyInUse needs `inUse`, e.g. findReferencedIds from @forumone/throughline/media.',
     )
   }
   const where: Where = {

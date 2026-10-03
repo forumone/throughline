@@ -1,6 +1,6 @@
 import type { Config, Plugin } from 'payload'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import type { McpToolCollector, McpToolDescriptor } from '@forumone/throughline-core'
+import type { McpToolDefinition } from '@forumone/throughline'
+import type { McpToolCollector, McpToolDescriptor } from '@forumone/throughline'
 import { EDITORIAL_CUSTOM_KEY, type EditorialRuntime } from './config.js'
 import type { CalendarOptions } from './calendar/calendar.js'
 import { calendarClock } from './calendar/month.js'

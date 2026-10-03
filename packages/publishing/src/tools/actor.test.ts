@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import type { McpToolDefinition } from '@forumone/throughline'
 import { resolvePublishingActor } from './actor.js'
 import { createGetPublishStatusTool } from './get-publish-status.js'
 import { createPublishTool } from './publish.js'

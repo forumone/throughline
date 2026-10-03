@@ -1,6 +1,6 @@
 import type { Config } from 'payload'
-import type { BaseCorePluginOptions, CorePlugin } from '@forumone/throughline-plugin-contract'
-import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
+import type { BaseCorePluginOptions, CorePlugin } from '@forumone/throughline'
+import { getPluginRegistry } from '@forumone/throughline'
 
 /*
 Moved here from `@forumone/throughline-plugin-contract`, which published it to

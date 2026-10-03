@@ -1,6 +1,6 @@
-import type { McpToolCollector } from '@forumone/throughline-core'
+import type { McpToolCollector } from '@forumone/throughline'
 import type { PayloadRequest } from 'payload'
-import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
+import type { BaseCorePluginOptions } from '@forumone/throughline'
 
 /*
 `routePrefix` is omitted rather than ignored. This server's only endpoint was
@@ -11,7 +11,7 @@ make it config that reads as if it does something.
 export interface AuditQueryPluginOptions extends Omit<BaseCorePluginOptions, 'routePrefix'> {
   /**
    * Override the audit collection slug. Must match the slug `auditPlugin`
-   * (in `@forumone/throughline-core`) writes to. Default: `'audit-events'`.
+   * (in `@forumone/throughline/audit`) writes to. Default: `'audit-events'`.
    */
   collectionSlug?: string
   /**
@@ -24,7 +24,7 @@ export interface AuditQueryPluginOptions extends Omit<BaseCorePluginOptions, 'ro
    * Where to put this server's MCP tools so Payload's own MCP plugin can serve
    * them.
    *
-   * `createMcpToolCollector()` from `@forumone/throughline-core`. The host hands
+   * `createMcpToolCollector()` from `@forumone/throughline`. The host hands
    * its array to `@payloadcms/plugin-mcp` at config time and this plugin fills
    * it at `onInit` — which is the first moment the tools can exist, since they
    * close over `payload`, and still before any request reads the array.

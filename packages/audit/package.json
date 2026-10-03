@@ -47,8 +47,7 @@
     "payload": "^3.89.0"
   },
   "dependencies": {
-    "@forumone/throughline-core": "workspace:*",
-    "@forumone/throughline-plugin-contract": "workspace:*",
+    "@forumone/throughline": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

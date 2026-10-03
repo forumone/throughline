@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline-plugin-contract'
+import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline'
 import {
   DEFAULT_APPROVALS_SLUG,
   createApprovalsCollection,

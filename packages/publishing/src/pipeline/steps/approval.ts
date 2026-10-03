@@ -1,4 +1,4 @@
-import { documentContentHash } from '@forumone/throughline-core'
+import { documentContentHash } from '@forumone/throughline'
 import type { ApprovalResolver } from '../../options.js'
 import type { PipelineStep } from '../types.js'
 

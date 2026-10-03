@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Payload, PayloadRequest } from 'payload'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
-import type { McpToolDescriptor } from '@forumone/throughline-core'
+import type { McpToolDefinition } from '@forumone/throughline'
+import type { McpToolDescriptor } from '@forumone/throughline'
 import type { HealthCheck } from './checks.js'
 import { findContentNeedingAttention, type HealthReport } from './find.js'
 

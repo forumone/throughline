@@ -1,4 +1,4 @@
-import type { McpToolDescriptor } from '@forumone/throughline-core'
+import type { McpToolDescriptor } from '@forumone/throughline'
 
 /*
 This server's tools, by name and description, knowable without a Payload.

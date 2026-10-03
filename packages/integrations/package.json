@@ -63,8 +63,7 @@
     }
   },
   "dependencies": {
-    "@forumone/throughline-core": "workspace:*",
-    "@forumone/throughline-plugin-contract": "workspace:*",
+    "@forumone/throughline": "workspace:*",
     "@forumone/throughline-workflows": "workspace:*",
     "zod": "^3.23.0"
   },

@@ -20,8 +20,8 @@ describe('package versions', () => {
     await writeFile(join(root, 'packages', dir, 'package.json'), JSON.stringify(manifest))
   }
 
-  it('reads published @forumone/throughline-* packages and nothing else', async () => {
-    await pkg('core', { name: '@forumone/throughline-core', version: '0.9.1' })
+  it('reads @forumone/throughline and the published @forumone/throughline-* packages, and nothing else', async () => {
+    await pkg('throughline', { name: '@forumone/throughline', version: '1.0.0' })
     await pkg('design-contract', {
       name: '@forumone/throughline-design-contract',
       version: '0.6.0',
@@ -34,7 +34,7 @@ describe('package versions', () => {
     await pkg('other', { name: 'unrelated', version: '1.0.0' })
 
     expect(await readWorkspaceVersions(join(root, 'packages'))).toEqual({
-      '@forumone/throughline-core': '0.9.1',
+      '@forumone/throughline': '1.0.0',
       '@forumone/throughline-design-contract': '0.6.0',
     })
   })
@@ -65,10 +65,17 @@ describe('package versions', () => {
   })
 
   it('falls back to the workspace when running from source', async () => {
-    await pkg('core', { name: '@forumone/throughline-core', version: '0.9.1' })
+    await pkg('throughline', { name: '@forumone/throughline', version: '1.0.0' })
+    await pkg('design-contract', {
+      name: '@forumone/throughline-design-contract',
+      version: '0.6.0',
+    })
     const templatesDir = join(root, 'packages', 'create-throughline', 'src', 'templates')
     await mkdir(templatesDir, { recursive: true })
 
-    expect(await loadPackageVersions(templatesDir)).toEqual({ version_core: '0.9.1' })
+    expect(await loadPackageVersions(templatesDir)).toEqual({
+      version_throughline: '1.0.0',
+      version_design_contract: '0.6.0',
+    })
   })
 })
