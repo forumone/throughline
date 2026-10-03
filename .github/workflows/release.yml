@@ -6,14 +6,29 @@ on:
     # (docs/spec/1.0-plan.md, "Distribution"). Its own `.changeset/config.json`
     # sets `baseBranch: "v0"`, so a merge there opens a release PR against `v0`.
     branches: [main, v0]
+  # A snapshot of each pull request that touches a published package, so a
+  # site's pull request can install the change before it merges. In this file
+  # rather than its own because npm's trusted publishing names one workflow
+  # file per package, and it is this one.
+  pull_request:
+    paths:
+      - 'packages/**'
+      - '.changeset/**'
+      - 'pnpm-lock.yaml'
 
 # One release at a time per branch: `main` and `v0` publish different versions
-# and must not wait on, or cancel, each other.
-concurrency: release-${{ github.ref }}
+# and must not wait on, or cancel, each other. A pull request's ref is its own,
+# and a newer push to it supersedes the snapshot of the last.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
     permissions:
       contents: write
       pull-requests: write
@@ -46,6 +61,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Create Release Pull Request or Publish
+        id: changesets
         uses: changesets/action@v1
         with:
           publish: pnpm publish-packages
@@ -61,3 +77,91 @@ jobs:
           # Provenance (Sigstore attestation) requires a public source repo;
           # this repo is private. Re-enable if it ever goes public.
           # NPM_CONFIG_PROVENANCE: true
+
+  # Every merge to `main` publishes a snapshot under `next`, once 1.0 is out.
+  # While `main` is in pre-release mode the `next` line is the release PR's own
+  # `1.0.0-next.N`, which is what a site's rehearsal tracks, so this waits for
+  # `.changeset/pre.json` to be gone. Not after the release PR merges, which
+  # publishes the release itself. Its own job, because the step above leaves
+  # the checkout on the release branch, already versioned.
+  next:
+    needs: release
+    if: github.ref == 'refs/heads/main' && needs.release.outputs.published != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: In pre-release mode?
+        id: pre
+        run: |
+          if [[ -f .changeset/pre.json ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "main is in pre-release mode: the next line is the release PR's next.N."
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.pre.outputs.skip != 'true'
+
+      - uses: actions/setup-node@v7
+        if: steps.pre.outputs.skip != 'true'
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm
+        if: steps.pre.outputs.skip != 'true'
+        run: npm install -g npm@^11.5.1
+
+      - name: Install dependencies
+        if: steps.pre.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Snapshot under next
+        if: steps.pre.outputs.skip != 'true'
+        run: scripts/publish-snapshot.sh "next-${GITHUB_SHA::7}" next
+
+  snapshot:
+    # Not for Renovate's dependency bumps or the release PR itself, whose
+    # versions are the release.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !startsWith(github.head_ref, 'renovate/') &&
+      !startsWith(github.head_ref, 'changeset-release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm
+        run: npm install -g npm@^11.5.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `<version>-pr-<n>-<sha>` under `pr`: the sha of the PR's head, so the
+      # version names the commit a reviewer sees.
+      - name: Snapshot under pr
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: scripts/publish-snapshot.sh "pr-${PR_NUMBER}-${HEAD_SHA::7}" pr

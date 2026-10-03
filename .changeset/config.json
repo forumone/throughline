@@ -13,5 +13,9 @@
     "@forumone/throughline-tsconfig",
     "@forumone/throughline-eslint-config",
     "@forumone/throughline-prettier-config"
-  ]
+  ],
+  "snapshot": {
+    "useCalculatedVersion": true,
+    "prereleaseTemplate": "{tag}"
+  }
 }

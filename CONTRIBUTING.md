@@ -20,6 +20,18 @@ Internal config packages (`@forumone/throughline-tsconfig`, `-eslint-config`, `-
 
 `@forumone/throughline`, `@forumone/throughline-design-system` and `@forumone/create-throughline` are one changesets `fixed` group: they release together, at one version. A changeset for any of them moves all three, so name the one you changed.
 
+### Snapshots
+
+A pull request that touches a published package publishes a snapshot of all three, `<version>-pr-<n>-<sha>` under the `pr` dist-tag, from the PR's head. The version is in the run's summary, so a site's pull request can install the change before this one merges:
+
+```bash
+pnpm add @forumone/throughline@1.0.0-pr-264-a1b2c3d
+```
+
+Install the exact version, never `@pr`: the tag moves with every pull request. Renovate's branches and the release PR publish nothing.
+
+Once 1.0 is out, every merge to `main` with changesets pending publishes `<next version>-next-<sha>` under `next` the same way. Until then `next` is the release PR's `1.0.0-next.N`. The script is `scripts/publish-snapshot.sh`; it versions the checkout and never commits or tags.
+
 ### Two lines while 1.0 is in progress
 
 `main` is in changesets pre-release mode (`.changeset/pre.json`, tag `next`) while the packages are consolidated for 1.0. A release from `main` publishes `-next.N` versions under the `next` dist-tag, and leaves `latest` alone.
