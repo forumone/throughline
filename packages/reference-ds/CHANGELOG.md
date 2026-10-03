@@ -1,5 +1,12 @@
 # @forumone/throughline-reference-ds
 
+## 0.3.8-next.0
+
+### Patch Changes
+
+- Updated dependencies [825f4e9]
+  - @forumone/throughline-design-system@1.0.0-next.0
+
 ## 0.3.7
 
 ### Patch Changes
