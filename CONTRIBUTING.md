@@ -32,9 +32,9 @@ Install the exact version, never `@pr`: the tag moves with every pull request. R
 
 Every merge to `main` with changesets pending publishes `<next version>-next-<sha>` under `next` the same way, so `next` is always what the next release holds. The script is `scripts/publish-snapshot.sh`; it versions the checkout and never commits or tags.
 
-### 0.x fixes go to `v0`
+### 0.x is closed
 
-**A fix for 0.x goes to `v0`**, the branch cut from the last 0.x release: base your branch and your pull request on `v0`. Its release PR opens against `v0` and publishes under the `v0` dist-tag, so it never moves `latest` off 1.x. If 1.x needs the fix too, port it to `main` by hand. See [the 1.0 plan](docs/spec/1.0-plan.md#distribution).
+The `v0` branch carried 0.x fixes while 1.0 was in pre-release, and closed once forumone-2026 ran 1.0 in production. It stays for its history, the 0.x reference pages and forms' source, and releases nothing more. A fix goes to `main`.
 
 ## Commits
 
