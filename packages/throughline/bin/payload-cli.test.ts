@@ -8,6 +8,7 @@ import {
   DEFAULT_TIMEOUT_MS,
   PID_FILE_NAME,
   TIMEOUT_EXIT_CODE,
+  payloadArgv,
   findRoot,
   isMigrateCommand,
   parseArgs,
@@ -61,6 +62,16 @@ describe('selectTimeout', () => {
         /PAYLOAD_CLI_TIMEOUT_MS/,
       )
     }
+  })
+})
+
+describe('payloadArgv', () => {
+  it('preloads the exit guard ahead of the bin, as a URL', () => {
+    const argv = payloadArgv('/w/node_modules/payload/bin.js', ['migrate', '--force'])
+    expect(argv[0]).toBe('--import')
+    expect(argv[1]).toMatch(/^file:\/\/.*\/payload-exit-guard\.mjs$/)
+    expect(fs.existsSync(fileURLToPath(argv[1]!))).toBe(true)
+    expect(argv.slice(2)).toEqual(['/w/node_modules/payload/bin.js', 'migrate', '--force'])
   })
 })
 
@@ -187,6 +198,8 @@ const grandchild = spawn(process.execPath, ['-e', "process.on('SIGTERM', () => {
 fs.writeFileSync(process.env.FAKE_PIDS + '.tmp', JSON.stringify([process.pid, grandchild.pid]))
 fs.renameSync(process.env.FAKE_PIDS + '.tmp', process.env.FAKE_PIDS)
 if (process.env.FAKE_EXIT) setTimeout(() => process.exit(Number(process.env.FAKE_EXIT)), 500)
+// payloadcms/payload#17757: nothing left on the event loop, so node exits 0 by itself.
+else if (process.env.FAKE_DRAIN) grandchild.unref()
 else setInterval(() => {}, 1000)
 `
 
@@ -331,6 +344,26 @@ describe('the runner, against a hanging CLI', () => {
     expect(await exited).toBe(3)
     await until(() => (pids.some(alive) ? undefined : true), 3_000)
     expect(fs.existsSync(path.join(workspace, PID_FILE_NAME))).toBe(false)
+    expect(processesUnder(workspace)).toEqual([])
+  }, 30_000)
+
+  it('exits 0 when Payload calls process.exit(0)', async () => {
+    const { exited } = run(['generate:types'], { FAKE_EXIT: '0' })
+    await fakePids()
+    expect(await exited).toBe(0)
+  }, 30_000)
+
+  /*
+  The intermittent failure: the config import never settles, the loop drains,
+  and node exits 0 having done nothing. In CI that was a `migrate` reporting
+  success over an empty database.
+  */
+  it('fails a run that exits 0 without Payload calling process.exit', async () => {
+    const { exited, stderr } = run(['migrate'], { FAKE_DRAIN: '1' })
+    const pids = await fakePids()
+    expect(await exited).toBe(70)
+    expect(stderr()).toMatch(/exited without finishing/)
+    await until(() => (pids.some(alive) ? undefined : true), 3_000)
     expect(processesUnder(workspace)).toEqual([])
   }, 30_000)
 
