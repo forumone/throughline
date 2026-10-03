@@ -110,4 +110,19 @@ describe('request_approval', () => {
     const created = deps.spies.payloadCreate.mock.calls[0]?.[0] as { data: Record<string, unknown> }
     expect(created.data['requestedBy']).toBe(7)
   })
+
+  // Stored, then announced: a failed send is a warning, not a failure that
+  // invites a second request for the same change.
+  it('reports a stored request with a warning when its event cannot be sent', async () => {
+    const deps = makeDeps({ inngestSend: vi.fn(async () => { throw new Error('no event key') }) })
+    const result = (await callTool(createRequestApprovalTool(deps), {
+      collection: 'pages',
+      id: 'p1',
+      changesSummary: 'Updated the headline copy.',
+      approverGroups: ['editorial'],
+    })) as { approvalId?: string; warnings?: string[] }
+    expect(result.approvalId).toBe('apr_1')
+    expect(result.warnings?.[0]).toMatch(/approval\/requested event could not be sent.*no event key/)
+    expect(deps.auditMock).toHaveBeenCalled()
+  })
 })

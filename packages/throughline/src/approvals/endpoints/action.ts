@@ -2,6 +2,8 @@ import type { Endpoint, Payload } from 'payload'
 import type { AuditWriter } from '../../audit/writer.js'
 import type { ApprovalsPluginOptions } from '../options.js'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
+import { relationshipIdFor } from '../../utils/relationships.js'
+import { sendEventSafely } from '../../utils/send-event-safely.js'
 import {
   type ActionTokenAction,
   type VerifyResult,
@@ -100,13 +102,18 @@ export function createActionEndpoint(deps: CreateActionEndpointDeps): Endpoint {
         // Discuss isn't a decision — surface a message and don't mutate state.
         // C11 listens for the 'approval/discussed' event to thread it into
         // the email reply UX once that lands.
-        await deps.options.inngest.send({
-          name: 'approval/discussed',
-          data: {
-            approvalId: verification.token.approvalId,
-            approverId: verification.token.approverId,
+        const warning = await sendEventSafely(
+          deps.options.inngest,
+          {
+            name: 'approval/discussed',
+            data: {
+              approvalId: verification.token.approvalId,
+              approverId: verification.token.approverId,
+            },
           },
-        })
+          'the discussion has not been threaded',
+        )
+        if (warning) req.payload.logger.warn(warning)
         await deps.auditWriter({
           actor: { type: 'user', userId: verification.token.approverId, apiKeyName: 'action-token' },
           action: 'approval.discussed',
@@ -128,13 +135,22 @@ export function createActionEndpoint(deps: CreateActionEndpointDeps): Endpoint {
         id: verification.token.approvalId,
         data: {
           status: newStatus,
-          decidedBy: verification.token.approverId,
+          // The token carries the approver as a string; on Postgres the users
+          // collection's ids are numbers, and a string is refused here — which
+          // made every emailed decision fail on Confirm.
+          decidedBy: relationshipIdFor(
+            req.payload,
+            deps.options.usersSlug ?? 'users',
+            verification.token.approverId,
+          ),
           decidedAt,
           consumedTokens: [...consumed, token],
         },
       })
 
-      await deps.options.inngest.send({
+      // After the write: the decision is recorded and the token consumed, so a
+      // failed send must not turn the approver's confirmation into an error page.
+      const warning = await sendEventSafely(deps.options.inngest, {
         name: 'approval/decided',
         data: {
           approvalId: verification.token.approvalId,
@@ -144,7 +160,8 @@ export function createActionEndpoint(deps: CreateActionEndpointDeps): Endpoint {
           targetCollection: String(approval['targetCollection']),
           targetId: String(approval['targetId']),
         },
-      })
+      }, 'the requester may not have been notified, and the approval/decided subscribers have not run')
+      if (warning) req.payload.logger.warn(warning)
 
       await deps.auditWriter({
         actor: {

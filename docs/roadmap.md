@@ -506,4 +506,4 @@ Left from P3 and P4, each documented as it stands until fixed:
 
 - [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw. Each needs a value in the audit log's `mcp_server` enum, which is a migration in every host, so it ships with one
 - [ ] The scaffold: `.env.local` written at the root, where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording
-- [ ] `request_approval` stores the request and then reports the call as failed when its `approval/requested` event cannot be sent; publishing treats the same failure as a warning on a write that landed
+- [x] `request_approval` stores the request and then reports the call as failed when its `approval/requested` event cannot be sent; publishing treats the same failure as a warning on a write that landed. Now a warning in `request_approval`, `respond_to_approval` and the email action endpoint — which also could not record a decision on Postgres, its `decidedBy` the same string-id defect #270 fixed in the tools
