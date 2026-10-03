@@ -1,6 +1,6 @@
 {
   "name": "@forumone/create-throughline",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Scaffolder for new Throughline projects (Payload CMS + MCP servers + Inngest workflows).",
   "type": "module",
   "bin": {
