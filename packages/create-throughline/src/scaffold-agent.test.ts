@@ -131,6 +131,9 @@ describe('the Stop hook', () => {
     expect(result.stdout).toBe('')
   })
 
+  // The hook starts `pnpm` and then `node`: well under a second on its own, but
+  // CI runs every package's suite at once on two cores, where this took 4.2s of
+  // the default 5s and then 5.2s. The time is process start-up, not the hook.
   it('reports a failure as JSON, and still exits 0', async () => {
     await writeFile(join(repo, 'apps', 'touched.ts'), 'export {}\n')
     const result = run()
@@ -138,7 +141,7 @@ describe('the Stop hook', () => {
     const message = JSON.parse(result.stdout) as { systemMessage: string; suppressOutput: boolean }
     expect(message.systemMessage).toContain('Gate FAILED')
     expect(message.suppressOutput).toBe(true)
-  })
+  }, 30_000)
 
   it('stays out of the way when THROUGHLINE_SKIP_GATE is set', () => {
     const result = run({ THROUGHLINE_SKIP_GATE: '1' })
