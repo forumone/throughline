@@ -476,15 +476,13 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
     - [x] `docs/guides/upgrading.md`, and `upgrading-core-packages.md` for releases after it
     - [x] reference docs for the three packages: `docs/reference` is the one home, a page per package and per plugin, and the 0.x pages stay on `v0`
     - [x] the rest of `docs/` on 1.0: getting started, guides, concepts, operations and the root README, each claim checked against the code
-- [ ] Code gaps the docs sweep found, each documented as it stands until fixed:
+- [x] Code gaps the docs sweep found, each documented as it stands until fixed. Two were left for after 1.0 and are under P5:
     - [x] `block-status-writes` skips `create`, so a document created as `published` (REST, or Payload's MCP CRUD) goes live with no pipeline; and a non-draft save to a live page changes live content without it, approval-required pages included. Both refused now; derived data passes with `DERIVED_WRITE_CONTEXT`
     - [x] an accessibility issue of severity `warning` is dropped, not reported
     - [x] `Integration.createFunctions` is required though `throughline()` runs only `createJobs`
     - [x] `auditQueryPlugin`'s `readAccess` is declared and read by nothing
     - [x] `job-failures` takes no sidebar group
-    - [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw. 1.x: each needs a value in the `mcp_server` enum, which is a migration in every host, and 1.0 promises none
     - [x] forms leftovers: `form.*` audit actions and the `forms` server name, the webhook's `form/submission.received`, `emailEnv`'s reason text. The `form.*` audit actions, the `forms` server name and the webhook's filter option stay: each is a stored enum value
-    - [ ] the scaffold: `.env.local` at the root where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording. Not taken for 1.0: it affects new projects only
 - [x] PR snapshots (`pr` dist-tag) and `next` snapshots on merge (#264). Every pull request touching a package publishes `<version>-pr-<n>-<sha>` under `pr`, first `1.0.0-pr-264-881f3a4`; the `next` snapshot of each merge to `main` starts once pre-release mode is exited
 - [x] forumone-2026's `chore/throughline-next` builds against each `next.N`: forumone-2026#814, draft, green in `fast` and `verify` on `1.0.0-next.2`. It is the P4 migration rehearsed — no schema change, every function id and MCP tool unchanged — and becomes the P4 pull request at `1.0.0`
 - [x] Exit pre-release mode and release `1.0.0` (#266, #268; released 2026-10-03). `v0` now publishes under the `v0` dist-tag so a 0.x fix cannot move `latest` (#267)
@@ -493,13 +491,19 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 
 Gate: forumone-2026 runs 1.0 in production, and the submodule is gone. Packaging only, since the code arrived in P1 and P2. The steps are in the spec, under "Migrating forumone-2026".
 
-- [ ] One site PR: dependencies, codemod, `throughline({...})`, generated files, repo rules
-- [ ] `migrate:create` finds nothing to change (run with the Blob token set)
-- [ ] Full `fast` and `verify`, a prerender-manifest diff, and an admin smoke test against a local Postgres
-- [ ] A preview with a publish scheduled ten minutes out
+- [x] One site PR: dependencies, codemod, `throughline({...})`, generated files, repo rules (forumone-2026#814, at `1.0.1`; the codemod rewrote 163 files, and HubSpot and Greenhouse became jobs)
+- [x] `migrate:create` finds nothing to change (run with the Blob token set); `payload-types.ts` and `select-options.json` regenerate byte-identical
+- [x] Full `fast` and `verify`, a prerender-manifest diff, and an admin smoke test against a local Postgres. Green on `1.0.0-next.2`, `1.0.0` and `1.0.1`; the manifest is identical to `main`'s (27 prerendered and 8 dynamic routes, no change in cache life); the smoke test found `request_approval` unable to store a request on Postgres, in 0.x as well, fixed in `1.0.1` (#270)
+- [x] A preview with a publish scheduled ten minutes out: it published on time
 - [ ] Merged and promoted to production
-- [ ] The submodule, `check:boundary` and `check-throughline-pin.sh` retired; `v0` closed
+- [ ] The submodule, `check:boundary` and `check-throughline-pin.sh` retired; `v0` closed. The retirements are in forumone-2026#814 and land with it; `v0` closes once production runs 1.0
 
 ### 1.0-P5 — After 1.0
 
 When a second site shows which configuration points are real: Okta generalised to OIDC, draft preview, HubSpot and Greenhouse, narration, AI Suggest, `llms.txt`.
+
+Left from P3 and P4, each documented as it stands until fixed:
+
+- [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw. Each needs a value in the audit log's `mcp_server` enum, which is a migration in every host, so it ships with one
+- [ ] The scaffold: `.env.local` written at the root, where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording
+- [ ] `request_approval` stores the request and then reports the call as failed when its `approval/requested` event cannot be sent; publishing treats the same failure as a warning on a write that landed
