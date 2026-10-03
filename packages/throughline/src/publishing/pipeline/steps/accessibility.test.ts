@@ -99,4 +99,27 @@ describe('accessibilityStep', () => {
     expect(result.pass).toBe(false)
     expect(result.issues?.some((i) => i.rule === 'custom')).toBe(true)
   })
+
+  // A warning used to be dropped here, so a check that only warned said
+  // nothing to anybody.
+  it('passes on a warning, and reports it', async () => {
+    const ctx = makeContext({
+      options: {
+        collections: [{ slug: 'pages' }],
+        inngest: makeContext().inngest,
+        accessibilityChecks: [
+          {
+            name: 'seo-length',
+            run: () => [
+              { field: 'seo.description', message: 'Over 160 characters', severity: 'warning' as const },
+            ],
+          },
+        ],
+      },
+      document: {},
+    })
+    const result = await accessibilityStep(ctx)
+    expect(result.pass).toBe(true)
+    expect(result.warnings).toEqual(['seo-length: Over 160 characters (seo.description)'])
+  })
 })

@@ -69,6 +69,26 @@ describe('createQueryAuditTool', () => {
     expect(result.error).toMatch(/admins and editors/)
   })
 
+  // `readAccess` was declared on the plugin and read by nothing.
+  it('applies a site-supplied reader rule in place of the default', async () => {
+    const { payload } = createFakePayload(seed)
+    const tool = createQueryAuditTool({
+      payload,
+      collectionSlug: SLUG,
+      canRead: (ctx) => ctx.user?.roles.includes('auditor') ?? false,
+    })
+    const auditor = makeContext({
+      user: { id: 'u-ada', email: 'a@x', name: 'Ada', roles: ['auditor'], groups: [] },
+    })
+    const editor = makeContext({
+      user: { id: 'u-ed', email: 'e@x', name: 'Ed', roles: ['editor'], groups: [] },
+    })
+    expect(((await tool.handler({} as Record<string, never>, auditor)) as { total?: number }).total).toBe(4)
+    expect(((await tool.handler({} as Record<string, never>, editor)) as { error?: string }).error).toMatch(
+      /Only audit readers/,
+    )
+  })
+
   it('returns all events sorted desc when no filters', async () => {
     const { payload } = createFakePayload(seed)
     const tool = createQueryAuditTool({ payload, collectionSlug: SLUG })
@@ -168,7 +188,7 @@ describe('createWhoChangedWhatTool', () => {
         user: { id: 'u-grace', email: 'g@x', name: 'Grace', roles: ['author'], groups: [] },
       }),
     )) as { error?: string }
-    expect(result.error).toMatch(/Only admins and editors/)
+    expect(result.error).toMatch(/Only audit readers/)
   })
 
   it('rejects when there is no caller and no actorId', async () => {

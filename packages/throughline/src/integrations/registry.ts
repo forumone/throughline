@@ -14,7 +14,7 @@ import type { Integration } from './types.js'
  *
  * ```ts
  * const registry = getIntegrationRegistry<InngestFunction.Any>(payload)
- * const functions = registry?.list().flatMap((i) => i.createFunctions(ctx)) ?? []
+ * const functions = registry?.list().flatMap((i) => i.createFunctions?.(ctx) ?? []) ?? []
  * ```
  */
 export class IntegrationRegistry<Fn = unknown> {

@@ -150,7 +150,7 @@ interface PluginAdminOptions {
 }
 ```
 
-Every plugin that declares a collection takes `admin: PluginAdminOptions`, and `throughline()` takes one for all of them: `audit-events`, `approvals` and `integrations`. A plugin's own `admin` wins over the suite's. `job-failures` takes no group yet, and sits ungrouped.
+Every plugin that declares a collection takes `admin: PluginAdminOptions`, and `throughline()` takes one for all of them: `audit-events`, `approvals`, `integrations` and `job-failures`. A plugin's own `admin` wins over the suite's.
 
 | `admin.group`                                                      | Sidebar placement                                   |
 | ------------------------------------------------------------------ | --------------------------------------------------- |

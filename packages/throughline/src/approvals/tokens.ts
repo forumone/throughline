@@ -2,7 +2,7 @@
  * HMAC-signed action tokens used in inline action emails (Approve / Decline /
  * Request changes / Discuss). Each token is bound to one approval, one
  * action, and one approver. Tokens are valid for a configurable window
- * (default 14 days) and consumed via the `consumedTokens` array on the
+ * (default 72 hours) and consumed via the `consumedTokens` array on the
  * approval record so they can't be replayed.
  *
  * Crypto uses the Web Crypto API (`crypto.subtle`) so the same code runs
@@ -29,7 +29,7 @@ export interface ActionToken {
  * Seventy-two hours is what an approval actually needs. It covers a weekend,
  * which is the realistic gap between sending a request and somebody opening
  * their mail, and it is well inside the request's own expiry so the two cannot
- * disagree. `createExpireStaleApprovalsFunction` handles anything that ages
+ * disagree. `expireStaleApprovalsJob` handles anything that ages
  * out either way.
  *
  * The token is otherwise well built — HMAC-SHA256, constant-time compare, bound
@@ -59,7 +59,7 @@ export async function generateActionToken(
 }
 
 export interface VerifyOptions {
-  /** Override the default 14-day token lifetime. */
+  /** Override the default 72-hour token lifetime. */
   maxAgeMs?: number
   /** Override "now" — useful in tests. Defaults to `Date.now()`. */
   now?: number

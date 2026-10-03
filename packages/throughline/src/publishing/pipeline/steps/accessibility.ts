@@ -3,9 +3,10 @@ import { BUILT_IN_ACCESSIBILITY_CHECKS } from '../../checks/index.js'
 
 /**
  * Runs every built-in accessibility check followed by user-supplied ones.
- * Errors block publish; warnings are surfaced on the result but don't fail
- * the step. (Warning-only behavior is currently unused by the built-in
- * checks but reserved for richer per-client checks.)
+ * Errors block publish; warnings don't, and reach the publish result's
+ * `warnings`, one line each, named by the check that raised them. (The
+ * built-ins raise none; a site's own checks may.) They used to be dropped
+ * here, so a check that warned said nothing to anybody.
  *
  * Built-ins named in `disableAccessibilityChecks` are skipped, so a host
  * whose content shape trips one can replace it rather than wait for a
@@ -27,8 +28,13 @@ export const accessibilityStep: PipelineStep = async (ctx) => {
   }
 
   const errors = allIssues.filter((i) => i.severity === 'error')
+  const warnings = allIssues
+    .filter((i) => i.severity === 'warning')
+    .map((i) => `${i.rule}: ${i.message}${i.field ? ` (${i.field})` : ''}`)
+  const carried = warnings.length ? { warnings } : {}
   if (errors.length > 0) {
     return {
+      ...carried,
       pass: false,
       code: 'accessibility-errors',
       reason: `${errors.length} accessibility issue${errors.length === 1 ? '' : 's'}`,
@@ -38,5 +44,5 @@ export const accessibilityStep: PipelineStep = async (ctx) => {
     }
   }
 
-  return { pass: true }
+  return { pass: true, ...carried }
 }

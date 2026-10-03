@@ -196,9 +196,9 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
   for (const integration of options.integrations?.integrations ?? []) {
     if (!integration.createJobs) {
       throw new Error(
-        `throughline(): integration "${integration.id}" defines createFunctions but no createJobs. ` +
-          'throughline() runs integrations through the jobs adapter, so give it a createJobs, and ' +
-          'derive createFunctions from it as the webhook integration does.',
+        `throughline(): integration "${integration.id}" defines no createJobs. ` +
+          'throughline() runs integrations through the jobs adapter, so give it a createJobs; ' +
+          'a 0.x createFunctions can be derived from it, as the webhook integration does.',
       )
     }
   }
@@ -211,7 +211,7 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
 
   const plugins: Plugin[] = [
     auditPlugin({ ...options.audit, ...logger, ...adminFor(options.audit), inngest }),
-    jobFailuresPlugin({ ...options.jobFailures, ...logger, mcpTools }),
+    jobFailuresPlugin({ ...options.jobFailures, ...logger, ...adminFor(options.jobFailures), mcpTools }),
   ]
   if (options.components) {
     plugins.push(componentsPlugin({ ...options.components, ...logger, mcpTools }))

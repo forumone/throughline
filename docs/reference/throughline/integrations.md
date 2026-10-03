@@ -6,7 +6,7 @@ Plugin architecture for connecting Throughline-powered Payload sites to external
 
 ## What this package provides
 
-- **`Integration` contract** — id, name, description, configFields, validateConfig, subscribes, createFunctions, mcpTools (optional), healthcheck. Every Salesforce / Mailchimp / Slack / etc. integration uses this exact shape.
+- **`Integration` contract** — id, name, description, configFields, validateConfig, subscribes, createJobs, and optionally mcpTools, healthcheck and the 0.x createFunctions. Every Salesforce / Mailchimp / Slack / etc. integration uses this exact shape.
 - **`IntegrationRegistry`** — process-local, per-plugin-init store keyed by integration id. Rejects duplicates synchronously.
 - **Integrations collection** — `name`, `integrationType`, `enabled`, `config` (json), and read-only `lastSyncAt` / `lastSyncStatus` / `lastError`. Admin-only writes; admin/editor reads.
 - **A Sync now button**, in the document's sidebar beside those status fields, and the `POST /api/<slug>/:id/sync` endpoint behind it. See below.

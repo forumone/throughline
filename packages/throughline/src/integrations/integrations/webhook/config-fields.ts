@@ -9,6 +9,9 @@ export const WEBHOOK_EVENT_OPTIONS = [
   { label: 'Page published', value: 'content/page.published' },
   { label: 'Page unpublished', value: 'content/page.unpublished' },
   { label: 'Page rolled back', value: 'content/page.rolled_back' },
+  // Nothing sends this since forms left the suite at 1.0, and the webhook no
+  // longer subscribes to it. The option stays because it is stored: removing
+  // it changes the select's values, which is a migration for every host.
   { label: 'Form submission received', value: 'form/submission.received' },
   { label: 'Approval decided', value: 'approval/decided' },
 ] as const

@@ -57,7 +57,7 @@ export const approvalStep: PipelineStep = async (ctx) => {
       reason:
         'This document requires approval and no granted approval exists for the current version',
       suggestion:
-        'Use the Approvals Server to request approval. Once granted, publish will succeed.',
+        'Call request_approval to ask for one. Once it is granted, publish will succeed.',
     }
   }
 

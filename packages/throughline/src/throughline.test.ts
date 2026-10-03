@@ -93,6 +93,7 @@ describe('throughline()', () => {
     expect(group('audit-events')).toBe('Workflow')
     expect(group('approval-requests')).toBe('Workflow')
     expect(group('integrations')).toBe('Admin')
+    expect(group('job-failures')).toBe('Workflow')
   })
 
   it("declares every enabled plugin's tools into suite.mcpTools as the config is built", async () => {

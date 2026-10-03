@@ -1,4 +1,5 @@
 import type { Access, CollectionConfig } from 'payload'
+import { type PluginAdminOptions, resolveAdminGroup } from '../plugin-contract/admin.js'
 
 /*
 Where a background job's failure is recorded.
@@ -25,6 +26,8 @@ export interface JobFailuresCollectionOptions {
   slug?: string
   /** Read access. Default: users with the `admin` role. */
   readAccess?: Access
+  /** Sidebar group, as every Throughline collection takes it. Default: `Throughline`. */
+  admin?: PluginAdminOptions
 }
 
 const adminOnly: Access = ({ req }) => {
@@ -38,6 +41,7 @@ export function createJobFailuresCollection(
   return {
     slug: options.slug ?? DEFAULT_JOB_FAILURES_SLUG,
     admin: {
+      ...resolveAdminGroup(options.admin),
       useAsTitle: 'summary',
       defaultColumns: ['createdAt', 'kind', 'source', 'message'],
       description:
