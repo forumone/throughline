@@ -17,7 +17,7 @@ When a release PR merges:
 - A git tag per package is created (`@forumone/throughline@1.2.0`)
 - Trusted publishing pushes the new versions to npm
 
-**Dist-tags:** `latest` is the current release, and `next` the pre-release line. While 1.0 itself was in pre-release, 0.x fixes went to the `v0` branch and published from there.
+**Dist-tags:** `latest` is the current release. `next` is a snapshot of `main` after every merge, `<next version>-next-<sha>`, so a site can try what the next release holds; while 1.0 itself was in pre-release it was the `1.0.0-next.N` line, and 0.x fixes went to the `v0` branch. `pr` is a snapshot of an open pull request, `<version>-pr-<n>-<sha>`: install it by exact version, to try a fix before it merges.
 
 ## Reading the changelog
 
