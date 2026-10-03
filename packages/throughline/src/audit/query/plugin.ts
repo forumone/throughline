@@ -1,12 +1,9 @@
-import type { CorePlugin, McpToolDefinition } from '@forumone/throughline'
-import { getPluginRegistry } from '@forumone/throughline'
-import { createNamedLogger, defaultLogger } from '@forumone/throughline'
-import { getAuditWriter } from '@forumone/throughline/audit'
-import {
-  type AuditQueryPluginOptions,
-  DEFAULT_AUDIT_COLLECTION_SLUG,
-  validateOptions,
-} from './options.js'
+import type { CorePlugin, McpToolDefinition } from '../../index.js'
+import { getPluginRegistry } from '../../index.js'
+import { createNamedLogger, defaultLogger } from '../../index.js'
+import { getAuditWriter } from '../index.js'
+import { DEFAULT_AUDIT_SLUG } from '../collection.js'
+import { type AuditQueryPluginOptions, validateOptions } from './options.js'
 import {
   AUDIT_TOOL_DESCRIPTORS,
   createGetChangeHistoryTool,
@@ -30,7 +27,7 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
     if (rawOptions.enabled === false) return incomingConfig
 
     const options = validateOptions(rawOptions)
-    const collectionSlug = options.collectionSlug ?? DEFAULT_AUDIT_COLLECTION_SLUG
+    const collectionSlug = options.collectionSlug ?? DEFAULT_AUDIT_SLUG
     const logger = createNamedLogger('audit-query', options.logger ?? defaultLogger)
 
     /*

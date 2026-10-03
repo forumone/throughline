@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { McpToolContext } from '@forumone/throughline'
+import type { McpToolContext } from '../../../index.js'
 
 export interface FakeAuditDoc {
   id: string

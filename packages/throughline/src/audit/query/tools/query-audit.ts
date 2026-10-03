@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload, Where } from 'payload'
-import type { McpToolDefinition } from '@forumone/throughline'
+import type { McpToolDefinition } from '../../../index.js'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
 import { AUDIT_TOOLS } from './descriptors.js'

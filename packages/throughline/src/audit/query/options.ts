@@ -1,6 +1,6 @@
-import type { McpToolCollector } from '@forumone/throughline'
+import type { McpToolCollector } from '../../index.js'
 import type { PayloadRequest } from 'payload'
-import type { BaseCorePluginOptions } from '@forumone/throughline'
+import type { BaseCorePluginOptions } from '../../index.js'
 
 /*
 `routePrefix` is omitted rather than ignored. This server's only endpoint was
@@ -34,8 +34,6 @@ export interface AuditQueryPluginOptions extends Omit<BaseCorePluginOptions, 'ro
    */
   mcpTools?: McpToolCollector
 }
-
-export const DEFAULT_AUDIT_COLLECTION_SLUG = 'audit-events'
 
 /**
  * Validates options at load time. Currently a passthrough; reserved for
