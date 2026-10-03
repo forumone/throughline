@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { McpToolDefinition } from '@forumone/throughline'
+import type { McpToolDefinition } from '../../index.js'
 import type { ManifestLoader } from '../manifest-source.js'
 import { COMPONENTS_TOOLS } from './descriptors.js'
 

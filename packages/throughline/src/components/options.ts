@@ -1,7 +1,7 @@
-import { formatZodIssues } from '@forumone/throughline'
-import type { McpToolCollector } from '@forumone/throughline'
+import { formatZodIssues } from '../index.js'
+import type { McpToolCollector } from '../index.js'
 import { z } from 'zod'
-import type { BaseCorePluginOptions } from '@forumone/throughline'
+import type { BaseCorePluginOptions } from '../index.js'
 import type { Manifest } from '@forumone/throughline-design-contract'
 
 export type ManifestSource =

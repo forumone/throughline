@@ -1,4 +1,4 @@
-import type { Logger, McpToolContext, McpToolDefinition } from '@forumone/throughline'
+import type { Logger, McpToolContext, McpToolDefinition } from '../../index.js'
 import { loadManifest, type LoadedManifest } from '@forumone/throughline-design-contract'
 import referenceManifest from '@forumone/throughline-reference-ds/manifest' with { type: 'json' }
 import type { ManifestLoader } from '../manifest-source.js'

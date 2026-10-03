@@ -1,11 +1,11 @@
 import { z } from 'zod'
-import type { McpToolDefinition } from '@forumone/throughline'
+import type { McpToolDefinition } from '../../index.js'
 import type { ManifestLoader } from '../manifest-source.js'
 import { COMPONENTS_TOOLS } from './descriptors.js'
 
-export function createGetTokensTool(loader: ManifestLoader): McpToolDefinition {
+export function createGetVariantsTool(loader: ManifestLoader): McpToolDefinition {
   return {
-    ...COMPONENTS_TOOLS.getTokens,
+    ...COMPONENTS_TOOLS.getVariants,
     inputSchema: z.object({
       name: z.string().describe('The PascalCase name of the component'),
     }),
@@ -15,7 +15,7 @@ export function createGetTokensTool(loader: ManifestLoader): McpToolDefinition {
       if (!contract) {
         return { error: `Component "${input.name}" not found` }
       }
-      return contract.tokens
+      return { variants: contract.content.variants ?? [] }
     },
   }
 }
