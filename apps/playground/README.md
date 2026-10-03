@@ -34,4 +34,4 @@ If you already run Postgres locally, skip `docker compose` and point `DATABASE_U
 
 ## Why this exists
 
-Every core plugin should compose cleanly into a Payload config. The playground is where we prove that. Keep it minimal — no visual polish, no production hardening. The design system work lives in `packages/reference-ds/` (phase C3).
+Every core plugin should compose cleanly into a Payload config. The playground is where we prove that. Keep it minimal — no visual polish, no production hardening. The design system work lives in `packages/create-throughline/reference-ds/` (phase C3).

@@ -4,7 +4,7 @@
  * environment (components + stories + foundations + contracts), not a
  * re-export of the compiled npm package.
  *
- * `packages/reference-ds` is the single source of truth. This script copies
+ * `reference-ds`, inside this package, is the single source of truth. This script copies
  * its source trees into `src/templates/with-reference-ds/design-system/`.
  * Hand-authored, project-specific files (package.json.template, tsconfig.json,
  * README) are NOT touched — only the vendored source listed in `COPY`.
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(__dirname, '..')
 const repoRoot = resolve(packageRoot, '..', '..')
-const referenceDs = resolve(repoRoot, 'packages/reference-ds')
+const referenceDs = resolve(packageRoot, 'reference-ds')
 const dest = resolve(packageRoot, 'src/templates/with-reference-ds/design-system')
 
 /** Source trees/files vendored verbatim from reference-ds. */
@@ -66,7 +66,7 @@ async function check(): Promise<void> {
   }
   if (drifted.length > 0) {
     console.error(
-      `Vendored design-system template is out of sync with packages/reference-ds:\n` +
+      `Vendored design-system template is out of sync with packages/create-throughline/reference-ds:\n` +
         drifted.map((f) => `  - ${f}`).join('\n') +
         `\n\nRun \`pnpm --filter @forumone/create-throughline sync-reference-ds\` and commit the result.`,
     )

@@ -24,7 +24,7 @@ Each component contract has:
 | `tokens` | CSS custom properties / brand tokens the component reads. Helps Claude reason about theming. |
 | `storyId` | The Storybook story ID. The lint pipeline cross-references the manifest with `storybook-static/index.json` so a contract pointing at a missing story fails CI. |
 
-A real contract is 50–150 lines per component. The reference DS in `packages/reference-ds` is a good template.
+A real contract is 50–150 lines per component. The reference DS in `packages/create-throughline/reference-ds` is a good template.
 
 ## Anti-examples are the most-overlooked part
 
@@ -92,7 +92,7 @@ Once you're modifying components, you need a contract. The contract is what make
 
 ## Where contracts live
 
-- **Reference DS**: each component has a `<Component>.contract.ts` file in `packages/reference-ds/src/components/<component>/`. They're aggregated into a manifest by `scripts/build-manifest.ts` at build time.
+- **Reference DS**: each component has a `<Component>.contract.ts` file in `packages/create-throughline/reference-ds/src/components/<component>/`. They're aggregated into a manifest by `scripts/build-manifest.ts` at build time.
 - **Your DS**: same shape. The Components plugin reads the manifest from a URL or an imported object — you pick.
 
 ## Authoring guidance
@@ -109,5 +109,5 @@ The contract is also discoverable at runtime: Claude calls `list_components` and
 
 - `packages/design-contract/src/schemas.ts` — `ComponentContractSchema`, `ManifestSchema`
 - `packages/design-contract/src/lint.ts` — `lintManifest`, the rules engine
-- `packages/reference-ds/src/components/Hero/Hero.contract.ts` — a worked example
+- `packages/create-throughline/reference-ds/src/components/Hero/Hero.contract.ts` — a worked example
 - `packages/components/src/composition/validator.ts` — what gets enforced at publish time
