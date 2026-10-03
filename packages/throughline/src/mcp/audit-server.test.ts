@@ -71,3 +71,32 @@ describe('mcpServerRefusal', () => {
     expect(message).toContain('enum_audit_events_mcp_server')
   })
 })
+
+/*
+Every collector server name a plugin uses has an audit name.
+
+Four of them did not until 1.1 — editorial, references, fields and
+observability — so a throw in their tools reached the log and nowhere else:
+no \`system.error\` row, nothing \`get_recent_failures\` could find. Read
+from source so that the next plugin is checked the day it is written.
+*/
+describe('every server a plugin declares', () => {
+  it('has a name in the audit log', async () => {
+    const { readFile, readdir } = await import('node:fs/promises')
+    const { join } = await import('node:path')
+    const root = join(import.meta.dirname, '..')
+    const files = (await readdir(root, { recursive: true })).filter(
+      (f) => f.endsWith('.ts') && !f.endsWith('.test.ts'),
+    )
+    const names = new Set<string>()
+    for (const file of files) {
+      const source = await readFile(join(root, file), 'utf8')
+      for (const m of source.matchAll(/serverName: '([a-z-]+)'/g)) names.add(m[1]!)
+    }
+    // approvals, audit, components, editorial, fields, integrations,
+    // observability, publishing, references: a scan that finds fewer is broken.
+    expect([...names].length).toBeGreaterThanOrEqual(9)
+    for (const name of names) expect(auditServerFor(name), name).toBeDefined()
+  })
+})
+
