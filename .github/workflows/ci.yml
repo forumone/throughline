@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, v0]
   pull_request:
   # Manual trigger so we can re-run CI on any branch when something prevents
   # the automatic dispatch (rare; usually only matters if RELEASE_PR_TOKEN is

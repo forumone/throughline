@@ -2,9 +2,14 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    # `v0` carries 0.x fixes while `main` is in pre-release mode for 1.0
+    # (docs/spec/1.0-plan.md, "Distribution"). Its own `.changeset/config.json`
+    # sets `baseBranch: "v0"`, so a merge there opens a release PR against `v0`.
+    branches: [main, v0]
 
-concurrency: release
+# One release at a time per branch: `main` and `v0` publish different versions
+# and must not wait on, or cancel, each other.
+concurrency: release-${{ github.ref }}
 
 jobs:
   release:
