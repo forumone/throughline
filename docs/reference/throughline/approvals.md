@@ -27,49 +27,35 @@ Part of [`@forumone/throughline`](../throughline.md#installation), which lists t
 ## Usage
 
 ```ts
-import { buildConfig } from 'payload'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
-import { approvalsPlugin } from '@forumone/throughline/approvals'
-import { publishingPlugin } from '@forumone/throughline/publishing'
-
-const inngest = createInngestClient({ id: 'my-site' })
-
-export default buildConfig({
-  // collections, db, secret...
-  plugins: [
-    auditPlugin({ inngest }),
-    approvalsPlugin({
-      inngest,
-      groups: [
-        { slug: 'editorial', name: 'Editorial review' },
-        { slug: 'legal', name: 'Legal review' },
-      ],
-      groupResolver: {
-        async resolveUsers(slugs) {
-          // Return users belonging to any of the listed groups.
-          return payload.find({
-            collection: 'users',
-            where: { groups: { in: slugs } },
-          })
-        },
+export const suite = throughline({
+  jobs: inngestJobs(inngest),
+  collections: ['pages'],
+  publishing: {},
+  approvals: {
+    groups: [
+      { slug: 'editorial', name: 'Editorial review' },
+      { slug: 'legal', name: 'Legal review' },
+    ],
+    groupResolver: {
+      async resolveUsers(slugs) {
+        // Return users belonging to any of the listed groups.
+        return payload.find({
+          collection: 'users',
+          where: { groups: { in: slugs } },
+        })
       },
-      tokenSecret: process.env.APPROVAL_TOKEN_SECRET,
-    }),
-    publishingPlugin({
-      inngest,
-      collections: [{ slug: 'pages' }],
-      // No `approvalResolver` is needed — approvalsPlugin attaches it
-      // automatically via Symbol. Pass one explicitly only if you need
-      // to override.
-    }),
-  ],
+    },
+    // tokenSecret falls back to APPROVAL_TOKEN_SECRET
+    expiry: {}, // the expiry job's own options
+  },
 })
 ```
 
+Publishing needs no `approvalResolver`: this plugin attaches one, and an explicit one would override it. `throughline()` gives the same `collectionSlug` to this collection, the emails and the expiry job. Registered by hand instead, it goes after `auditPlugin`, and takes `inngest` and `mcpTools` itself.
+
 ## Sidebar group
 
-The approvals collection sits in the admin sidebar's `Throughline` group by default. Pass `admin: { group: 'Workflow' }` to file it elsewhere, or `admin: { group: false }` to leave it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](../throughline.md#admin-sidebar-group).
+The approvals collection sits in the admin sidebar's `Throughline` group by default, or the suite's `admin` group. Pass `approvals: { admin: { group: 'Workflow' } }` to file it elsewhere, or `admin: { group: false }` to leave it ungrouped. Every Throughline plugin that declares a collection takes the same option — see [the reference](../throughline.md#admin-sidebar-group).
 
 ## Environment
 
@@ -88,9 +74,9 @@ The publishing server's `approvalStep` does not require an `approvalResolver` in
 
 If you need a custom resolver (e.g. you store approvals in an external system), pass `approvalResolver` directly to `publishingPlugin` — it takes precedence over the symbol lookup.
 
-## Phase 1 semantics
+## Semantics
 
-- **First-decision-wins.** Multi-party approvals (e.g. legal AND communications must both approve) are deferred to Phase 2. The Phase 1 model handles "any one approver from the configured groups," which covers the most common case.
+- **First-decision-wins.** Multi-party approvals (e.g. legal AND communications must both approve) are not supported. The model handles "any one approver from the configured groups," which covers the most common case.
 - **Approvals are tied to content, not to a timestamp.** `request_approval` stores `documentContentHash(document)` in `targetVersion`, and publishing's approval step recomputes the same hash from the document it is about to publish. So an approval granted against one draft does not apply to a subsequent edit — but it does survive a save that changed nothing, and it comes back if an edit is reverted.
 
   This is what lets **autosave and approvals both be on**. The binding used to be `updatedAt`, which moves on every save: an editor fixing a typo while an approver read the request invalidated the approval, and autosave did that every couple of seconds. See the note under `documentContentHash` in `@forumone/throughline` for what counts as content — in short, everything except `id`, `createdAt`, `updatedAt`, `_status` and the other storage bookkeeping, at every level of the document.

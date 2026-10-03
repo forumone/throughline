@@ -40,7 +40,6 @@ Core knows nothing about Forum One, any specific client, any specific brand, or 
 
 - Real collections (your content model)
 - Real groups + a real `groupResolver` (your user/SSO mapping)
-- Real allowlisted destinations (the things forms can email or webhook to)
 - Real integrations (your CRM, your analytics)
 - A brand layer on top of the reference DS, or your own DS that satisfies the same contract
 - Frontend rendering — the published site itself
@@ -57,7 +56,7 @@ Three reasons.
 
 **Upstreaming has a place.** When a client project develops something genuinely generic (a new healthcheck, a new accessibility check, a new email template), it can graduate to core. The seam tells you which side of the boundary code currently sits on, which informs the move.
 
-**Contributors don't need client context.** Someone fixing a bug in `@forumone/throughline-publishing` doesn't need credentials to a client environment. Tests run against fakes; the playground app is a self-contained smoke test. This is what makes the framework maintainable on a multi-engineer team.
+**Contributors don't need client context.** Someone fixing a bug in `@forumone/throughline/publishing` doesn't need credentials to a client environment. Tests run against fakes; the playground app is a self-contained smoke test. This is what makes the framework maintainable on a multi-engineer team.
 
 ## The fork question
 
@@ -81,13 +80,12 @@ A custom plugin in a client project is just a Payload plugin. The framework alre
 | Need | Where it goes |
 | --- | --- |
 | New collection | Client project's `payload.config.ts` |
-| New approval group | Client project's `approvalsPlugin` options |
-| New AccessibilityCheck | Client project, registered with `publishingPlugin({ accessibilityChecks })` |
-| New Inngest worker | Client project's `app/api/inngest/route.ts` functions array |
-| New form destination type | Client project's `formsPlugin` options |
-| New integration (CRM, analytics) | Client project, registered with `integrationsPlugin` |
-| New email template | Client project, passed to `emailPlugin({ templates })` |
-| New brand colors / fonts | Client project's `componentsPlugin({ brand: { tokens } })` |
+| New approval group | Client project's `throughline({ approvals })` options |
+| New AccessibilityCheck | Client project, registered with `throughline({ publishing: { accessibilityChecks } })` |
+| New Inngest function | Client project's `app/api/inngest/route.ts` functions array, beside `suite.jobs` |
+| New integration (CRM, analytics) | Client project, registered with `throughline({ integrations })` |
+| New email look | Client project's `throughline({ email: { tokens } })`; a different email entirely is the site's own job |
+| New brand colors / fonts | Client project's design-system tokens; email's through `throughline({ email: { tokens } })` |
 | New design system component | Client project's design-system package |
 | Bug fix in a Throughline plugin | Core PR |
 | New plugin entirely | Core (after upstream conversation) |

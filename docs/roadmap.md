@@ -472,10 +472,19 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [x] Leave forms out of 1.0; tag its last 0.x source. The tag is the release's own, `@forumone/throughline-forms@0.7.9`, and `v0` keeps the source
 - [x] Regenerate the scaffolder for the new shape; CI generates a site from it and builds that site. The `Scaffold` workflow installs it against the checkout's packed packages and runs the scaffold's own gates, through a migration, `next build` and the smoke pack (#257)
 - [x] Import codemod (`throughline migrate-imports`) covering every 0.x import path, including the P1/P2 temporary homes. On forumone-2026: 163 files rewritten, five imports left for the `throughline()` call to replace
-- [ ] Migration guide in `docs/guides/upgrading.md`, and reference docs for the three packages
+- [x] Migration guide in `docs/guides/upgrading.md`, and reference docs for the three packages
     - [x] `docs/guides/upgrading.md`, and `upgrading-core-packages.md` for releases after it
     - [x] reference docs for the three packages: `docs/reference` is the one home, a page per package and per plugin, and the 0.x pages stay on `v0`
-    - [ ] the rest of `docs/` on the 1.0 names: guides, concepts, operations and the root README still name 0.x packages
+    - [x] the rest of `docs/` on 1.0: getting started, guides, concepts, operations and the root README, each claim checked against the code
+- [ ] Code gaps the docs sweep found, each documented as it stands until fixed:
+    - [ ] `block-status-writes` skips `create`, so a document created as `published` (REST, or Payload's MCP CRUD) goes live with no pipeline; and a non-draft save to a live page changes live content without it, approval-required pages included
+    - [ ] an accessibility issue of severity `warning` is dropped, not reported
+    - [ ] `Integration.createFunctions` is required though `throughline()` runs only `createJobs`
+    - [ ] `auditQueryPlugin`'s `readAccess` is declared and read by nothing
+    - [ ] `job-failures` takes no sidebar group
+    - [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw
+    - [ ] forms leftovers: `form.*` audit actions and the `forms` server name, the webhook's `form/submission.received`, `emailEnv`'s reason text
+    - [ ] the scaffold: `.env.local` at the root where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording
 - [ ] PR snapshots (`pr` dist-tag) and `next` snapshots on merge
 - [ ] forumone-2026's `chore/throughline-next` builds against each `next.N`
 - [ ] Exit pre-release mode and release `1.0.0`

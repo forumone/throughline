@@ -8,11 +8,11 @@ After this package, the approval workflow is end-to-end: a marketer requests app
 
 ## What this package provides
 
-- **`emailPlugin`** — registers an email client and the three notification Inngest functions on the Payload instance via Symbols.
+- **`emailPlugin`** — attaches an email client to the Payload instance; `emailJobs` returns the three notification jobs, which `throughline()` puts in `suite.jobs`.
 - **`createEmailClient`** — Resend wrapper that lazy-imports both `resend` and `@react-email/render` and produces both HTML and plaintext from the same React tree on every send.
 - **Three React Email templates** — `ApprovalRequestEmail`, `ApprovalDecisionEmail` (granted / declined / changes-requested variants), `ApprovalExpiredEmail`. Themed via `EmailBrandTokens`.
-- **Three notification jobs** — `notifyApprovalRequestJob`, `notifyApprovalDecisionJob`, `notifyApprovalExpiredJob`, which the plugin registers with Inngest for `getEmailFunctions`, or which `emailJobs` hands to any adapter.
-- **Brand tokens** — neutral defaults (black on white, system sans, "Your Site"); deployments override via `emailPlugin({ tokens })`.
+- **Three notification jobs** — `notifyApprovalRequestJob`, `notifyApprovalDecisionJob`, `notifyApprovalExpiredJob`, which `emailJobs` hands to any adapter.
+- **Brand tokens** — neutral defaults (black on white, system sans, "Your Site"); deployments override via `email: { tokens }`.
 
 ## Installation
 
@@ -22,80 +22,47 @@ Part of [`@forumone/throughline`](../throughline.md#installation). It needs `res
 
 ## Usage
 
-In your Payload config:
-
 ```ts
-import { buildConfig } from 'payload'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
-import { emailPlugin } from '@forumone/throughline/email'
-
-const inngest = createInngestClient({ id: 'my-site' })
-
-export default buildConfig({
-  // collections, db, secret...
-  plugins: [
-    auditPlugin({ inngest }),
-    emailPlugin({
-      inngest,
-      tokens: { brandName: 'Acme Foundation', brandPrimary: '#5B21B6' },
-      resolveApprover: async (userId) => {
-        const user = await payload.findByID({ collection: 'users', id: userId })
-        return user ? { email: user.email, name: user.name } : null
-      },
-      resolveRequester: async (userId) => {
-        const user = await payload.findByID({ collection: 'users', id: userId })
-        return user ? { email: user.email, name: user.name } : null
-      },
-      buildActionUrl: async ({ approvalId, action, approverId }) => {
-        // Wrap your approvals plugin's HMAC token. The action endpoint
-        // confirms-on-first-hit, so any well-formed URL works here.
-        return `${process.env.NEXT_PUBLIC_SERVER_URL}/api/approvals/action?token=...`
-      },
-      // Optional preview URL builder for cases where the approval record
-      // doesn't carry a previewUrl directly.
-      buildPreviewUrl: async ({ approvalId }) =>
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/preview?approval=${approvalId}`,
-    }),
-  ],
+export const suite = throughline({
+  jobs: inngestJobs(inngest),
+  collections: ['pages'],
+  approvals: { groups, groupResolver },
+  email: {
+    tokens: { brandName: 'Acme Foundation', brandPrimary: '#5B21B6' },
+    resolveApprover: async (userId) => {
+      const user = await payload.findByID({ collection: 'users', id: userId })
+      return user ? { email: user.email, name: user.name } : null
+    },
+    resolveRequester: async (userId) => {
+      const user = await payload.findByID({ collection: 'users', id: userId })
+      return user ? { email: user.email, name: user.name } : null
+    },
+    // Optional preview URL builder for cases where the approval record
+    // doesn't carry a previewUrl directly.
+    buildPreviewUrl: async ({ approvalId }) =>
+      `${process.env.NEXT_PUBLIC_SERVER_URL}/preview?approval=${approvalId}`,
+  },
 })
 ```
 
-Then in your client app's Inngest endpoint:
-
-```ts
-// src/app/api/inngest/route.ts
-import { serve } from 'inngest/next'
-import { getPayload } from 'payload'
-import config from '@payload-config'
-import { inngest } from '@/lib/inngest'
-import { getEmailFunctions } from '@forumone/throughline/email'
-
-const payload = await getPayload({ config })
-const emailFunctions = getEmailFunctions(payload)
-
-export const { GET, POST, PUT } = serve({
-  client: inngest,
-  functions: [...emailFunctions /* plus your other functions */],
-})
-```
-
-The plugin registers functions into the Payload instance via Symbol; the endpoint reads them via `getEmailFunctions`. Same shape used by `/integrations`.
+The three notification jobs are in `suite.jobs`, which the site's Inngest endpoint serves, or `payloadJobs()` registers. `buildActionUrl` defaults to a link signed with approvals' secret against `NEXT_PUBLIC_SERVER_URL`; pass your own only if it does something else.
 
 ## How the events flow
 
 1. Approvals server fires `approval.requested` / `approval.granted` / `approval.declined` / `approval.changes_requested` audit events.
-2. C10's `audit-event-echo` re-fires these as `notification/send-approval-request` and `notification/send-approval-decision`.
+2. The `audit-event-echo` job re-fires these as `notification/send-approval-request` and `notification/send-approval-decision`.
 3. This package's notification functions handle those events and email the right people.
 
-The `approval/expired` event (fired by C10's `expire-stale-approvals` cron) is handled directly — no audit-echo translation is needed.
+The `approval/expired` event (fired by the `expire-stale-approvals` cron) is handled directly — no audit-echo translation is needed.
 
 ## Brand tokens
 
 Tokens are merged onto neutral defaults; pass only what you want to override:
 
 ```ts
-emailPlugin({
+throughline({
+  // …
+  email: {
   tokens: {
     brandName: 'Acme Foundation', // header + From name + footer
     brandPrimary: '#5B21B6', // approve button + discuss link
@@ -123,16 +90,16 @@ Every email renders to both HTML and plaintext from the same React tree (React E
 
 | Option                    | Default                                                    | Notes                                                           |
 | ------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
-| `inngest`                 | required                                                   | Fires no events itself; needed to register the three functions  |
+| `inngest`                 | supplied by `throughline()`                                | By hand: needed only to register the three functions on Inngest |
 | `apiKey`                  | `RESEND_API_KEY` env                                       | Throws at init if neither is set                                |
 | `fromAddress`             | `EMAIL_FROM_ADDRESS` env                                   | Required                                                        |
 | `fromName`                | `EMAIL_FROM_NAME` env → `tokens.brandName` → `'Your Site'` |                                                                 |
 | `replyTo`                 | `EMAIL_REPLY_TO` env                                       | Optional                                                        |
 | `tokens`                  | `defaultTokens` (merged onto)                              | Partial override                                                |
-| `approvalsCollectionSlug` | `'approvals'`                                              | Match what your approvals plugin uses                           |
+| `approvalsCollectionSlug` | approvals' slug, under `throughline()`                     | By hand: match what your approvals plugin uses                  |
 | `resolveApprover`         | required                                                   | `(userId) => {email, name}`                                     |
 | `resolveRequester`        | required                                                   | `(userId) => {email, name}`                                     |
-| `buildActionUrl`          | required                                                   | Per-action URL builder; wrap your approvals plugin's HMAC token |
+| `buildActionUrl`          | a signed link, under `throughline()`                       | By hand: required; wrap your approvals plugin's HMAC token      |
 | `buildPreviewUrl`         | optional                                                   | Used only when the approval record has no `previewUrl`          |
 
 ## Related

@@ -13,16 +13,18 @@ This indirection lets you change who's on a team without re-tagging content. Mov
 In `apps/web/src/payload.config.ts`:
 
 ```typescript
-approvalsPlugin({
-  inngest,
-  groups: [
-    { slug: 'editorial', name: 'Editorial', description: 'Copy + voice review' },
-    { slug: 'legal', name: 'Legal', description: 'Compliance + legal review' },
-    { slug: 'communications', name: 'Communications', description: 'PR + brand voice' },
-    { slug: 'senior', name: 'Senior leadership', description: 'CEO + founders' },
-  ],
-  groupResolver: { /* see below */ },
-}),
+export const suite = throughline({
+  // ...
+  approvals: {
+    groups: [
+      { slug: 'editorial', name: 'Editorial', description: 'Copy + voice review' },
+      { slug: 'legal', name: 'Legal', description: 'Compliance + legal review' },
+      { slug: 'communications', name: 'Communications', description: 'PR + brand voice' },
+      { slug: 'senior', name: 'Senior leadership', description: 'CEO + founders' },
+    ],
+    groupResolver: { /* see below */ },
+  },
+})
 ```
 
 Group slugs become the values listed in collections' `policy.approverGroups` select. Add them everywhere that select appears.
@@ -147,13 +149,13 @@ If the resolver returns no users for a group, the approval still succeeds (no-op
 - **Don't use `requiresApproval` for "who can edit."** That's a role-based access control (RBAC) decision, handled by Payload's collection-level `access` config, not by approvals. Editors can edit; approvers gate publish.
 - **Approver != editor.** The Approver role grants the user *only* the ability to grant/deny approvals on assigned content. They can't necessarily edit content; that's an `editor` or `admin` role.
 - **Multiple groups means *any of them*, not all.** A page with `approverGroups: ['editorial', 'legal']` publishes after either group grants. Use a single group when you need single-source approval.
-- **Approvals expire.** The `createExpireStaleApprovalsFunction` workflow runs daily; stale approvals (default: 14 days) get auto-expired and the requester gets an email. Tune via `approvalsPlugin({ expireAfter: '30d' })`.
+- **Approvals expire.** The `expire-stale-approvals` job runs daily; a pending approval older than `expirationDays` (default: 7) is expired, and the requester gets an email. Tune via `approvals: { expirationDays: 14 }`, and the job's schedule via `approvals: { expiry: { schedule } }`.
 
 ## 5. Roles vs groups
 
 Throughline distinguishes:
 
-- **Roles** (`admin`, `editor`, `approver`, `form-admin`) — what you can *do* in the system
+- **Roles** (`admin`, `editor`, `approver`) — what you can *do* in the system
 - **Groups** (`editorial`, `legal`, ...) — content workflow assignments; orthogonal to roles
 
 A user can be `admin` (does anything) and also a member of `editorial` (gets approval requests for editorial-tagged content). A user can be `approver` only for the `legal` group, in which case they can only act on legal-tagged approvals.
@@ -162,7 +164,8 @@ The `approver` role is the gate to *deciding* approvals via MCP. Email actions, 
 
 ## Where to look in code
 
-- `packages/approvals/src/options.ts` — `ApprovalsPluginOptions`, `GroupResolver` type
-- `packages/approvals/src/tools/request-approval.ts` — what gets called from the publish pipeline
-- `packages/approvals/src/email/decision-tokens.ts` — how the email action URLs are signed
-- `packages/workflows/src/expire-stale-approvals.ts` — the daily cron
+- `packages/throughline/src/approvals/options.ts` — `ApprovalsPluginOptions`, `GroupResolver` type
+- `packages/throughline/src/approvals/tools/request-approval.ts` — the `request_approval` tool
+- `packages/throughline/src/approvals/tokens.ts` — how the email action URLs are signed
+- `packages/throughline/src/approvals/jobs/expire-stale-approvals.ts` — the daily cron
+- [Approvals reference](../reference/throughline/approvals.md)

@@ -22,7 +22,7 @@ Throughline's `groupResolver` is agnostic to the auth source — it reads from w
 
 **Path forward**: layer on top of the published frontend, not on top of Payload.
 
-- **Algolia / Typesense / Meilisearch**: write an Inngest function that subscribes to `content/page.published` and indexes the page. Call the search service from your frontend.
+- **Algolia / Typesense / Meilisearch**: write a job (`defineJob` from `@forumone/throughline/jobs`) on `content/page.published` that indexes the page, and serve it beside `suite.jobs`. Call the search service from your frontend.
 - **Postgres FTS**: cheaper if you're staying in-database. Add a `tsvector` column on your `pages` collection via a Payload hook; query with the SQL the standard FTS docs show.
 - **Site-wide build-time indexing**: for static sites, build a JSON index at deploy time and query from the client (FlexSearch, Lunr).
 
@@ -30,9 +30,9 @@ Throughline doesn't gate which choice you make. The publish event is the integra
 
 ## Caching
 
-**Why deferred**: Next.js handles HTTP caching; Inngest handles work caching. Beyond that, "cache layer" usually means something specific to your traffic shape (hot pages, expensive computations) and the framework can't predict it.
+**Why deferred**: Next.js handles HTTP caching; the jobs runner handles work caching. Beyond that, "cache layer" usually means something specific to your traffic shape (hot pages, expensive computations) and the framework can't predict it.
 
-**Path forward**: the Workflows package ships `createRevalidateOnPublishFunction`, which revalidates page paths and cache tags on publish, and `createTagRevalidationHooks`, which drops cache tags when a global, a non-publish save or a delete changes what a cached read returns. Both name their tags through `createCacheTags`, the same scheme your readers use. For more:
+**Path forward**: `@forumone/throughline/publishing` ships `revalidateOnPublishJob`, which revalidates page paths and cache tags on publish (`throughline()` adds it when `publishing.urls` is set), and `createTagRevalidationHooks`, which drops cache tags when a global, a non-publish save or a delete changes what a cached read returns. Both name their tags through `createCacheTags` from `@forumone/throughline/cache-tags`, the same scheme your readers use. See [Jobs](../reference/throughline/jobs.md#cache-tags-one-scheme-both-ends). For more:
 
 - **Component output cache**: wrap expensive renderers in `unstable_cache`, tagged from your `createCacheTags` scheme
 - **External data cache**: Redis or Cloudflare Workers KV in front of expensive third-party API calls
@@ -42,22 +42,22 @@ The framework's stance: cache invalidation is the publish event. Whatever cachin
 
 ## Observability stack
 
-**Why deferred**: the audit log + Inngest dashboard + Resend dashboard cover most operational debugging. Adding a full APM stack (Datadog, Honeycomb, Sentry) is real work and costs real money — clients should opt in deliberately.
+**Why deferred**: the audit log, the `job-failures` collection, the error webhook (`ERROR_WEBHOOK_URL`), and the Inngest and Resend dashboards cover most operational debugging. Adding a full APM stack (Datadog, Honeycomb, Sentry) is real work and costs real money — clients should opt in deliberately.
 
 **Path forward**:
 
-- **Sentry** — error tracking. Wire Sentry's Next.js SDK in `next.config.mjs`; add `Sentry.captureException` in your Inngest workers.
+- **Sentry** — error tracking. The built-in reporter needs no SDK: point `ERROR_WEBHOOK_URL` at a small proxy that forwards to Sentry. Or wire Sentry's Next.js SDK yourself, in `instrumentation.ts` beside `reportError`.
 - **OpenTelemetry** — distributed tracing. Both Payload and Next.js have OTel instrumentation. Wire to your collector.
 - **Axiom / Logflare** — log aggregation. Pipe Vercel/Railway logs to your provider.
 - **Datadog APM** — full-stack APM. Significant cost; appropriate for high-traffic sites.
 
-The framework writes structured audit rows; an observability layer subscribes to those (via the `audit/event.recorded` Inngest event) and forwards them to your stack. See [Observability](observability.md).
+The framework writes structured audit rows; an observability layer subscribes to those (via the `audit/event.recorded` event, with a handler in `throughline({ auditEcho: { handlers } })`) and forwards them to your stack. See [Observability](observability.md).
 
 ## Workflow visualization for non-developers
 
 **Why deferred**: showing approval state, scheduled publishes, and integration health in a unified marketer-facing UI is a real product, not a plugin. Marketers can read the audit log via the admin or ask Claude; that's reasonable for early adoption.
 
-**Path forward**: build a custom Payload admin route with the views you want. Payload supports custom React routes alongside its standard collection views. Pull data from the audit log + scheduled-publish queue + integration health table.
+**Path forward**: start from what `throughline({ editorial })` already adds — content health, the calendar and "Your work" — and build a custom Payload admin route for the rest. Payload supports custom React routes alongside its standard collection views. Pull data from the audit log, the documents' `scheduledPublishAt`, `job-failures` and the `integrations` collection's status.
 
 Or: an external dashboard (Retool, Metabase, your own) that reads from Postgres directly. Faster to ship, easier to share with non-developers.
 
@@ -70,7 +70,7 @@ Or: an external dashboard (Retool, Metabase, your own) that reads from Postgres 
 - A custom admin route showing field-level diffs
 - Integration with a tool like Diffchecker or your own diff component
 
-The publishing pipeline's `rollback` tool lets Claude revert to a prior version. Marketers can ask "show me what changed since the last publish" via Audit MCP.
+The publishing pipeline's `rollback` tool lets Claude revert to a prior version. Marketers can ask "show me what changed since the last publish" through the audit tools (`get_change_history`).
 
 ## Multi-tenancy
 
@@ -82,7 +82,7 @@ If you really need shared infrastructure across tenants, a custom orchestration 
 
 ## Localization (i18n)
 
-**Why deferred**: Payload supports localized fields out of the box. Throughline plugins are locale-agnostic (the audit log records locale; the publish pipeline runs per-locale-version). What's deferred is built-in tooling for translation workflows.
+**Why deferred**: Payload supports localized fields out of the box. Throughline plugins are locale-unaware: the audit log has no locale column, and the publish pipeline publishes a document, not a locale. What's deferred is both of those, and built-in tooling for translation workflows.
 
 **Path forward**: use Payload's localized fields + a translation provider:
 
@@ -90,7 +90,7 @@ If you really need shared infrastructure across tenants, a custom orchestration 
 - **Manual translation in admin**: rely on Payload's built-in localized field UI
 - **AI-assisted with Claude**: an MCP tool that translates a draft from source locale to a target locale, returning a tracked-changes diff
 
-The publish pipeline runs per-locale; each locale's draft can publish independently or together (controlled by your collection config).
+Publishing one locale independently of the others would need the pipeline to learn about locales; today a publish covers the whole document.
 
 ## Compliance frameworks
 
@@ -101,9 +101,9 @@ The publish pipeline runs per-locale; each locale's draft can publish independen
 - **Audit log retention policies** — already supported; configure per your retention requirement
 - **Field-level encryption** — Payload field hooks can transparently en/decrypt
 - **Tamper-evident audit log** — fan out audit rows to an append-only system (CloudTrail, Datadog audit, an internal hash-chain)
-- **Access reviews** — query the `api-keys` collection on a schedule; alert on long-lived keys
+- **Access reviews** — query the `payload-mcp-api-keys` collection on a schedule; alert on long-lived keys
 
-Most compliance work is platform/process, not code. Throughline's design (structured audit, encrypted secrets, gated publish) is consistent with audit-friendly operations.
+Most compliance work is platform/process, not code. Throughline's design (structured audit, encrypted MCP keys, gated publish) is consistent with audit-friendly operations.
 
 ## What we won't add to core
 

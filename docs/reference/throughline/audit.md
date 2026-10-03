@@ -27,23 +27,14 @@ Part of [`@forumone/throughline`](../throughline.md#installation). The audit log
 ## Usage
 
 ```ts
-import { buildConfig } from 'payload'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
-import { auditQueryPlugin } from '@forumone/throughline/audit'
-
-const inngest = createInngestClient({ id: 'my-site' })
-
-export default buildConfig({
-  // collections, db, secret...
-  plugins: [
-    auditPlugin({ inngest }), // writes
-    auditQueryPlugin({}), // reads
-  ],
+export const suite = throughline({
+  jobs: inngestJobs(inngest),
+  collections: ['pages'],
+  auditQuery: {}, // the audit log itself is always on
 })
 ```
 
-The query plugin requires the `audit-log` capability. If `auditPlugin` is not registered first, initialization fails fast with a clear message.
+The query plugin requires the `audit-log` capability. Registered by hand, without `auditPlugin` first, initialization fails fast with a clear message.
 
 ## Why a separate package?
 
@@ -58,18 +49,7 @@ Raw collection access via Payload MCP would give Claude too much: pagination sem
 - The default predicate (`isAuditReader`) admits `admin` and `editor` roles.
 - `who_changed_what` defaults `actorId` to the authenticated caller, so any role can ask about their own activity.
 - Looking up another user's activity requires admin / editor.
-- Override the predicate via the `readAccess` option if your role model differs.
-
-```ts
-auditQueryPlugin({
-  readAccess: (req) => {
-    const roles = (req.user?.roles as string[] | undefined) ?? []
-    return roles.includes('observability')
-  },
-})
-```
-
-> Note: `readAccess` currently controls the underlying collection read (via the slug match with `auditPlugin`). The MCP tools layer their own admin/editor gate on top.
+- **The predicate cannot be changed yet.** `auditQueryPlugin` declares a `readAccess` option, but nothing reads it: the tools apply `isAuditReader` regardless. A role model other than admin/editor needs that fixed first.
 
 ## Options
 

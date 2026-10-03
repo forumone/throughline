@@ -26,6 +26,8 @@ The CLI asks seven questions:
 | 6 | Initialize git? | yes |
 | 7 | Install dependencies? | yes |
 
+Questions 4 and 5 change nothing in the generated files today: the Postgres answer only changes the connection-string hint printed at the end.
+
 See [Scaffolding a project](../getting-started/scaffolding-a-project.md) for the full walkthrough.
 
 ## What it generates
