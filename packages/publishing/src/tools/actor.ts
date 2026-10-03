@@ -1,4 +1,4 @@
-import type { AuthenticatedUser, McpToolContext } from '@forumone/throughline-plugin-contract'
+import type { AuthenticatedUser, McpToolContext } from '@forumone/throughline'
 import type { PublishingActor } from '../service.js'
 
 /*

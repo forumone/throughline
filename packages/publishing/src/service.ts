@@ -1,6 +1,6 @@
 import type { Payload, TypedUser } from 'payload'
-import type { AuditActor, AuditWriter } from '@forumone/throughline-core'
-import type { AuthenticatedUser, Logger } from '@forumone/throughline-plugin-contract'
+import type { AuditActor, AuditWriter } from '@forumone/throughline/audit'
+import type { AuthenticatedUser, Logger } from '@forumone/throughline'
 import { sendEventSafely } from './events.js'
 import { type PublishingPluginOptions, resolveCollection } from './options.js'
 import { runPreflightPipeline, runPublishPipeline } from './pipeline/index.js'

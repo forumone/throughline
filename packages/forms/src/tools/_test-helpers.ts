@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { McpToolContext } from '@forumone/throughline-plugin-contract'
+import type { McpToolContext } from '@forumone/throughline'
 import type { Inngest } from 'inngest'
 import type { FormsPluginOptions, ResolvedFormsConfig } from '../options.js'
 

@@ -1,5 +1,5 @@
 {
-  "name": "@forumone/throughline",
+  "name": "@forumone/throughline-monorepo",
   "private": true,
   "description": "Conversational content management framework (MCP servers + Payload plugins).",
   "repository": {

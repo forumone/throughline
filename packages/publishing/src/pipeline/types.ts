@@ -1,6 +1,6 @@
 import type { Inngest } from 'inngest'
 import type { Payload, TypedUser } from 'payload'
-import type { AuthenticatedUser } from '@forumone/throughline-plugin-contract'
+import type { AuthenticatedUser } from '@forumone/throughline'
 import type {
   AccessibilityIssue,
   PublishingPluginOptions,

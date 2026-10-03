@@ -224,9 +224,7 @@ describe('the scaffold serves Throughline tools over MCP', () => {
     const mcp = config.indexOf('mcpPlugin({')
     const call = config.slice(mcp, config.indexOf('\n    }),', mcp))
     expect(call).toContain('overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),')
-    expect(config).toMatch(
-      /import \{[^}]*\bmcpApiKeyAccess\b[^}]*\} from '@forumone\/throughline-core'/,
-    )
+    expect(config).toMatch(/import \{[^}]*\bmcpApiKeyAccess\b[^}]*\} from '@forumone\/throughline'/)
     expect(config).toMatch(/^const isAdmin: Access = /m)
   })
 

@@ -3,7 +3,7 @@ import {
   buildRequestErrorReport,
   describeErrorReporting,
   reportError,
-} from '@forumone/throughline-core/observability'
+} from '@forumone/throughline/observability'
 
 /*
 Where a server-side error goes.

@@ -1,0 +1,134 @@
+{
+  "name": "@forumone/throughline",
+  "version": "0.0.0",
+  "description": "Throughline: an editorial platform for Payload CMS. Publishing, approvals, audit, integrations, email and jobs, with every feature reachable over MCP.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "throughline-payload": "./bin/throughline-payload.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./audit": {
+      "types": "./dist/audit/index.d.ts",
+      "default": "./dist/audit/index.js"
+    },
+    "./fields": {
+      "types": "./dist/fields/index.d.ts",
+      "default": "./dist/fields/index.js"
+    },
+    "./jobs": {
+      "types": "./dist/jobs/index.d.ts",
+      "default": "./dist/jobs/index.js"
+    },
+    "./jobs/inngest": {
+      "types": "./dist/jobs/inngest/index.d.ts",
+      "default": "./dist/jobs/inngest/index.js"
+    },
+    "./media": {
+      "types": "./dist/media/index.d.ts",
+      "default": "./dist/media/index.js"
+    },
+    "./observability": {
+      "types": "./dist/observability/index.d.ts",
+      "default": "./dist/observability/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
+    "./client": {
+      "types": "./dist/exports/client.d.ts",
+      "default": "./dist/exports/client.js"
+    },
+    "./rsc": {
+      "types": "./dist/exports/rsc.d.ts",
+      "default": "./dist/exports/rsc.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin/*.mjs",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src bin",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "throughline",
+    "payload",
+    "cms",
+    "mcp",
+    "publishing",
+    "audit"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumone/throughline.git",
+    "directory": "packages/throughline"
+  },
+  "homepage": "https://github.com/forumone/throughline/tree/main/packages/throughline#readme",
+  "bugs": {
+    "url": "https://github.com/forumone/throughline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "payload": "^3.89.0",
+    "inngest": "^4.0.0",
+    "vitest": "^3.0.0 || ^4.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "@payloadcms/ui": "^3.0.0",
+    "@vercel/blob": "^2.0.0",
+    "@payloadcms/plugin-cloud-storage": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "@payloadcms/ui": {
+      "optional": true
+    },
+    "@vercel/blob": {
+      "optional": true
+    },
+    "@payloadcms/plugin-cloud-storage": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@forumone/throughline-eslint-config": "workspace:*",
+    "@forumone/throughline-tsconfig": "workspace:*",
+    "@payloadcms/db-sqlite": "^3.83.0",
+    "@payloadcms/plugin-cloud-storage": "^3.83.0",
+    "@payloadcms/ui": "^3.83.0",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.0",
+    "@vercel/blob": "2.3.1",
+    "eslint": "^10.11.0",
+    "inngest": "^4.2.0",
+    "payload": "^3.83.0",
+    "react": "^19.2.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.10"
+  }
+}

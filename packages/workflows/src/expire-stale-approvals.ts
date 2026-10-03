@@ -1,6 +1,6 @@
 import { failureOptions } from './types.js'
 import type { InngestFunction } from 'inngest'
-import { getAuditWriter } from '@forumone/throughline-core'
+import { getAuditWriter } from '@forumone/throughline/audit'
 import type { ExpireStaleApprovalsOptions } from './types.js'
 import { defineJob } from './jobs/define.js'
 import { inngestJobs } from './jobs/inngest.js'

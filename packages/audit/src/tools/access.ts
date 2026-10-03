@@ -1,4 +1,4 @@
-import type { McpToolContext } from '@forumone/throughline-plugin-contract'
+import type { McpToolContext } from '@forumone/throughline'
 
 /**
  * Default read-access predicate. Admins and editors can read everything;
@@ -12,4 +12,4 @@ export function isAuditReader(ctx: McpToolContext): boolean {
 }
 
 // `deniedEnvelope` lives in core: three servers had identical copies.
-export { deniedEnvelope } from '@forumone/throughline-core'
+export { deniedEnvelope } from '@forumone/throughline'

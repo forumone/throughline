@@ -1,10 +1,10 @@
-import { checkEnvValue, type McpToolCollector } from '@forumone/throughline-core'
+import { checkEnvValue, type McpToolCollector } from '@forumone/throughline'
 import type { Inngest } from 'inngest'
 import type {
   BaseCorePluginOptions,
   CollectionPluginOptions,
   EnvRequirement,
-} from '@forumone/throughline-plugin-contract'
+} from '@forumone/throughline'
 
 export interface ApproverGroup {
   /** Group slug, referenced by the policy.approverGroups field on requests. */
@@ -53,7 +53,7 @@ export interface ApprovalsPluginOptions extends BaseCorePluginOptions, Collectio
    * Where to put this server's MCP tools so Payload's own MCP plugin can serve
    * them.
    *
-   * `createMcpToolCollector()` from `@forumone/throughline-core`. The host hands
+   * `createMcpToolCollector()` from `@forumone/throughline`. The host hands
    * its array to `@payloadcms/plugin-mcp` at config time and this plugin fills
    * it at `onInit` — which is the first moment the tools can exist, since they
    * close over `payload`, and still before any request reads the array.
@@ -76,7 +76,7 @@ const TOKEN_SECRET_ENV = {
 /**
  * What `approvalsPlugin` reads from the environment when the matching option is
  * omitted, and refuses to start without. Hand it to `assertEnvironment` from
- * `@forumone/throughline-core` so a site reports it with everything else.
+ * `@forumone/throughline` so a site reports it with everything else.
  *
  * Leave it out if you pass `tokenSecret` yourself. `NEXT_PUBLIC_SERVER_URL`
  * (the `publicUrl` fallback) is not here: the plugin does not refuse to start

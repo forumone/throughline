@@ -1,5 +1,5 @@
 import type { Endpoint, Payload } from 'payload'
-import type { AuditWriter } from '@forumone/throughline-core'
+import type { AuditWriter } from '@forumone/throughline/audit'
 import type { ApprovalsPluginOptions } from '../options.js'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import {

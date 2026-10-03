@@ -1,4 +1,4 @@
-export { unwrapRelationshipId } from '@forumone/throughline-core'
+export { unwrapRelationshipId } from '@forumone/throughline'
 
 import type { ApprovalTargetKind } from '../templates/index.js'
 

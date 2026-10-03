@@ -1,4 +1,5 @@
-import { auditPlugin, createMcpToolCollector } from '@forumone/throughline-core'
+import { auditPlugin } from '@forumone/throughline/audit'
+import { createMcpToolCollector } from '@forumone/throughline'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import type { Inngest } from 'inngest'
 import { buildConfig, getPayload, type Payload } from 'payload'

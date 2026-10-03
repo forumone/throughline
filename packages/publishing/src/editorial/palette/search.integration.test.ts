@@ -1,6 +1,6 @@
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
-import { createMcpToolCollector } from '@forumone/throughline-core'
-import type { McpToolContext } from '@forumone/throughline-plugin-contract'
+import { createMcpToolCollector } from '@forumone/throughline'
+import type { McpToolContext } from '@forumone/throughline'
 import { buildConfig, getPayload, type CollectionConfig, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { staleCheck } from '../health/checks.js'

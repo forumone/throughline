@@ -1,4 +1,4 @@
-import type { McpToolContext } from '@forumone/throughline-plugin-contract'
+import type { McpToolContext } from '@forumone/throughline'
 
 export function isFormsAuthor(ctx: McpToolContext): boolean {
   if (!ctx.user) return false
@@ -13,4 +13,4 @@ export function isPiiReader(ctx: McpToolContext): boolean {
 }
 
 // `deniedEnvelope` lives in core: three servers had identical copies.
-export { deniedEnvelope } from '@forumone/throughline-core'
+export { deniedEnvelope } from '@forumone/throughline'

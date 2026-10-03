@@ -58,7 +58,7 @@
     }
   },
   "dependencies": {
-    "@forumone/throughline-core": "workspace:*",
+    "@forumone/throughline": "workspace:*",
     "@forumone/throughline-publishing": "workspace:*"
   },
   "devDependencies": {

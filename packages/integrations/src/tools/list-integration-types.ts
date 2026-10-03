@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import type { McpToolDefinition } from '@forumone/throughline'
 import type { IntegrationRegistry } from '../registry.js'
 import { INTEGRATIONS_TOOLS } from './descriptors.js'
 

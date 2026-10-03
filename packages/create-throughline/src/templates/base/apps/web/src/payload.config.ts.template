@@ -4,13 +4,9 @@ import { buildConfig } from 'payload'
 import type { Access, CollectionConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import {
-  assertEnvironment,
-  auditPlugin,
-  createInngestClient,
-  createMcpToolCollector,
-  mcpApiKeyAccess,
-} from '@forumone/throughline-core'
+import { assertEnvironment, createMcpToolCollector, mcpApiKeyAccess } from '@forumone/throughline'
+import { auditPlugin } from '@forumone/throughline/audit'
+import { createInngestClient } from '@forumone/throughline/jobs/inngest'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
 import { publishingPlugin } from '@forumone/throughline-publishing'
@@ -26,7 +22,7 @@ import { emailEnv, emailPlugin } from '@forumone/throughline-email'
 import { formsEnv, formsPlugin } from '@forumone/throughline-forms'
 import { createTagRevalidationHooks } from '@forumone/throughline-workflows'
 import { cacheTags } from './lib/cache-tags'
-import { jobFailuresPlugin } from '@forumone/throughline-core/observability'
+import { jobFailuresPlugin } from '@forumone/throughline/observability'
 import { databaseConnectionString } from './lib/database'
 {{#if useReferenceDs}}import type { Manifest } from '@forumone/throughline-design-contract'
 import designSystemManifest from '{{designSystemName}}/manifest' with { type: 'json' }

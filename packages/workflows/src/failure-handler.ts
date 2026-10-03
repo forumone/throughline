@@ -1,9 +1,8 @@
 import type { Payload } from 'payload'
-import type { Logger } from '@forumone/throughline-core'
+import type { Logger } from '@forumone/throughline'
 import {
   buildHealthcheckFailureReport,
   buildJobFailureReport,
-  defaultLogger,
   getJobFailureWriter,
   reportError,
   summariseReport,
@@ -11,7 +10,8 @@ import {
   type HealthcheckFailureReport,
   type JobFailureReport,
   type JobFailureWriter,
-} from '@forumone/throughline-core'
+} from '@forumone/throughline/observability'
+import { defaultLogger } from '@forumone/throughline'
 import type { HealthcheckOptions, WorkflowFailureHandler } from './types.js'
 
 /*

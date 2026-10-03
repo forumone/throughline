@@ -1,12 +1,8 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import {
-  type AuditWriter,
-  auditContext,
-  documentContentHash,
-  withMeta,
-} from '@forumone/throughline-core'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import { type AuditWriter } from '@forumone/throughline/audit'
+import { auditContext, documentContentHash, withMeta } from '@forumone/throughline'
+import type { McpToolDefinition } from '@forumone/throughline'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
 import { APPROVALS_TOOLS } from './descriptors.js'

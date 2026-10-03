@@ -103,7 +103,9 @@ describe('generate (with reference DS)', () => {
         dependencies?: Record<string, string>
       }
       for (const [name, range] of Object.entries(json.dependencies ?? {})) {
-        if (name.startsWith('@forumone/throughline-')) ranges.push([name, range])
+        if (name === '@forumone/throughline' || name.startsWith('@forumone/throughline-')) {
+          ranges.push([name, range])
+        }
       }
     }
     // Ten in apps/web (nine plugins + design-contract), one in the design system.
@@ -126,8 +128,8 @@ describe('generate (with reference DS)', () => {
     }
 
     // A bare `payload` behind pnpm outlives a killed shell and can spin on a
-    // core forever. The runner ships as a bin of throughline-core.
-    expect(webJson.dependencies['@forumone/throughline-core']).toBeDefined()
+    // core forever. The runner ships as a bin of @forumone/throughline.
+    expect(webJson.dependencies['@forumone/throughline']).toBeDefined()
     expect(webJson.scripts).toMatchObject({
       payload: 'throughline-payload',
       'payload:reap': 'throughline-payload --reap',
@@ -284,7 +286,7 @@ describe('generate (with reference DS)', () => {
 
     const instrumentation = await readFile(join(target, 'apps/web/src/instrumentation.ts'), 'utf-8')
     expect(instrumentation).toContain('export const onRequestError')
-    expect(instrumentation).toContain("from '@forumone/throughline-core/observability'")
+    expect(instrumentation).toContain("from '@forumone/throughline/observability'")
 
     const env = await readFile(join(target, '.env.example'), 'utf-8')
     expect(env).toMatch(/^ERROR_WEBHOOK_URL=$/m)

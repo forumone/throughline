@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Config } from 'payload'
 import type { Inngest } from 'inngest'
-import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline-plugin-contract'
+import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline'
 import { approvalsPlugin } from './plugin.js'
 import { DEFAULT_APPROVALS_SLUG } from './collection.js'
 import type { ApprovalsPluginOptions } from './options.js'

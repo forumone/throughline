@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
-import type { McpToolDefinition } from '@forumone/throughline-plugin-contract'
+import type { McpToolDefinition } from '@forumone/throughline'
 import { deniedEnvelope, isIntegrationsAdmin } from './access.js'
 import { INTEGRATIONS_TOOLS } from './descriptors.js'
 import { requestManualSync } from '../sync/manual-sync.js'

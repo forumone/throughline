@@ -1,8 +1,8 @@
-import { formatZodIssues } from '@forumone/throughline-core'
-import type { McpToolCollector } from '@forumone/throughline-core'
+import { formatZodIssues } from '@forumone/throughline'
+import type { McpToolCollector } from '@forumone/throughline'
 import type { Inngest } from 'inngest'
 import { z } from 'zod'
-import type { BaseCorePluginOptions } from '@forumone/throughline-plugin-contract'
+import type { BaseCorePluginOptions } from '@forumone/throughline'
 
 export interface PublishableCollection {
   /** Slug of the collection that can be published through this server. */
@@ -88,7 +88,7 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
    *
    * Payload ships `@payloadcms/plugin-mcp`, which takes its tools as a config
    * option — and every tool here is built at `onInit`, because every one closes
-   * over `payload`. `createMcpToolCollector()` from `@forumone/throughline-core`
+   * over `payload`. `createMcpToolCollector()` from `@forumone/throughline`
    * bridges that: the host hands the collector's array to `mcpPlugin` at config
    * time and this plugin fills it at init, which is before any request and
    * therefore before the plugin reads it.
