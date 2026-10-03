@@ -49,7 +49,16 @@ Raw collection access via Payload MCP would give Claude too much: pagination sem
 - The default predicate (`isAuditReader`) admits `admin` and `editor` roles.
 - `who_changed_what` defaults `actorId` to the authenticated caller, so any role can ask about their own activity.
 - Looking up another user's activity requires admin / editor.
-- **The predicate cannot be changed yet.** `auditQueryPlugin` declares a `readAccess` option, but nothing reads it: the tools apply `isAuditReader` regardless. A role model other than admin/editor needs that fixed first.
+- Replace the predicate with `readAccess`, which takes the tool's context, if your role model differs:
+
+```ts
+throughline({
+  // …
+  auditQuery: {
+    readAccess: (ctx) => ctx.user?.roles.includes('auditor') ?? false,
+  },
+})
+```
 
 ## Options
 

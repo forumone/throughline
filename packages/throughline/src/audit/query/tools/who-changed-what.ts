@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload, Where } from 'payload'
-import type { McpToolDefinition } from '../../../plugin-contract/mcp.js'
+import type { McpToolContext, McpToolDefinition } from '../../../plugin-contract/mcp.js'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
 import { AUDIT_TOOLS } from './descriptors.js'
@@ -8,6 +8,8 @@ import { AUDIT_TOOLS } from './descriptors.js'
 export interface WhoChangedWhatDeps {
   payload: Payload
   collectionSlug: string
+  /** Who may read the whole log. Default `isAuditReader`: admins and editors. */
+  canRead?: (ctx: McpToolContext) => boolean
 }
 
 const inputSchema = z.object({
@@ -42,8 +44,8 @@ export function createWhoChangedWhatTool(
       if (!actorId) return deniedEnvelope('No actorId provided and no authenticated caller.')
 
       const queryingSelf = !!callerId && actorId === callerId
-      if (!queryingSelf && !isAuditReader(ctx)) {
-        return deniedEnvelope("Only admins and editors can look up other users' activity.")
+      if (!queryingSelf && !(deps.canRead ?? isAuditReader)(ctx)) {
+        return deniedEnvelope("Only audit readers can look up other users' activity (admins and editors, unless the site sets `readAccess`).")
       }
 
       const conditions: Where[] = [{ 'actor.userId': { equals: actorId } }]

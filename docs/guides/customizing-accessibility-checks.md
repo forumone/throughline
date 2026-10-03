@@ -113,7 +113,7 @@ When a publish fails here, the result says where and why:
 
 ## Warnings
 
-`severity: 'warning'` is accepted, and does not block. **It is not reported anywhere today**: the step keeps errors and drops the rest. Until it does, a rule that should not block belongs in a Payload field's `admin.description`, or in a content-health check (`/editorial`), which lists documents needing attention without gating them.
+`severity: 'warning'` does not block. Each one reaches the publish result's `warnings`, as one line named by its check — `seo-length: Over 160 characters (seo.description)` — and the publishing service logs them. Claude relays them from the `publish` tool, and the admin's Publish button shows them in a toast. Nothing records them, so a rule that needs to be acted on later belongs in a content-health check (`/editorial`), which lists documents needing attention.
 
 ## Example: external links
 

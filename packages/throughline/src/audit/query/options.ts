@@ -1,5 +1,5 @@
 import type { McpToolCollector } from '../../mcp/collector.js'
-import type { PayloadRequest } from 'payload'
+import type { McpToolContext } from '../../plugin-contract/mcp.js'
 import type { BaseCorePluginOptions } from '../../plugin-contract/index.js'
 
 /*
@@ -15,10 +15,12 @@ export interface AuditQueryPluginOptions extends Omit<BaseCorePluginOptions, 'ro
    */
   collectionSlug?: string
   /**
-   * Custom access-control function for read operations. Returns true to
-   * allow reads. Defaults to admin and editor roles.
+   * Who may read the whole audit log through the tools. Anyone else is
+   * scoped to their own actions: `who_changed_what` about themselves, and a
+   * `permission-denied` envelope from the broad tools. Default
+   * `isAuditReader`: the `admin` and `editor` roles.
    */
-  readAccess?: (req: PayloadRequest) => boolean
+  readAccess?: (ctx: McpToolContext) => boolean
 
   /**
    * Where to put this server's MCP tools so Payload's own MCP plugin can serve

@@ -16,7 +16,7 @@ interface Integration<Config> {
   validateConfig: (config: Config) => Promise<{ ok: true } | { ok: false; reason: string }>
   subscribes: Array<{ event: string; purpose: string }> // documentation only
   createJobs?: (getContext: (job: JobContext) => IntegrationContext) => Job[]
-  createFunctions: (ctx: IntegrationContext) => InngestFunction[]
+  createFunctions?: (ctx: IntegrationContext) => InngestFunction[] // 0.x; optional
   healthcheck?: (config: Config) => Promise<{ ok: boolean; details?: string }>
   mcpTools?: (ctx: IntegrationContext) => McpToolDefinition[]
 }
@@ -24,7 +24,7 @@ interface Integration<Config> {
 
 The plugin registers it once at boot. The Payload `integrations` collection holds per-instance configs (you can have multiple HubSpot accounts, for instance). The integration's jobs do the actual work, for every enabled instance.
 
-**`createJobs` is the one that runs.** `throughline()` runs integrations through the site's jobs adapter, on Inngest or on Payload Jobs, and refuses an integration without `createJobs`. `createFunctions` is the 0.x shape, still in the type; derive it from `createJobs` in one line, as the bundled webhook integration does.
+**`createJobs` is the one that runs.** `throughline()` runs integrations through the site's jobs adapter, on Inngest or on Payload Jobs, and refuses an integration without `createJobs`. `createFunctions` is the 0.x shape, optional and not called by `throughline()`. Keep it only if a 0.x site still registers your integration by hand, and then derive it from `createJobs` in one line, as the bundled webhook integration does.
 
 ## Building one: the example
 

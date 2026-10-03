@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload, Where } from 'payload'
-import type { McpToolDefinition } from '../../../plugin-contract/mcp.js'
+import type { McpToolContext, McpToolDefinition } from '../../../plugin-contract/mcp.js'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
 import { AUDIT_TOOLS } from './descriptors.js'
@@ -8,6 +8,8 @@ import { AUDIT_TOOLS } from './descriptors.js'
 export interface QueryAuditDeps {
   payload: Payload
   collectionSlug: string
+  /** Who may read the whole log. Default `isAuditReader`: admins and editors. */
+  canRead?: (ctx: McpToolContext) => boolean
 }
 
 const inputSchema = z.object({
@@ -50,9 +52,9 @@ export function createQueryAuditTool(deps: QueryAuditDeps): McpToolDefinition<ty
     ...AUDIT_TOOLS.queryAudit,
     inputSchema,
     handler: async (input, ctx) => {
-      if (!isAuditReader(ctx)) {
+      if (!(deps.canRead ?? isAuditReader)(ctx)) {
         return deniedEnvelope(
-          'Only admins and editors can run general audit queries. Try `who_changed_what` for your own activity.',
+          'Only audit readers can run general audit queries (admins and editors, unless the site sets `readAccess`). Try `who_changed_what` for your own activity.',
         )
       }
 

@@ -1,12 +1,14 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import type { McpToolDefinition } from '../../../plugin-contract/mcp.js'
+import type { McpToolContext, McpToolDefinition } from '../../../plugin-contract/mcp.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
 import { AUDIT_TOOLS } from './descriptors.js'
 
 export interface WhatChangedInRangeDeps {
   payload: Payload
   collectionSlug: string
+  /** Who may read the whole log. Default `isAuditReader`: admins and editors. */
+  canRead?: (ctx: McpToolContext) => boolean
 }
 
 const inputSchema = z.object({
@@ -28,8 +30,8 @@ export function createWhatChangedInRangeTool(
     ...AUDIT_TOOLS.whatChangedInRange,
     inputSchema,
     handler: async (input, ctx) => {
-      if (!isAuditReader(ctx)) {
-        return deniedEnvelope('Only admins and editors can summarize activity ranges.')
+      if (!(deps.canRead ?? isAuditReader)(ctx)) {
+        return deniedEnvelope('Only audit readers can summarize activity ranges (admins and editors, unless the site sets `readAccess`).')
       }
 
       const scanLimit = input.scanLimit ?? 1000

@@ -80,7 +80,7 @@ export interface EmailPluginOptions extends BaseCorePluginOptions {
 
 const API_KEY_ENV = {
   name: 'RESEND_API_KEY',
-  why: 'Sends approval and form notification email through Resend; emailPlugin will not start without it.',
+  why: 'Sends approval notification email through Resend; emailPlugin will not start without it.',
 } as const satisfies EnvRequirement
 
 const FROM_ADDRESS_ENV = {

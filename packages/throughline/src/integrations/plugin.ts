@@ -145,7 +145,7 @@ export const integrationsPlugin: CorePlugin<IntegrationsPluginOptions> =
         }
 
         for (const integration of registry.list()) {
-          if (options.inngest) {
+          if (options.inngest && integration.createFunctions) {
             const fnCount = integration.createFunctions(context).length
             logger.info('Integration registered', { id: integration.id, inngestFunctions: fnCount })
           } else if (integration.createJobs) {

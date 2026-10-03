@@ -43,7 +43,6 @@ export const webhookIntegration: Integration<WebhookConfig> = {
     { event: 'content/page.published', purpose: 'Notify external systems when content goes live' },
     { event: 'content/page.unpublished', purpose: 'Notify when content is taken down' },
     { event: 'content/page.rolled_back', purpose: 'Notify when content reverts to a prior version' },
-    { event: 'form/submission.received', purpose: 'Forward form submissions to downstream systems' },
     { event: 'approval/decided', purpose: 'Notify external workflow tools of approval outcomes' },
   ],
   createFunctions: createWebhookFunctions,

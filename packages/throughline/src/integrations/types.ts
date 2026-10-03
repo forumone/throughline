@@ -44,8 +44,8 @@ export interface IntegrationHealth {
  * compounding is in keeping it stable.
  *
  * Integrations are events-in, events-out: they subscribe to system events
- * (e.g. `content/page.published`) via Inngest functions returned by
- * {@link Integration.createFunctions} and emit their own results events as
+ * (e.g. `content/page.published`) through the jobs returned by
+ * {@link Integration.createJobs} and emit their own results events as
  * needed. They never call other integrations directly.
  */
 export interface Integration<Config = Record<string, unknown>, Fn = unknown> {
@@ -73,10 +73,10 @@ export interface Integration<Config = Record<string, unknown>, Fn = unknown> {
   /** Which system events this integration subscribes to. Documentation only. */
   subscribes: Array<{ event: string; purpose: string }>
   /**
-   * Factory for the Inngest functions this integration contributes. Called
-   * during plugin init; the returned functions are exposed via the registry
-   * so the client app's Inngest endpoint can serve them. See
-   * `docs/integrations-wiring.md`.
+   * The 0.x shape: Inngest functions, for a site that registers
+   * `integrationsPlugin` by hand with an Inngest client and serves them itself.
+   * Optional, and not called under `throughline()`, which runs `createJobs`.
+   * Derive it from `createJobs` if you keep it, as the webhook does.
    *
    * **Generic in the function type, and `unknown` by default, on purpose.**
    * This plugin never inspects or invokes what comes back — the one use
@@ -94,10 +94,12 @@ export interface Integration<Config = Record<string, unknown>, Fn = unknown> {
    * export const myIntegration: Integration<MyConfig, InngestFunction.Any> = { … }
    * ```
    */
-  createFunctions: (ctx: IntegrationContext) => Fn[]
+  createFunctions?: (ctx: IntegrationContext) => Fn[]
   /**
-   * The same work as runner-neutral jobs, for a site on `payloadJobs` (or any
-   * jobs adapter). Optional: an integration without it runs on Inngest only.
+   * The integration's work, as runner-neutral jobs, on Inngest or Payload
+   * Jobs. `throughline()` requires it, and puts what it returns in
+   * `suite.jobs`. Optional in the type only so a 0.x integration with nothing
+   * but `createFunctions` still typechecks under a hand-wired plugin.
    *
    * Takes a function rather than a context, because a jobs adapter is handed
    * its jobs while the config is being built, before the context exists. Call

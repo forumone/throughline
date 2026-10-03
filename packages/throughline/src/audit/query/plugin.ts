@@ -55,7 +55,11 @@ export const auditQueryPlugin: CorePlugin<AuditQueryPluginOptions> =
         would look is the thing that broke.
         */
         const auditWriter = getAuditWriter(payload)
-        const deps = { payload, collectionSlug }
+        const deps = {
+          payload,
+          collectionSlug,
+          ...(options.readAccess ? { canRead: options.readAccess } : {}),
+        }
         const tools = [
           createQueryAuditTool(deps),
           createGetChangeHistoryTool(deps),

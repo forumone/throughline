@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
-import type { McpToolDefinition } from '../../../plugin-contract/mcp.js'
+import type { McpToolContext, McpToolDefinition } from '../../../plugin-contract/mcp.js'
 import { formatAuditEvent } from '../formatting/index.js'
 import { deniedEnvelope, isAuditReader } from './access.js'
 import { AUDIT_TOOLS } from './descriptors.js'
@@ -8,6 +8,8 @@ import { AUDIT_TOOLS } from './descriptors.js'
 export interface GetChangeHistoryDeps {
   payload: Payload
   collectionSlug: string
+  /** Who may read the whole log. Default `isAuditReader`: admins and editors. */
+  canRead?: (ctx: McpToolContext) => boolean
 }
 
 const inputSchema = z.object({
@@ -29,8 +31,8 @@ export function createGetChangeHistoryTool(
     ...AUDIT_TOOLS.getChangeHistory,
     inputSchema,
     handler: async (input, ctx) => {
-      if (!isAuditReader(ctx)) {
-        return deniedEnvelope('Only admins and editors can read a document\'s change history.')
+      if (!(deps.canRead ?? isAuditReader)(ctx)) {
+        return deniedEnvelope("Only audit readers can read a document's change history (admins and editors, unless the site sets `readAccess`).")
       }
 
       const result = await deps.payload.find({

@@ -35,7 +35,6 @@ export function createWebhookJobs(getContext: (job: JobContext) => IntegrationCo
           'content/page.published',
           'content/page.unpublished',
           'content/page.rolled_back',
-          'form/submission.received',
           'approval/decided',
         ],
       },

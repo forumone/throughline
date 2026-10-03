@@ -66,7 +66,7 @@ export function mcpServerRefusal(serverName: string): string {
     `mcpServer enum, so a \`system.error\` row for its tools could not be written. ` +
     `Known collector names: ${Object.keys(AUDIT_SERVER_BY_COLLECTOR_NAME).join(', ')}. ` +
     `Audit enum values: ${AUDIT_MCP_SERVERS.join(', ')}. Add "${serverName}" to the map in ` +
-    `core/src/mcp/audit-server.ts, and — if the enum needs a new value — to AUDIT_MCP_SERVERS ` +
+    `src/mcp/audit-server.ts in @forumone/throughline, and — if the enum needs a new value — to AUDIT_MCP_SERVERS ` +
     `with a migration in the host that adds it to enum_audit_events_mcp_server.`
   )
 }

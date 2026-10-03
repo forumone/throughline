@@ -19,7 +19,7 @@ The reasoning behind each change is in [the 1.0 plan](../spec/1.0-plan.md). The 
 ## Before you start
 
 - **Be on the last 0.x of everything.** The 1.0 shapes arrived in 0.x first: jobs, the moved editorial views, and the field kit. A site on the last 0.x already runs the 1.0 code, and what is left is packaging.
-- **Give each of your own integrations a `createJobs`.** `throughline()` runs integrations through the jobs adapter, and refuses one that only has `createFunctions`. The bundled webhook integration is the pattern: write the jobs once, and derive `createFunctions` from them, so 0.x keeps working while you switch.
+- **Give each of your own integrations a `createJobs`.** `throughline()` runs integrations through the jobs adapter, and refuses one without `createJobs`; `createFunctions` is optional in 1.0. The bundled webhook integration is the pattern: write the jobs once, and derive `createFunctions` from them, so 0.x keeps working while you switch.
 
   ```ts
   export const myIntegration: Integration = {

@@ -478,13 +478,13 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
     - [x] the rest of `docs/` on 1.0: getting started, guides, concepts, operations and the root README, each claim checked against the code
 - [ ] Code gaps the docs sweep found, each documented as it stands until fixed:
     - [x] `block-status-writes` skips `create`, so a document created as `published` (REST, or Payload's MCP CRUD) goes live with no pipeline; and a non-draft save to a live page changes live content without it, approval-required pages included. Both refused now; derived data passes with `DERIVED_WRITE_CONTEXT`
-    - [ ] an accessibility issue of severity `warning` is dropped, not reported
-    - [ ] `Integration.createFunctions` is required though `throughline()` runs only `createJobs`
-    - [ ] `auditQueryPlugin`'s `readAccess` is declared and read by nothing
-    - [ ] `job-failures` takes no sidebar group
-    - [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw
-    - [ ] forms leftovers: `form.*` audit actions and the `forms` server name, the webhook's `form/submission.received`, `emailEnv`'s reason text
-    - [ ] the scaffold: `.env.local` at the root where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording
+    - [x] an accessibility issue of severity `warning` is dropped, not reported
+    - [x] `Integration.createFunctions` is required though `throughline()` runs only `createJobs`
+    - [x] `auditQueryPlugin`'s `readAccess` is declared and read by nothing
+    - [x] `job-failures` takes no sidebar group
+    - [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw. 1.x: each needs a value in the `mcp_server` enum, which is a migration in every host, and 1.0 promises none
+    - [x] forms leftovers: `form.*` audit actions and the `forms` server name, the webhook's `form/submission.received`, `emailEnv`'s reason text. The `form.*` audit actions, the `forms` server name and the webhook's filter option stay: each is a stored enum value
+    - [ ] the scaffold: `.env.local` at the root where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording. Not taken for 1.0: it affects new projects only
 - [ ] PR snapshots (`pr` dist-tag) and `next` snapshots on merge
 - [ ] forumone-2026's `chore/throughline-next` builds against each `next.N`
 - [ ] Exit pre-release mode and release `1.0.0`

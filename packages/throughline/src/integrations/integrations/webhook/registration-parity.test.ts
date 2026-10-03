@@ -49,9 +49,6 @@ describe('webhook registrations', () => {
               "event": "content/page.rolled_back",
             },
             {
-              "event": "form/submission.received",
-            },
-            {
               "event": "approval/decided",
             },
           ],
