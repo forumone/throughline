@@ -457,18 +457,18 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [x] Cut `v0` from the last 0.x release. `release.yml` runs on `v0` as well, and `v0`'s changesets config sets `baseBranch: "v0"` (#239, #240; `v0` cut at `fb354b9`, whose packages are #237's release)
 - [x] forumone-2026's `check-throughline-pin.sh` accepts `main` or `v0`, and its `CLAUDE.md` says platform fixes start from `v0` (forumone-2026#812)
 - [x] Enter changesets pre-release mode on `main` (`1.0.0-next.N`), with `CONTRIBUTING.md` saying where a 0.x fix goes
-- [ ] Consolidate into `@forumone/throughline` with subpath exports, folding workflows into its owners (publishing, approvals, audit, integrations). The map is `docs/spec/1.0-exports.md` (#242).
+- [x] Consolidate into `@forumone/throughline` with subpath exports, folding workflows into its owners (publishing, approvals, audit, integrations). The map is `docs/spec/1.0-exports.md` (#242).
     - [x] core and plugin-contract (#243)
     - [x] publishing, into `/publishing`, `/editorial`, `/client` and `/rsc` (#245)
     - [x] workflows, split by owner into `/jobs`, `/jobs/inngest`, `/jobs/payload`, `/publishing`, `/approvals`, `/audit`, `/integrations` and `/cache-tags`; the six Inngest-shaped factories removed (#246)
     - [x] audit, approvals, components, integrations and email; email's three Inngest-shaped factories removed, and every internal import pointed at its declaring module rather than an entry (#247)
 - [x] Consolidate design-contract and design-system-payload into `@forumone/throughline-design-system`, and **publish it** (design-system-payload is `private` today); it builds to `dist` now, rather than shipping TypeScript source
 - [ ] Fold reference-ds into create-throughline as template and test fixture
-- [ ] Make plugin-contract, the capability registry and the MCP collector internal
-- [ ] `throughline({...})` registers every plugin in order and wires the MCP collector
+- [x] Make plugin-contract, the capability registry and the MCP collector internal, with the accessors the Inngest route used (`getEmailFunctions`, `getIntegrationRegistry`, `getIntegrationContext`)
+- [x] `throughline({...})` registers every plugin in order and wires the MCP collector (spec: `docs/spec/1.0-throughline-call.md`, #250); it also lists the jobs the options call for, and the playground and scaffold use it
 - [ ] `resend`, React Email and `inngest` become optional peers, loaded only by the subpath that needs them
 - [ ] One fixed version across the three published packages (changesets `fixed`)
-- [ ] Bootstrap npm trusted publishing for the new package names (see the C0 note)
+- [x] Bootstrap npm trusted publishing for the new package names (see the C0 note). Both publish through it: `@forumone/throughline@1.0.0-next.0` (#244) and `@forumone/throughline-design-system@1.0.0-next.0` (#249)
 - [x] Leave forms out of 1.0; tag its last 0.x source. The tag is the release's own, `@forumone/throughline-forms@0.7.9`, and `v0` keeps the source
 - [ ] Regenerate the scaffolder for the new shape; CI generates a site from it and builds that site
 - [ ] Import codemod (`throughline migrate-imports`) covering every 0.x import path, including the P1/P2 temporary homes

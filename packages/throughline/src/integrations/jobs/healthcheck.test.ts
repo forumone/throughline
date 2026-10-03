@@ -38,7 +38,9 @@ describe('healthcheckJob', () => {
       data: {},
     })) as { failureCount: number }
     expect(result.failureCount).toBe(1)
-    expect(onFailure).toHaveBeenCalledWith([{ name: 'b', details: 'broken' }])
+    expect(onFailure).toHaveBeenCalledWith([{ name: 'b', details: 'broken' }], {
+      payload: expect.anything(),
+    })
     expect(fakeInngest.sends).toEqual([
       expect.objectContaining({ name: 'system/healthcheck' }),
     ])
@@ -62,7 +64,9 @@ describe('healthcheckJob', () => {
       ],
     })
     await fakeInngest.invoke('healthcheck', { name: 'inngest/function.invoked', data: {} })
-    expect(onFailure).toHaveBeenCalledWith([{ name: 'crashes', details: 'boom' }])
+    expect(onFailure).toHaveBeenCalledWith([{ name: 'crashes', details: 'boom' }], {
+      payload: expect.anything(),
+    })
   })
 
   it('skips onFailure when all checks pass and still fires heartbeat', async () => {

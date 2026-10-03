@@ -308,8 +308,13 @@ export interface HealthcheckOptions extends BaseWorkflowOptions {
   /**
    * Called once per run when at least one check fails. Defaults to
    * `console.error`; production deployments route this to monitoring.
+   * `createHealthcheckFailureHandler()` records the failure on the Payload the
+   * run was given, which is the second argument.
    */
-  onFailure?: (failures: Array<{ name: string; details?: string }>) => Promise<void>
+  onFailure?: (
+    failures: Array<{ name: string; details?: string }>,
+    context: { payload: Payload },
+  ) => Promise<void>
   /** Override the function id. Default: `healthcheck`. */
   id?: string
 }

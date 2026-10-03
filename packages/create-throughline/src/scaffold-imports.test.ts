@@ -173,7 +173,7 @@ for (const useReferenceDs of [true, false]) {
         }
       }
 
-      expect(checked).toBeGreaterThan(15)
+      expect(checked).toBeGreaterThan(10)
       expect(missing).toEqual([])
     })
   })
@@ -208,28 +208,16 @@ describe('the scaffold serves Throughline tools over MCP', () => {
     await rm(workDir, { recursive: true, force: true })
   })
 
-  it('hands one collector to every tool-bearing plugin, and registers mcpPlugin after them', () => {
-    expect(config).toContain('const mcpTools = createMcpToolCollector()')
-    const plugins = [
-      'componentsPlugin',
-      'publishingPlugin',
-      'approvalsPlugin',
-      'auditQueryPlugin',
-      'integrationsPlugin',
-    ]
+  it('registers the suite before mcpPlugin, and serves the tools it collects', () => {
+    // `throughline()` gives every tool-bearing plugin the one collector (its
+    // own suite checks that each declares). What the scaffold must get right
+    // is the order: mcpPlugin reads the declared tools as the config is built.
+    const suite = config.indexOf('    suite.plugin,')
     const mcp = config.indexOf('mcpPlugin({')
-    expect(mcp).toBeGreaterThan(-1)
-    for (const plugin of plugins) {
-      const start = config.indexOf(`${plugin}(`)
-      expect(start, plugin).toBeGreaterThan(-1)
-      expect(start, `${plugin} is registered before mcpPlugin`).toBeLessThan(mcp)
-      // Its call runs until the next plugin call, or mcpPlugin.
-      const next = [...plugins.map((p) => config.indexOf(`${p}(`)), mcp]
-        .filter((at) => at > start)
-        .sort((a, b) => a - b)[0]
-      expect(config.slice(start, next), plugin).toContain('mcpTools')
-    }
-    expect(config).toContain('mcp: { tools: mcpTools.tools }')
+    expect(suite).toBeGreaterThan(-1)
+    expect(suite).toBeLessThan(mcp)
+    expect(config).toContain('mcp: { tools: suite.mcpTools }')
+    expect(config).not.toContain('createMcpToolCollector')
   })
 
   it("makes the MCP key collection admin-only, with core's helper", () => {

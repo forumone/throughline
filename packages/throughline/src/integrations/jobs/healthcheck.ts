@@ -66,7 +66,7 @@ export function healthcheckJob(options: JobOptions<HealthcheckOptions>): Job {
 
       if (failures.length > 0) {
         await step.run('report-failures', async () => {
-          await onFailure(failures)
+          await onFailure(failures, { payload })
         })
       }
 

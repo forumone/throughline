@@ -1,11 +1,11 @@
 # @forumone/throughline
 
-Throughline for Payload CMS: the audit log, MCP authentication and tools, the jobs event taxonomy and
-Inngest client, the field kit, media hardening and reference tracking, error reporting, environment
-checks and a logger. Each part lives on its own subpath.
+Throughline for Payload CMS: publishing behind a policy pipeline, approvals, the audit log, editorial
+reports, integrations, email and background jobs, with every feature reachable over MCP. One call
+registers the suite; each part also lives on its own subpath.
 
 > **1.0 is in progress.** Every 0.x server package has moved in: core, plugin-contract, publishing,
-> workflows, audit, approvals, components, integrations and email. `throughline()` comes next.
+> workflows, audit, approvals, components, integrations and email.
 > [`docs/spec/1.0-exports.md`](../../docs/spec/1.0-exports.md) maps every 0.x import to its 1.0 path.
 > Pre-releases publish as `1.0.0-next.N` under the `next` dist-tag.
 
@@ -32,7 +32,48 @@ checks and a logger. Each part lives on its own subpath.
 | `/client`, `/rsc` | The admin's client and server components, named in Payload's import map                                                                                                                |
 | bin               | `throughline-payload`, see [below](#running-the-payload-cli-throughline-payload)                                                                                                       |
 
-The MCP collector (`createMcpToolCollector`) is on the root until `throughline()` wires it.
+## `throughline()`
+
+```ts
+// payload.config.ts
+import { mcpApiKeyAccess, throughline } from '@forumone/throughline'
+import { inngestJobs } from '@forumone/throughline/jobs/inngest'
+
+export const suite = throughline({
+  jobs: inngestJobs(inngest), // or payloadJobs() from /jobs/payload
+  collections: ['pages', 'posts'],
+  publishing: { urls: { pages: (slug) => `/${slug}`, posts: (slug) => `/blog/${slug}` } },
+  approvals: { groups, groupResolver },
+  email: { resolveApprover, resolveRequester },
+  integrations: {},
+  healthcheck: { checks: [createPayloadReachableCheck()] },
+})
+
+export default buildConfig({
+  // …
+  plugins: [
+    suite.plugin,
+    mcpPlugin({
+      mcp: { tools: suite.mcpTools },
+      overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
+    }),
+  ],
+})
+```
+
+```ts
+// app/api/inngest/route.ts, on Inngest. On Payload Jobs, suite.plugin registers the jobs itself.
+const jobs = inngestJobs(inngest, { onFailure: createTerminalFailureHandler({ payload }), payload })
+export const { GET, POST, PUT } = serve({ client: inngest, functions: jobs.functions(suite.jobs) })
+```
+
+- **It registers every plugin in the order they need.** Audit, job failures and `check_slug` are always on. Every other plugin is on when its key is present.
+- **It gives every plugin the one MCP collector.** `suite.mcpTools` is what `mcpPlugin` serves.
+- **Shared values are given once.** `approvals.collectionSlug` reaches the approvals collection, the emails and the expiry job. `collections` reaches publishing, "Your work" and scheduled publishing. `admin` is every added collection's sidebar group, unless a plugin's own says otherwise.
+- **`suite.jobs` is every job the options call for:** revalidation (given `publishing.urls`), scheduled publishing and its backstop, approval expiry, the audit echo, the healthcheck, the three approval emails, and each integration's jobs. Function ids are the ones the 0.x factories registered.
+- **Its defaults are what every site wrote by hand.** Scheduled publishes go through the publishing pipeline. Approval links are signed with `APPROVAL_TOKEN_SECRET` against `NEXT_PUBLIC_SERVER_URL`. A failing healthcheck is recorded in `job-failures`.
+
+The reasoning is in [`docs/spec/1.0-throughline-call.md`](../../docs/spec/1.0-throughline-call.md). Each plugin is still exported from its subpath for a site that wires them by hand.
 
 ## Installation
 

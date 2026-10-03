@@ -177,13 +177,16 @@ describe('generate (with reference DS)', () => {
   it('signs approval links and points them at the route approvalsPlugin serves', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
-    // `buildActionUrl` from approvals targets `/api/approvals/action`, the
-    // endpoint the plugin registers. The template once built an unsigned
-    // query string against `/api/approvals/decision`, which nothing serves.
-    expect(config).toContain('generateActionToken(')
-    expect(config).toContain('buildActionUrl(process.env.NEXT_PUBLIC_SERVER_URL!, token)')
-    expect(config).toContain("from '@forumone/throughline/approvals'")
+    // `throughline()` signs every approval link with APPROVAL_TOKEN_SECRET and
+    // points it at `/api/approvals/action`, the endpoint approvalsPlugin
+    // serves (its own suite checks the link verifies). So the template writes
+    // no builder of its own: the one it used to write was an unsigned query
+    // string against `/api/approvals/decision`, which nothing serves.
+    expect(config).toContain('email: {')
+    expect(config).toContain('approvals: {')
+    expect(config).not.toContain('buildActionUrl')
     expect(config).not.toContain('/api/approvals/decision')
+    expect(config).toMatch(/assertEnvironment\(\s+approvalsEnv,/)
   })
 
   it('creates a top-level design-system Storybook authoring package', async () => {
@@ -238,16 +241,25 @@ describe('generate (with reference DS)', () => {
   it('inngest endpoint registers all framework functions', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
-    expect(route).toContain('...jobs.functions([')
-    expect(route).toContain('revalidateOnPublishJob(')
-    expect(route).toContain('executeScheduledPublishesJob(')
-    expect(route).toContain('publishAtScheduledTimeJob(')
-    expect(route).toContain('expireStaleApprovalsJob(')
-    expect(route).toContain('auditEventEchoJob(')
-    expect(route).toContain('healthcheckJob(')
-    expect(route).toContain('getEmailFunctions')
-    expect(route).toContain('getIntegrationRegistry')
-    expect(route).toContain("createInngestClient({ id: 'demo' })")
+    const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
+    const inngest = await readFile(join(target, 'apps/web/src/lib/inngest.ts'), 'utf-8')
+    // The suite lists its jobs from its options (its own suite checks which,
+    // and their ids); the route serves that list, with the one client.
+    expect(route).toContain("import config, { suite } from '@/payload.config'")
+    expect(route).toContain('...jobs.functions(suite.jobs)')
+    expect(route).toContain("import { inngest } from '@/lib/inngest'")
+    expect(config).toContain("import { inngest } from './lib/inngest'")
+    expect(config).toContain('jobs: inngestJobs(inngest),')
+    for (const key of [
+      'publishing: {',
+      'approvals: {',
+      'email: {',
+      'integrations: {}',
+      'healthcheck: {',
+    ]) {
+      expect(config, key).toContain(key)
+    }
+    expect(inngest).toContain("createInngestClient({ id: 'demo' })")
   })
 
   /*
@@ -257,16 +269,14 @@ describe('generate (with reference DS)', () => {
   */
   it('wires cache revalidation to one tag scheme, with explicit URL builders', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
-    const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
     const tags = await readFile(join(target, 'apps/web/src/lib/cache-tags.ts'), 'utf-8')
 
     expect(tags).toContain("from '@forumone/throughline/cache-tags'")
     expect(tags).toContain('export const cacheTags = createCacheTags(')
-    expect(route).toContain("import { cacheTags } from '@/lib/cache-tags'")
-    expect(route).toContain('revalidateOnPublishJob({ urlBuilders, cacheTags })')
-    expect(route).toMatch(/const urlBuilders = \{\s+pages:/)
     expect(config).toContain("import { cacheTags } from './lib/cache-tags'")
+    expect(config).toContain('revalidation: { cacheTags },')
+    expect(config).toMatch(/urls: \{ pages: /)
     expect(config).toContain('createTagRevalidationHooks({ cacheTags })')
     expect(config).toContain('afterChange: [revalidation.afterCollectionChange()]')
     expect(config).toContain('afterDelete: [revalidation.afterCollectionDelete()]')
@@ -275,14 +285,14 @@ describe('generate (with reference DS)', () => {
   it('routes failures: workflows, healthchecks and request errors', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const route = await readFile(join(target, 'apps/web/src/app/api/inngest/route.ts'), 'utf-8')
-    expect(route).toContain('const onTerminalFailure = createTerminalFailureHandler({ payload })')
-    expect(route).toContain('onFailure: createHealthcheckFailureHandler({ payload })')
-    // Every platform job gets the handler, through the adapter: declared once, used once.
-    expect(route).toContain('inngestJobs(inngest, { onFailure: onTerminalFailure, payload })')
-    expect(route.match(/onTerminalFailure[,\s}]/g)?.length).toBe(1 + 1)
-
+    // Every job gets the terminal handler, through the adapter, once. The
+    // healthcheck's own handler, and the `job-failures` collection both write
+    // to, are `throughline()`'s defaults.
+    expect(route).toContain(
+      'inngestJobs(inngest, { onFailure: createTerminalFailureHandler({ payload }), payload })',
+    )
     const config = await readFile(join(target, 'apps/web/src/payload.config.ts'), 'utf-8')
-    expect(config).toContain('jobFailuresPlugin({})')
+    expect(config).toContain('healthcheck: { checks: [createPayloadReachableCheck()] }')
 
     const instrumentation = await readFile(join(target, 'apps/web/src/instrumentation.ts'), 'utf-8')
     expect(instrumentation).toContain('export const onRequestError')
