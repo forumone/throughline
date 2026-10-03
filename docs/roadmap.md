@@ -485,8 +485,8 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
     - [ ] editorial, references, `check_slug` and `list_job_failures` record no `system.error` on a throw. 1.x: each needs a value in the `mcp_server` enum, which is a migration in every host, and 1.0 promises none
     - [x] forms leftovers: `form.*` audit actions and the `forms` server name, the webhook's `form/submission.received`, `emailEnv`'s reason text. The `form.*` audit actions, the `forms` server name and the webhook's filter option stay: each is a stored enum value
     - [ ] the scaffold: `.env.local` at the root where `next dev` in `apps/web` does not read it; every new user defaults to `admin`; stale "Payload MCP API Keys" and "Pick a User" wording. Not taken for 1.0: it affects new projects only
-- [ ] PR snapshots (`pr` dist-tag) and `next` snapshots on merge
-- [ ] forumone-2026's `chore/throughline-next` builds against each `next.N`
+- [x] PR snapshots (`pr` dist-tag) and `next` snapshots on merge (#264). Every pull request touching a package publishes `<version>-pr-<n>-<sha>` under `pr`, first `1.0.0-pr-264-881f3a4`; the `next` snapshot of each merge to `main` starts once pre-release mode is exited
+- [x] forumone-2026's `chore/throughline-next` builds against each `next.N`: forumone-2026#814, draft, green in `fast` and `verify` on `1.0.0-next.2`. It is the P4 migration rehearsed — no schema change, every function id and MCP tool unchanged — and becomes the P4 pull request at `1.0.0`
 - [ ] Exit pre-release mode and release `1.0.0`
 
 ### 1.0-P4 — Migrate forumone-2026
