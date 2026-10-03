@@ -14,7 +14,6 @@
         "POSTGRES_URL_NON_POOLING",
         "PAYLOAD_SECRET",
         "APPROVAL_TOKEN_SECRET",
-        "FORMS_IP_HASH_SECRET",
         "RESEND_API_KEY",
         "EMAIL_*",
         "INNGEST_*",

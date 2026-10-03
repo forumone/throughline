@@ -31,7 +31,6 @@ env:
   DATABASE_URI: postgres://ci:ci@localhost:5432/ci
   PAYLOAD_SECRET: ci-placeholder-not-a-secret-000000000000
   APPROVAL_TOKEN_SECRET: ci-placeholder-not-a-secret-000000000000
-  FORMS_IP_HASH_SECRET: ci-placeholder-not-a-secret-000000000000
   RESEND_API_KEY: re_ci_placeholder
   EMAIL_FROM_ADDRESS: ci@example.com
   NEXT_PUBLIC_SERVER_URL: http://localhost:3000

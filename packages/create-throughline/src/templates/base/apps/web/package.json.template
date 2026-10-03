@@ -25,12 +25,10 @@
   },
   "dependencies": {
     "@forumone/throughline": "^{{version_throughline}}",
-    "@forumone/throughline-forms": "^{{version_forms}}",
     {{#if useReferenceDs}}"@forumone/throughline-design-system": "^{{version_design_system}}",
     "{{designSystemName}}": "workspace:*",
     {{/if}}"@payloadcms/db-postgres": "^3.89.0",
     "@payloadcms/next": "^3.89.0",
-    "@payloadcms/plugin-form-builder": "^3.89.0",
     "@payloadcms/plugin-mcp": "^3.89.0",
     "@payloadcms/richtext-lexical": "^3.89.0",
     "graphql": "^16.8.1",

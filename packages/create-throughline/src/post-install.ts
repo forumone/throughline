@@ -37,7 +37,6 @@ export function printNextSteps(answers: Answers): void {
   lines.push(formatStep(step++, 'Generate required secrets:'))
   lines.push(`       ${pc.dim('openssl rand -base64 48  # PAYLOAD_SECRET')}`)
   lines.push(`       ${pc.dim('openssl rand -base64 48  # APPROVAL_TOKEN_SECRET')}`)
-  lines.push(`       ${pc.dim('openssl rand -base64 48  # FORMS_IP_HASH_SECRET')}`)
 
   // `push: false`: the schema exists only once a migration has created it.
   lines.push(formatStep(step++, 'Create and apply the first migration:'))
@@ -84,7 +83,6 @@ export function printNextSteps(answers: Answers): void {
   const customizations = [
     'Replace the example Pages collection with your content model',
     'Implement the groupResolver and user resolvers in payload.config.ts',
-    'Add your destinations to the formsPlugin allowlist',
   ]
   if (!answers.useReferenceDs) {
     customizations.push('Point componentsPlugin at your design system manifest URL')

@@ -19,7 +19,6 @@ import { expireStaleApprovalsJob } from '@forumone/throughline/approvals'
 import { auditEventEchoJob } from '@forumone/throughline/audit'
 import { createPayloadReachableCheck, healthcheckJob } from '@forumone/throughline/integrations'
 import { getEmailFunctions } from '@forumone/throughline/email'
-import { getFormsFunctions } from '@forumone/throughline-forms'
 import { getIntegrationContext, getIntegrationRegistry } from '@forumone/throughline/integrations'
 
 const inngest = createInngestClient({ id: '{{projectName}}' })
@@ -40,7 +39,6 @@ same jobs with `payloadJobs()` from `@forumone/throughline/jobs/payload`.
 const jobs = inngestJobs(inngest, { onFailure: onTerminalFailure, payload })
 
 const emailFunctions = getEmailFunctions(payload) ?? []
-const formsFunctions = getFormsFunctions(payload) ?? []
 /*
 Through the publishing service, in process — so a scheduled publish passes the
 same composition, accessibility and approval gates as an interactive one. Not
@@ -109,7 +107,6 @@ export const { GET, POST, PUT } = serve({
       }),
     ]),
     ...emailFunctions,
-    ...formsFunctions,
     ...integrationFunctions,
   ],
 })

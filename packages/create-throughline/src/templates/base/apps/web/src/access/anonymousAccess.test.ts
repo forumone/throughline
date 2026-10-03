@@ -17,15 +17,12 @@ describeAnonymousAccess(config, {
   renderPath: {
     // Anonymous reads see published pages only; signed-in users see drafts.
     pages: 'the page routes, once the frontend renders them',
-    // formsPlugin opens form definitions so a page can render the fields.
-    forms: 'any page that embeds a form',
   },
   private: {
     users: 'accounts',
     'payload-mcp-api-keys': 'MCP keys are credentials; narrowed to admins in payload.config.ts',
     'audit-events': 'who did what',
     approvals: 'who signed off on what',
-    'form-submissions': 'what readers typed into a form',
     integrations: 'connection settings and sync state',
     'job-failures': 'background jobs that ran out of retries, with their errors',
     'payload-kv': 'the key-value store Payload keeps',

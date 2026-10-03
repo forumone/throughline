@@ -228,7 +228,7 @@ After augmentation, `inngest.send({ name: 'approval/decided', data: { ... } })` 
 
 ## Checking the environment
 
-Each plugin that falls back to `process.env` exports what it needs as data — `approvalsEnv`, `emailEnv`, `formsEnv` — and checks the same entries at init. A site passes every list, plus its own variables, to `assertEnvironment` first thing in `payload.config.ts`:
+Each plugin that falls back to `process.env` exports what it needs as data — `approvalsEnv` and `emailEnv` — and checks the same entries at init. A site passes every list, plus its own variables, to `assertEnvironment` first thing in `payload.config.ts`:
 
 ```ts
 import { assertEnvironment } from '@forumone/throughline'
