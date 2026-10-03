@@ -32,7 +32,7 @@ Spec: [`docs/spec/1.0-plan.md`](spec/1.0-plan.md). Checklists are [below](#throu
 | --- | --- | --- |
 | [1.0-P0](#10-p0--stabilize-0x) | Stabilize 0.x | ✅ Done |
 | [1.0-P1](#10-p1--jobs-interface-0x) | Jobs interface (0.x) | ✅ Done |
-| [1.0-P2](#10-p2--moves-and-mcp-tools-0x) | Moves and MCP tools (0.x) | 🟡 In progress |
+| [1.0-P2](#10-p2--moves-and-mcp-tools-0x) | Moves and MCP tools (0.x) | ✅ Done |
 | [1.0-P3](#10-p3--consolidate-and-release-10) | Consolidate and release 1.0 | ⬜ Not started |
 | [1.0-P4](#10-p4--migrate-forumone-2026) | Migrate forumone-2026 | ⬜ Not started |
 | [1.0-P5](#10-p5--after-10) | After 1.0 | ⬜ When a second site arrives |
@@ -436,17 +436,19 @@ Gate: the workflow tests pass against both adapters, the playground runs on Payl
 
 Gate: every moved feature runs from the package in forumone-2026's production, with its site copy deleted, and each has its MCP tool and a parity test. Additive only, as in P1. Each row is a 0.x release, then a site PR.
 
-- [ ] Media usage for blocks stored as JSON, delete guards, "Used on" panel; tools `find_references` and `can_delete` (in `core` for now)
-- [ ] Content health view; tool `find_content_needing_attention`
-- [ ] Content calendar; tool `get_content_calendar`
-- [ ] "Your work" dashboard; tool `list_my_work`
-- [ ] Command palette; tool `search_content`
-- [ ] Field kit: slug and trashed-slug guard, character count, `publishedAt`, `revisedAt`, `usedBy`, `unlisted`, `mapFields`; tool `check_slug` (in `core` for now)
-- [ ] Access hardening for Payload's internal collections
-- [ ] `list_job_failures` over `job-failures`
-- [ ] Terminal-failure handlers for the five functions that have none: the three email notifications and the webhook integration's two. Found while counting forumone-2026's Inngest registrations in P1. On a jobs adapter they get its `onFailure` for free.
-- [ ] Vercel Blob client-upload hardening: PR to Payload, or Throughline if refused
-- [ ] Every default field name and slug matches forumone-2026's current one, so adoption needs no data migration
+- [x] Media usage for blocks stored as JSON, delete guards, "Used on" panel; tools `find_references` and `can_delete` (in `core` for now) (#220; forumone-2026#799)
+- [x] Content health view; tool `find_content_needing_attention` (#223; forumone-2026#802)
+- [x] Content calendar; tool `get_content_calendar` (#225; forumone-2026#804)
+- [x] "Your work" dashboard; tool `list_my_work` (#227; forumone-2026#806)
+- [x] Command palette, and the Reports nav; tool `search_content` (#229; forumone-2026#808)
+- [x] Field kit: slug and trashed-slug guard, character count, `publishedAt`, `revisedAt`, `usedBy`, `unlisted`, `mapFields`; tool `check_slug` (in `core` for now) (#232; forumone-2026#809)
+- [x] Access hardening for Payload's internal collections (#234; forumone-2026#810)
+- [x] `list_job_failures` over `job-failures` (#234; forumone-2026#810)
+- [x] Terminal-failure handlers for the five functions that have none: the three email notifications and the webhook integration's two. Found while counting forumone-2026's Inngest registrations in P1. On a jobs adapter they get its `onFailure` for free. (#234; forumone-2026#810)
+- [x] Vercel Blob client-upload hardening: in Throughline, at `@forumone/throughline-core/media`, and not offered to Payload (#236; forumone-2026#811)
+- [x] Every default field name and slug matches forumone-2026's current one, so adoption needs no data migration: each site migration in P2 only adds a new tool's API-key column
+
+Promoted to forumone-2026's production 2026-10-02 (`live` at forumone-2026 `c331cb12`), and checked there: the dashboard panels, both reports, the Reports nav, Cmd-K and a media item's "Used on" panel.
 
 ### 1.0-P3 — Consolidate and release 1.0
 
