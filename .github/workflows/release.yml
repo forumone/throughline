@@ -2,10 +2,9 @@ name: Release
 
 on:
   push:
-    # `v0` carries 0.x fixes while `main` is in pre-release mode for 1.0
-    # (docs/spec/1.0-plan.md, "Distribution"). Its own `.changeset/config.json`
-    # sets `baseBranch: "v0"`, so a merge there opens a release PR against `v0`.
-    branches: [main, v0]
+    # `main` only. `v0` carried 0.x fixes while 1.0 was in pre-release, and closed
+    # once forumone-2026, the one site on 0.x, ran 1.0 in production.
+    branches: [main]
   # A snapshot of each pull request that touches a published package, so a
   # site's pull request can install the change before it merges. In this file
   # rather than its own because npm's trusted publishing names one workflow
@@ -16,9 +15,8 @@ on:
       - '.changeset/**'
       - 'pnpm-lock.yaml'
 
-# One release at a time per branch: `main` and `v0` publish different versions
-# and must not wait on, or cancel, each other. A pull request's ref is its own,
-# and a newer push to it supersedes the snapshot of the last.
+# One release at a time per ref. A pull request's ref is its own, and a newer
+# push to it supersedes the snapshot of the last.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

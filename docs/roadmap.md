@@ -33,8 +33,8 @@ Spec: [`docs/spec/1.0-plan.md`](spec/1.0-plan.md). Checklists are [below](#throu
 | [1.0-P0](#10-p0--stabilize-0x) | Stabilize 0.x | ✅ Done |
 | [1.0-P1](#10-p1--jobs-interface-0x) | Jobs interface (0.x) | ✅ Done |
 | [1.0-P2](#10-p2--moves-and-mcp-tools-0x) | Moves and MCP tools (0.x) | ✅ Done |
-| [1.0-P3](#10-p3--consolidate-and-release-10) | Consolidate and release 1.0 | 🟡 In progress |
-| [1.0-P4](#10-p4--migrate-forumone-2026) | Migrate forumone-2026 | ⬜ Not started |
+| [1.0-P3](#10-p3--consolidate-and-release-10) | Consolidate and release 1.0 | ✅ Done |
+| [1.0-P4](#10-p4--migrate-forumone-2026) | Migrate forumone-2026 | ✅ Done |
 | [1.0-P5](#10-p5--after-10) | After 1.0 | ⬜ When a second site arrives |
 
 ---
@@ -495,8 +495,8 @@ Gate: forumone-2026 runs 1.0 in production, and the submodule is gone. Packaging
 - [x] `migrate:create` finds nothing to change (run with the Blob token set); `payload-types.ts` and `select-options.json` regenerate byte-identical
 - [x] Full `fast` and `verify`, a prerender-manifest diff, and an admin smoke test against a local Postgres. Green on `1.0.0-next.2`, `1.0.0` and `1.0.1`; the manifest is identical to `main`'s (27 prerendered and 8 dynamic routes, no change in cache life); the smoke test found `request_approval` unable to store a request on Postgres, in 0.x as well, fixed in `1.0.1` (#270)
 - [x] A preview with a publish scheduled ten minutes out: it published on time
-- [ ] Merged and promoted to production
-- [ ] The submodule, `check:boundary` and `check-throughline-pin.sh` retired; `v0` closed. The retirements are in forumone-2026#814 and land with it; `v0` closes once production runs 1.0
+- [x] Merged and promoted to production (forumone-2026#814; `live` at `3194a383` on `1.0.1`, 2026-10-03)
+- [x] The submodule, `check:boundary` and `check-throughline-pin.sh` retired (forumone-2026#814); `v0` closed: it releases and runs CI no more, and stays for its history
 
 ### 1.0-P5 — After 1.0
 

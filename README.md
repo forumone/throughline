@@ -8,7 +8,7 @@ Full documentation lives at [`docs/`](./docs/) — getting-started tutorials, co
 
 ## Status
 
-1.0. Releases publish under `latest`, and a snapshot of every merge to `main` under `next`. 0.x fixes go to the `v0` branch and publish under `v0`. See [`docs/roadmap.md`](./docs/roadmap.md) for phase status, and [Upgrading from 0.x to 1.0](./docs/guides/upgrading.md) to move a site.
+1.0. Releases publish under `latest`, and a snapshot of every merge to `main` under `next`. 0.x is closed; its source stays on the `v0` branch. See [`docs/roadmap.md`](./docs/roadmap.md) for phase status, and [Upgrading from 0.x to 1.0](./docs/guides/upgrading.md) to move a site.
 
 ## Packages
 
