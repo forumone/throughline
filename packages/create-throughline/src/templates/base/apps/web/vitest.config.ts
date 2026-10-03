@@ -48,7 +48,6 @@ export default defineConfig({
       DATABASE_URI: 'postgres://test:test@localhost:5432/does-not-exist',
       PAYLOAD_SECRET: 'test-only-not-a-real-secret-000000000000',
       APPROVAL_TOKEN_SECRET: 'test-only-not-a-real-secret-000000000000',
-      FORMS_IP_HASH_SECRET: 'test-only-not-a-real-secret-000000000000',
       RESEND_API_KEY: 're_test_only_not_a_real_key',
       EMAIL_FROM_ADDRESS: 'test-only@example.invalid',
       NEXT_PUBLIC_SERVER_URL: 'http://localhost:3000',

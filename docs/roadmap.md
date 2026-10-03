@@ -469,7 +469,7 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [ ] `resend`, React Email and `inngest` become optional peers, loaded only by the subpath that needs them
 - [ ] One fixed version across the three published packages (changesets `fixed`)
 - [ ] Bootstrap npm trusted publishing for the new package names (see the C0 note)
-- [ ] Leave forms out of 1.0; tag its last 0.x source
+- [x] Leave forms out of 1.0; tag its last 0.x source. The tag is the release's own, `@forumone/throughline-forms@0.7.9`, and `v0` keeps the source
 - [ ] Regenerate the scaffolder for the new shape; CI generates a site from it and builds that site
 - [ ] Import codemod (`throughline migrate-imports`) covering every 0.x import path, including the P1/P2 temporary homes
 - [ ] Migration guide in `docs/guides/upgrading.md`, and reference docs for the three packages

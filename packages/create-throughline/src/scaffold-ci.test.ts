@@ -117,7 +117,6 @@ for (const useReferenceDs of [true, false]) {
         'DATABASE_URI',
         'PAYLOAD_SECRET',
         'APPROVAL_TOKEN_SECRET',
-        'FORMS_IP_HASH_SECRET',
         'RESEND_API_KEY',
         'EMAIL_FROM_ADDRESS',
         'NEXT_PUBLIC_SERVER_URL',
@@ -125,7 +124,7 @@ for (const useReferenceDs of [true, false]) {
         expect(workflow, name).toMatch(new RegExp(`^  ${name}: \\S+`, 'm'))
       }
       // The plugins that sign things refuse a secret under 32 characters.
-      for (const name of ['PAYLOAD_SECRET', 'APPROVAL_TOKEN_SECRET', 'FORMS_IP_HASH_SECRET']) {
+      for (const name of ['PAYLOAD_SECRET', 'APPROVAL_TOKEN_SECRET']) {
         const value = new RegExp(`^  ${name}: (\\S+)`, 'm').exec(workflow)?.[1] ?? ''
         expect(value.length, name).toBeGreaterThanOrEqual(32)
       }

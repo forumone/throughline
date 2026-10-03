@@ -100,8 +100,6 @@ for (const useReferenceDs of [true, false]) {
         [
           'approvals',
           'audit-events',
-          'form-submissions',
-          'forms',
           'integrations',
           'job-failures',
           'pages',

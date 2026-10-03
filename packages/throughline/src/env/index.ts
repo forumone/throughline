@@ -10,8 +10,8 @@ times — and each failure arrives as a stack trace inside `next build`'s "Faile
 to collect page data", which reads like a build problem rather than a
 configuration one, and names a plugin rather than the variable.
 
-The plugins export what they need as data (`approvalsEnv`, `emailEnv`,
-`formsEnv`) and check it at init with `checkEnvValue` below, so the list a site
+The plugins export what they need as data (`approvalsEnv` and `emailEnv`)
+and check it at init with `checkEnvValue` below, so the list a site
 asserts and the check a plugin enforces cannot drift apart.
 
 Deliberately not a schema library: the rules are two, and a dependency for them
@@ -88,7 +88,6 @@ export class EnvironmentError extends Error {
  * assertEnvironment(
  *   approvalsEnv,
  *   emailEnv,
- *   formsEnv,
  *   { name: 'PAYLOAD_SECRET', minLength: 32, why: 'Signs Payload sessions.' },
  *   () => databaseConnectionString(),
  * )

@@ -108,10 +108,9 @@ describe('generate (with reference DS)', () => {
         }
       }
     }
-    // Three in apps/web (@forumone/throughline, forms, which 1.0 drops, and
-    // @forumone/throughline-design-system), one in the design system. Falls as the 1.0
-    // consolidation folds each package in.
-    expect(ranges).toHaveLength(4)
+    // Two in apps/web (@forumone/throughline and @forumone/throughline-design-system),
+    // one in the design system.
+    expect(ranges).toHaveLength(3)
     // A hand-typed range left them at ^0.2.0 — patches only, for a 0.x version —
     // while the packages reached 0.9. Every range must be read, not typed.
     for (const [name, range] of ranges) {
@@ -247,7 +246,6 @@ describe('generate (with reference DS)', () => {
     expect(route).toContain('auditEventEchoJob(')
     expect(route).toContain('healthcheckJob(')
     expect(route).toContain('getEmailFunctions')
-    expect(route).toContain('getFormsFunctions')
     expect(route).toContain('getIntegrationRegistry')
     expect(route).toContain("createInngestClient({ id: 'demo' })")
   })

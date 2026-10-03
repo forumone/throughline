@@ -19,7 +19,6 @@ import {
 import { auditQueryPlugin } from '@forumone/throughline/audit'
 import { integrationsPlugin } from '@forumone/throughline/integrations'
 import { emailEnv, emailPlugin } from '@forumone/throughline/email'
-import { formsEnv, formsPlugin } from '@forumone/throughline-forms'
 import { createTagRevalidationHooks } from '@forumone/throughline/publishing'
 import { cacheTags } from './lib/cache-tags'
 import { jobFailuresPlugin } from '@forumone/throughline/observability'
@@ -47,7 +46,6 @@ and type generation), placeholders of the right length do; see
 assertEnvironment(
   approvalsEnv,
   emailEnv,
-  formsEnv,
   {
     name: 'PAYLOAD_SECRET',
     minLength: 32,
@@ -105,7 +103,7 @@ const Users: CollectionConfig = {
       type: 'select',
       hasMany: true,
       defaultValue: ['admin'],
-      options: ['admin', 'editor', 'approver', 'form-admin'],
+      options: ['admin', 'editor', 'approver'],
     },
     {
       name: 'groups',
@@ -257,25 +255,6 @@ export default buildConfig({
         return buildActionUrl(process.env.NEXT_PUBLIC_SERVER_URL!, token)
       },
       tokens: { brandName: '{{projectName}}' },
-    }),
-
-    formsPlugin({
-      inngest,
-      // ipHashSecret: read from FORMS_IP_HASH_SECRET, checked above.
-      // TODO: list every place a form is allowed to send to, and delete the
-      // placeholder. The plugin refuses to start with an empty list — the
-      // allowlist is the security perimeter — and refuses to deliver anywhere
-      // not on it. example.com is reserved and accepts no mail, so the
-      // placeholder routes nothing anywhere while it stands.
-      allowedDestinations: [
-        {
-          type: 'email',
-          value: 'forms@example.com',
-          label: 'Placeholder',
-          description: 'Replace before launch: example.com accepts no mail.',
-        },
-      ],
-      mcpTools,
     }),
 
     integrationsPlugin({ inngest, mcpTools }),

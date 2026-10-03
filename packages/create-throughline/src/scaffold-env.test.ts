@@ -46,7 +46,6 @@ function declarationsIn(source: string): Declared[] {
 const PLUGIN_LISTS = {
   approvalsEnv: 'throughline/src/approvals/options.ts',
   emailEnv: 'throughline/src/email/options.ts',
-  formsEnv: 'forms/src/options.ts',
 } as const
 
 describe('the scaffold checks its environment at startup', () => {
@@ -107,7 +106,7 @@ describe('the scaffold checks its environment at startup', () => {
       expect(call, list).toMatch(new RegExp(`^\\s+${list},$`, 'm'))
     }
     // The site's own list names only what no plugin declares.
-    for (const name of ['APPROVAL_TOKEN_SECRET', 'RESEND_API_KEY', 'FORMS_IP_HASH_SECRET']) {
+    for (const name of ['APPROVAL_TOKEN_SECRET', 'RESEND_API_KEY']) {
       expect(call, name).not.toContain(`'${name}'`)
     }
   })
@@ -144,9 +143,5 @@ describe('the scaffold checks its environment at startup', () => {
         expect(table, name).toMatch(new RegExp(`\\|\\s*\`${name}\`\\s*\\|\\s*${minLength ?? '—'}\\s*\\|`))
       }
     }
-  })
-
-  it('leaves the forms secret to the declaration rather than a non-null assertion', () => {
-    expect(config).not.toContain('process.env.FORMS_IP_HASH_SECRET!')
   })
 })

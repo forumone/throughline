@@ -215,7 +215,6 @@ describe('the scaffold serves Throughline tools over MCP', () => {
       'publishingPlugin',
       'approvalsPlugin',
       'auditQueryPlugin',
-      'formsPlugin',
       'integrationsPlugin',
     ]
     const mcp = config.indexOf('mcpPlugin({')
@@ -251,16 +250,6 @@ describe('the scaffold serves Throughline tools over MCP', () => {
     for (const name of ['payload', '@payloadcms/plugin-mcp']) {
       expect(web.dependencies[name], name).toBe('^3.89.0')
     }
-  })
-
-  it('gives formsPlugin a destination, since it refuses to start with none', () => {
-    const start = config.indexOf('allowedDestinations: [')
-    expect(start).toBeGreaterThan(-1)
-    const list = config.slice(start, config.indexOf('\n      ],', start))
-    // A live entry, not a commented-out example: an empty allowlist throws at
-    // config load, which stops `pnpm dev`, `generate:types` and everything else.
-    expect(list).toMatch(/^\s+\{\s*$/m)
-    expect(list).toMatch(/^\s+type: 'email',$/m)
   })
 
   it('depends on @payloadcms/plugin-mcp, and on no removed core export', () => {

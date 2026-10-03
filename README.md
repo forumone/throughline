@@ -23,7 +23,6 @@ Plugins:
 - `@forumone/throughline-audit` — read-only MCP query tools over the audit log
 - `@forumone/throughline-integrations` — pluggable third-party integrations (webhook included)
 - `@forumone/throughline-email` — Resend-backed transactional email + React Email templates
-- `@forumone/throughline-forms` — Form Builder wrapper with allowlisted destinations + spam/rate-limit hardening
 - `@forumone/throughline-workflows` — Inngest workflow factories (revalidate, scheduled publish, expire approvals, healthchecks)
 
 Design system:
