@@ -2,7 +2,7 @@
 
 The design-system side of Throughline. A design system describes its components in a manifest; this package defines that manifest, lints it, and turns it into Payload blocks, rendering and admin components for a Throughline site.
 
-> **1.0 is in progress.** This package is `@forumone/throughline-design-contract` and `@forumone/throughline-design-system-payload` together; [Upgrading from 0.x](https://github.com/forumone/throughline/blob/main/docs/guides/upgrading.md) moves a 0.x site onto it. Pre-releases publish as `1.0.0-next.N` under the `next` dist-tag.
+> **Coming from 0.x?** This package is `@forumone/throughline-design-contract` and `@forumone/throughline-design-system-payload` together; [Upgrading from 0.x](https://github.com/forumone/throughline/blob/main/docs/guides/upgrading.md) moves a 0.x site onto it.
 
 | Subpath     | Holds                                                                                                                                                                                                                                             |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -15,7 +15,7 @@ The design-system side of Throughline. A design system describes its components 
 | bin         | `check-block-props <manifest.json> <components-dir>…`: does each contract produce the props its component takes?                                                                                                                                  |
 
 ```bash
-pnpm add @forumone/throughline-design-system@next
+pnpm add @forumone/throughline-design-system
 ```
 
 `/contract` and `/lint` have no peers, so a design system that only publishes a manifest needs nothing else. The rest expects `payload` and `react`, `/client` expects `@payloadcms/ui`, `/generate` reads component source with `typescript`, and `/testing` is a vitest suite.

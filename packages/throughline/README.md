@@ -4,10 +4,9 @@ Throughline for Payload CMS: publishing behind a policy pipeline, approvals, the
 reports, integrations, email and background jobs, with every feature reachable over MCP. One call
 registers the suite; each part also lives on its own subpath.
 
-> **1.0 is in progress.** Every 0.x server package has moved in: core, plugin-contract, publishing,
-> workflows, audit, approvals, components, integrations and email.
-> [Upgrading from 0.x](https://github.com/forumone/throughline/blob/main/docs/guides/upgrading.md) moves a 0.x site onto it.
-> Pre-releases publish as `1.0.0-next.N` under the `next` dist-tag.
+> **Coming from 0.x?** This package is core, plugin-contract, publishing, workflows, audit,
+> approvals, components, integrations and email together.
+> [Upgrading from 0.x](https://github.com/forumone/throughline/blob/main/docs/guides/upgrading.md) moves a 0.x site onto it, with a codemod for the imports.
 
 **Reference: [`docs/reference/throughline.md`](https://github.com/forumone/throughline/blob/main/docs/reference/throughline.md)**, with a page per plugin.
 
@@ -80,7 +79,7 @@ The reasoning is in [`1.0-throughline-call.md`](https://github.com/forumone/thro
 ## Installation
 
 ```bash
-pnpm add @forumone/throughline@next
+pnpm add @forumone/throughline
 ```
 
 `payload@^3.89.0` is the one required peer. The rest are optional, each needed only by the subpaths that use it, and none is loaded by the root:
