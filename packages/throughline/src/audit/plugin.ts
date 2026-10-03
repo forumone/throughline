@@ -63,6 +63,15 @@ function attachAuditWriter(target: object, writer: AuditWriter): void {
 }
 
 /**
+ * The audit writer if `auditPlugin` attached one, or `undefined`. For a plugin
+ * that records its tools' crashes when there is a log to record them in, and
+ * still works registered by hand without one.
+ */
+export function findAuditWriter(payload: object): AuditWriter | undefined {
+  return (payload as Record<symbol, unknown>)[AUDIT_WRITER_SYMBOL] as AuditWriter | undefined
+}
+
+/**
  * Retrieves the audit writer attached to a Payload instance by `auditPlugin`.
  * Plugins that depend on auditing call this in their own `onInit` to record
  * events without importing this package's writer factory directly.

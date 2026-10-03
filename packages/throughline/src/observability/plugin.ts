@@ -1,3 +1,4 @@
+import { findAuditWriter } from '../audit/plugin.js'
 import {
   type BaseCorePluginOptions,
   type CorePlugin,
@@ -55,7 +56,7 @@ export const jobFailuresPlugin: CorePlugin<JobFailuresPluginOptions> =
               ...(options.slug ? { slug: options.slug } : {}),
             }),
           ] as unknown as McpToolDefinition[],
-          { serverName: 'observability' },
+          { serverName: 'observability', ...(findAuditWriter(payload) ? { audit: findAuditWriter(payload)! } : {}) },
         )
 
         getPluginRegistry(payload).register({
