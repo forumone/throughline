@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
 import { withMeta } from '../../mcp/meta.js'
+import { relationshipIdFor } from '../../utils/relationships.js'
 import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
 import type { ApprovalsPluginOptions } from '../options.js'
@@ -32,16 +33,17 @@ export function createListMyRequestsTool(deps: ListMyRequestsDeps): McpToolDefin
     handler: async (input, ctx) => {
       if (!ctx.user) return { error: 'Must be authenticated to list approval requests' }
 
+      const me = relationshipIdFor(deps.payload, deps.options.usersSlug ?? 'users', ctx.user.id)
       const result = await deps.payload.find({
         collection: deps.options.collectionSlug ?? DEFAULT_APPROVALS_SLUG,
         where: input.status
           ? {
               and: [
-                { requestedBy: { equals: ctx.user.id } },
+                { requestedBy: { equals: me } },
                 { status: { equals: input.status } },
               ],
             }
-          : { requestedBy: { equals: ctx.user.id } },
+          : { requestedBy: { equals: me } },
         limit: input.limit ?? 25,
         sort: '-requestedAt',
       })

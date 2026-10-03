@@ -39,6 +39,8 @@ export interface MakeDepsOverrides {
   inngestSend?: ReturnType<typeof vi.fn>
   audit?: ReturnType<typeof vi.fn>
   optionsOverrides?: Partial<ApprovalsPluginOptions>
+  /** The database's id type: `text`, as Mongo and these fixtures' ids; `number`, as Postgres. */
+  idType?: 'number' | 'text'
 }
 
 export function makeDeps(overrides: MakeDepsOverrides = {}) {
@@ -71,6 +73,8 @@ export function makeDeps(overrides: MakeDepsOverrides = {}) {
     find: payloadFind,
     create: payloadCreate,
     update: payloadUpdate,
+    collections: {},
+    db: { defaultIDType: overrides.idType ?? 'text' },
   } as unknown as Payload
 
   const inngest = { send: inngestSend } as unknown as Inngest

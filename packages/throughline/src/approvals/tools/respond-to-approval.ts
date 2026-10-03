@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Payload } from 'payload'
 import { auditContext } from '../../mcp/audit-context.js'
-import { unwrapRelationshipId } from '../../utils/relationships.js'
+import { relationshipIdFor, unwrapRelationshipId } from '../../utils/relationships.js'
 import { withMeta } from '../../mcp/meta.js'
 import { type AuditWriter } from '../../audit/writer.js'
 import type { AuditAction } from '../../audit/types.js'
@@ -80,7 +80,7 @@ export function createRespondToApprovalTool(deps: RespondToApprovalDeps): McpToo
         id: input.approvalId,
         data: {
           status: newStatus,
-          decidedBy: ctx.user.id,
+          decidedBy: relationshipIdFor(deps.payload, deps.options.usersSlug ?? 'users', ctx.user.id),
           decidedAt,
           ...(input.notes ? { decisionNotes: input.notes } : {}),
         },

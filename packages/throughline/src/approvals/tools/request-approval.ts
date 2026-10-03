@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import { type AuditWriter } from '../../audit/writer.js'
 import { auditContext } from '../../mcp/audit-context.js'
 import { documentContentHash } from '../../utils/content-hash.js'
+import { relationshipIdFor } from '../../utils/relationships.js'
 import { withMeta } from '../../mcp/meta.js'
 import type { McpToolDefinition } from '../../plugin-contract/mcp.js'
 import { DEFAULT_APPROVALS_SLUG } from '../collection.js'
@@ -93,7 +94,9 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
           targetTitle,
           targetVersion,
           previewUrl,
-          requestedBy: ctx.user.id,
+          // In the users collection's id type: a string here is refused on
+          // Postgres, where they are numbers.
+          requestedBy: relationshipIdFor(deps.payload, deps.options.usersSlug ?? 'users', ctx.user.id),
           requestedAt: new Date().toISOString(),
           ...(input.requestReason ? { requestReason: input.requestReason } : {}),
           changesSummary: input.changesSummary,

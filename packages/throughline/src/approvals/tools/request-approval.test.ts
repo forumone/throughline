@@ -93,4 +93,21 @@ describe('request_approval', () => {
     expect(auditArgs.prompt).toBe('Send for review')
     expect(auditArgs.reasoning).toBe('Marketing wants this live tomorrow')
   })
+
+  /*
+  On Postgres a user's id is a serial number, and an MCP caller arrives as
+  `ctx.user.id: "7"`. Written as that string, the relationship is refused —
+  "The following field is invalid: Requested By" — so this tool could never
+  store a request on a Postgres site. Found by forumone-2026's 1.0 smoke test.
+  */
+  it('writes the requester in the users collection\'s id type', async () => {
+    const deps = makeDeps({ idType: 'number' })
+    await callTool(
+      createRequestApprovalTool(deps),
+      { collection: 'pages', id: 'p1', changesSummary: 'Updated the headline copy.', approverGroups: ['editorial'] },
+      makeContext({ user: { id: '7', email: 'tester@example.com', name: 'Tester', roles: ['editor'], groups: ['editorial'] } }),
+    )
+    const created = deps.spies.payloadCreate.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+    expect(created.data['requestedBy']).toBe(7)
+  })
 })

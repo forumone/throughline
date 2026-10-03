@@ -108,4 +108,23 @@ describe('respond_to_approval', () => {
     )) as { error?: string }
     expect(result.error).toMatch(/authenticated/)
   })
+
+  // The same on the decision side; see request_approval's test.
+  it('writes the decider in the users collection\'s id type', async () => {
+    const deps = makeDeps({ idType: 'number', payloadFindByID: vi.fn(async () => ({ ...pendingApproval, requestedBy: 3 })) })
+    await callTool(createRespondToApprovalTool(deps), { approvalId: 'apr_1', decision: 'approve' }, makeContext({ user: { id: '7', email: 'tester@example.com', name: 'Tester', roles: ['editor'], groups: ['editorial'] } }))
+    const updated = deps.spies.payloadUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> }
+    expect(updated.data['decidedBy']).toBe(7)
+  })
+
+  it('still blocks self-approval when the stored requester is a number', async () => {
+    const deps = makeDeps({ idType: 'number', payloadFindByID: vi.fn(async () => ({ ...pendingApproval, requestedBy: 7 })) })
+    const result = (await callTool(
+      createRespondToApprovalTool(deps),
+      { approvalId: 'apr_1', decision: 'approve' },
+      makeContext({ user: { id: '7', email: 'tester@example.com', name: 'Tester', roles: ['editor'], groups: ['editorial'] } }),
+    )) as { error?: string }
+    expect(result.error).toMatch(/own request/)
+    expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
+  })
 })
