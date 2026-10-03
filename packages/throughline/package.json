@@ -118,44 +118,56 @@
     "access": "public"
   },
   "peerDependencies": {
-    "payload": "^3.89.0",
-    "inngest": "^4.0.0",
-    "vitest": "^3.0.0 || ^4.0.0",
-    "react": "^18.0.0 || ^19.0.0",
-    "@payloadcms/ui": "^3.0.0",
-    "@vercel/blob": "^2.0.0",
+    "@payloadcms/next": "^3.0.0",
     "@payloadcms/plugin-cloud-storage": "^3.0.0",
+    "@payloadcms/ui": "^3.0.0",
+    "@react-email/components": "^0.5.4",
+    "@react-email/render": "^1.3.2",
+    "@vercel/blob": "^2.0.0",
+    "inngest": "^4.0.0",
     "next": "^15.0.0 || ^16.0.0",
-    "@payloadcms/next": "^3.0.0"
+    "payload": "^3.89.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "resend": "^6.1.4",
+    "vitest": "^3.0.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
-    "vitest": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    },
-    "@payloadcms/ui": {
-      "optional": true
-    },
-    "@vercel/blob": {
+    "@payloadcms/next": {
       "optional": true
     },
     "@payloadcms/plugin-cloud-storage": {
       "optional": true
     },
+    "@payloadcms/ui": {
+      "optional": true
+    },
+    "@react-email/components": {
+      "optional": true
+    },
+    "@react-email/render": {
+      "optional": true
+    },
+    "@vercel/blob": {
+      "optional": true
+    },
+    "inngest": {
+      "optional": true
+    },
     "next": {
       "optional": true
     },
-    "@payloadcms/next": {
+    "react": {
+      "optional": true
+    },
+    "resend": {
+      "optional": true
+    },
+    "vitest": {
       "optional": true
     }
   },
   "dependencies": {
     "@forumone/throughline-design-system": "workspace:*",
-    "@react-email/components": "^0.5.4",
-    "@react-email/render": "^1.3.2",
-    "resend": "^6.1.4",
     "zod": "^3.23.0",
     "zod-to-json-schema": "^3.25.2"
   },
@@ -167,6 +179,8 @@
     "@payloadcms/next": "^3.83.0",
     "@payloadcms/plugin-cloud-storage": "^3.83.0",
     "@payloadcms/ui": "^3.83.0",
+    "@react-email/components": "^0.5.4",
+    "@react-email/render": "^1.3.2",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -177,6 +191,7 @@
     "payload": "^3.83.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "resend": "^6.1.4",
     "typescript": "^5.6.0",
     "vitest": "^4.1.10"
   }

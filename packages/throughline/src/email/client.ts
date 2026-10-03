@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { loadOptionalPeer } from '../utils/optionalPeer.js'
 
 export interface EmailClient {
   send(params: SendEmailParams): Promise<SendEmailResult>
@@ -80,14 +81,20 @@ export function createEmailClient(options: EmailClientOptions): EmailClient {
 
   async function getResend() {
     if (cachedResend) return cachedResend
-    const mod = (await import('resend')) as { Resend: ResendCtor }
+    const mod = (await loadOptionalPeer('resend', 'Sending email', () => import('resend'))) as {
+      Resend: ResendCtor
+    }
     cachedResend = new mod.Resend(options.apiKey)
     return cachedResend
   }
 
   async function getRenderer(): Promise<TemplateRenderer> {
     if (cachedRenderer) return cachedRenderer
-    const mod = (await import('@react-email/render')) as {
+    const mod = (await loadOptionalPeer(
+      '@react-email/render',
+      'Rendering an email',
+      () => import('@react-email/render'),
+    )) as {
       render: (template: ReactElement, opts?: { plainText?: boolean }) => Promise<string>
     }
     cachedRenderer = {
