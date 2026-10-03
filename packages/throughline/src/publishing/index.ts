@@ -62,6 +62,13 @@ export type {
  */
 export { isDraftWrite } from './hooks/draft-writes.js'
 
+/**
+ * For a write of data derived from a live document — an audio rendition, a
+ * sync timestamp — which may change it without the publish pipeline. Never a
+ * status change, a create, or the promotion of a pending draft.
+ */
+export { DERIVED_WRITE_CONTEXT } from './hooks/block-status-writes.js'
+
 // Built-in accessibility checks, which were `@forumone/throughline-publishing/checks`.
 export {
   BUILT_IN_ACCESSIBILITY_CHECKS,

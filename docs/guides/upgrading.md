@@ -206,6 +206,20 @@ It should report no schema changes, and write nothing. Set a placeholder Blob to
 
 A 0.x site that registered all three sees no change. One that did not register `jobFailuresPlugin` gains the `job-failures` collection: step 7's migration, and one that is meant.
 
+## Stricter in 1.0: edits to a live page
+
+1.0 refuses two writes 0.x allowed, because each changed what the public sees without the pipeline:
+
+- **A create with `_status: 'published'`.** Create a draft, then publish it.
+- **A non-draft save that changes a live document.** Save a draft (`draft: true`), then publish it. The admin already works this way, so editors see no difference; what changes is code that calls `payload.update` on a live document without `draft: true`.
+
+Find that code before you ship. For each one:
+
+- **An editor's change, or a script fixing content:** write a draft and publish through the pipeline, or for a one-off script pass `context: { bypassPublishingServer: true }`, as seeds do.
+- **Data derived from the page and written back** (an audio URL, a sync timestamp): pass `context: DERIVED_WRITE_CONTEXT` from `@forumone/throughline/publishing`.
+
+A refused write is a 400 that says which of these it is.
+
 ## What does not change
 
 - **Environment variables.** The same names, checked the same way: `assertEnvironment(approvalsEnv, emailEnv, …)`.

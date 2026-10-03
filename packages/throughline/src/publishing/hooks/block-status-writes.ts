@@ -50,12 +50,40 @@ import { isDraftWrite } from './draft-writes.js'
  * its own check it passed as an ordinary edit, and the page came down with no
  * policy check, no `unpublished` event and nothing to drop the cached copy.
  * It is refused while the document is live: unpublish, then trash.
+ *
+ * A create is the same question again. A document created as `published` is
+ * live the moment it exists, so it is refused like any other publish: create
+ * it as a draft, then publish it. This hook used to skip creates entirely,
+ * which left REST, and Payload's own MCP `create` tools, a way to put a page
+ * live that no check, approval or audit row ever saw.
+ *
+ * And an edit to a live document is a change to what the public sees, so it
+ * belongs in the pipeline as much as the first publish does. A non-draft write
+ * to a live document is refused unless it changes nothing; editors save a
+ * draft and publish it, which is what the admin's own buttons do. Otherwise
+ * "requires approval" held for the first publish and for no edit after it.
+ *
+ * The one exception is data a system derives from the published document and
+ * writes back to it — an audio rendition's URL, a sync's timestamp. Running
+ * the pipeline for those would gate the page on its own side effects. A write
+ * that carries `DERIVED_WRITE_CONTEXT` may change fields on a document that is
+ * live with nothing pending. It can never change `_status`, never promote a
+ * pending draft, and never create: it is a way to annotate a live page, not
+ * to publish one.
  */
 export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
   return async ({ collection, data, originalDoc, operation, context, req }) => {
-    if (operation !== 'update') return data
     if (!carriesStatus(data)) return data
     if (isBypassed(context) || isBypassed(req?.context)) return data
+
+    if (operation === 'create') {
+      if ((data as Record<string, unknown>)['_status'] !== 'published') return data
+      throw new APIError(
+        'Create it as a draft, then publish it. Publishing is what runs the checks a live page needs.',
+        400,
+      )
+    }
+    if (operation !== 'update') return data
 
     const nextStatus = (data as Record<string, unknown>)['_status']
     const previousStatus = (originalDoc as Record<string, unknown> | undefined)?.['_status']
@@ -80,13 +108,19 @@ export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
     }
 
     if (nextStatus === 'published') {
-      // This puts content live. Allowed only when the document is already
-      // live *and* nothing is pending: a latest version of `published`
-      // means there is no newer draft for this write to promote. When a
-      // draft is pending, this is the publish and it belongs in the
-      // pipeline — even though the live status does not change.
-      if (previousStatus === 'published') return data
+      // This writes to what is live. Allowed when it changes nothing — a
+      // save that restates the live content, or Payload's "Revert to
+      // published" discarding a pending draft — or when it is derived data
+      // on a document that is live with nothing pending: a latest version of
+      // `published` means there is no newer draft for it to promote.
       if (await restatesLiveContent(req, collection?.slug, id, data)) return data
+      if (previousStatus === 'published' && !restoresFromTrash(data, originalDoc)) {
+        if (isDerivedWrite(context) || isDerivedWrite(req?.context)) return data
+        throw new APIError(
+          'This page is live. Save your change as a draft, then publish it, so the checks a live page needs run.',
+          400,
+        )
+      }
     } else {
       // This takes the live document down. Harmless only if nothing is
       // live: a document that was never published, or is already down.
@@ -249,6 +283,22 @@ function restoresFromTrash(data: unknown, originalDoc: unknown): boolean {
   const next = (data as Record<string, unknown> | null | undefined)?.['deletedAt']
   const previous = (originalDoc as Record<string, unknown> | null | undefined)?.['deletedAt']
   return next == null && previous != null
+}
+
+/**
+ * The context for a write of data derived from a live document, such as an
+ * audio rendition's URL, which is allowed to change that document without the
+ * pipeline. See `createBlockStatusWritesHook`.
+ *
+ * ```ts
+ * await payload.update({ collection: 'posts', id, data: { narration }, context: DERIVED_WRITE_CONTEXT })
+ * ```
+ */
+export const DERIVED_WRITE_CONTEXT = Object.freeze({ throughlineDerivedWrite: true })
+
+function isDerivedWrite(context: unknown): boolean {
+  if (!context || typeof context !== 'object') return false
+  return (context as Record<string, unknown>)['throughlineDerivedWrite'] === true
 }
 
 function isBypassed(context: unknown): boolean {
