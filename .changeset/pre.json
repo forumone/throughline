@@ -19,7 +19,13 @@
     "@forumone/throughline-publishing": "0.15.3",
     "@forumone/throughline-reference-ds": "0.3.7",
     "@forumone/throughline-tsconfig": "0.0.0",
-    "@forumone/throughline-workflows": "0.6.8"
+    "@forumone/throughline-workflows": "0.6.8",
+    "@forumone/throughline": "0.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "throughline-jobs",
+    "throughline-package",
+    "throughline-plugins",
+    "throughline-publishing"
+  ]
 }

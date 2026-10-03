@@ -1,5 +1,50 @@
 # @forumone/throughline
 
+## 1.0.0-next.0
+
+### Major Changes
+
+- fb0b908: Jobs move in from `@forumone/throughline-workflows`, split by owner, by `docs/spec/1.0-exports.md`:
+
+  - `defineJob`, the job types, `jobPayload`, `eventSenderFor`, `failureOptions` and the two failure handlers are on `@forumone/throughline/jobs`.
+  - `inngestJobs` is on `/jobs/inngest`, beside the Inngest client; `payloadJobs` is on `/jobs/payload`.
+  - `revalidateOnPublishJob`, `publishAtScheduledTimeJob`, `executeScheduledPublishesJob` and `createTagRevalidationHooks` are on `/publishing`; `expireStaleApprovalsJob` on `/approvals`; `auditEventEchoJob` on `/audit`; `healthcheckJob` and its checks on `/integrations`.
+  - `createCacheTags` is on `/cache-tags`, which still imports nothing.
+
+  **Removed:** the six Inngest-shaped factories, `createRevalidateOnPublishFunction`, `createPublishAtScheduledTimeFunction`, `createExecuteScheduledPublishesFunction`, `createExpireStaleApprovalsFunction`, `createAuditEventEchoFunction` and `createHealthcheckFunction`. Each was `inngestJobs(inngest).toFunction(<job>(options))`; write that instead, or better, give the adapter `onFailure` and `payload` once and pass the jobs to `jobs.functions([...])`. Function ids are unchanged. `BaseWorkflowOptions` and `AuditEventEchoOptions` no longer take an `inngest`.
+
+- cb29249: `@forumone/throughline`: the 1.0 package, starting from `@forumone/throughline-core` and `@forumone/throughline-plugin-contract`.
+
+  The root holds what is shared: environment checks, access helpers, the logger, utilities, the plugin and MCP tool types, and the MCP collector until `throughline()` wires it. Everything else is on a subpath: `/audit`, `/fields`, `/jobs`, `/jobs/inngest`, `/media` (now including reference tracking), `/observability`, `/testing`, `/client` and `/rsc`. The `throughline-payload` bin is unchanged.
+
+  Moving from 0.x, by `docs/spec/1.0-exports.md`:
+
+  - core's root no longer re-exports audit, events, references or observability; import them from `/audit`, `/jobs` and `/jobs/inngest`, `/media` and `/observability`.
+  - `/events` is now `/jobs` (the event taxonomy) and `/jobs/inngest` (the Inngest client and Vercel environment pinning). Augment `CoreEvents` on `@forumone/throughline/jobs`.
+  - `/references` is part of `/media`; `/env` and `/mcp` are part of the root; `/auth` is gone.
+  - plugin-contract's types are on the root. Its separate `McpMeta` interface is gone; the root's `McpMeta` is the one.
+  - Admin component paths are `@forumone/throughline/client#…` and `@forumone/throughline/rsc#UsedOnPanel`, so a site's `importMap.js` changes.
+
+- 3b467f0: The last five 0.x server packages move in, by `docs/spec/1.0-exports.md`:
+
+  - `@forumone/throughline-audit` joins core's audit writer on `@forumone/throughline/audit`. `DEFAULT_AUDIT_COLLECTION_SLUG` is gone; use `DEFAULT_AUDIT_SLUG`, the same value.
+  - `@forumone/throughline-approvals` is `/approvals`. `APPROVALS_RESOLVER_SYMBOL` is internal.
+  - `@forumone/throughline-components` is `/components`.
+  - `@forumone/throughline-integrations` is `/integrations`; its `/client` (`SyncButton` and helpers) joins `@forumone/throughline/client`.
+  - `@forumone/throughline-email` and its `/templates` are `/email`. `DEFAULT_APPROVALS_COLLECTION_SLUG` is gone; use `DEFAULT_APPROVALS_SLUG` from `/approvals`, the same value. `validateOptions` is internal.
+
+  **Removed:** `createNotifyApprovalRequestFunction`, `createNotifyApprovalDecisionFunction` and `createNotifyApprovalExpiredFunction`. `emailPlugin` builds the same three Inngest functions itself, so `getEmailFunctions` and the function ids are unchanged; run `notify…Job` through an adapter to build one by hand.
+
+  Admin component paths follow: `@forumone/throughline/client#SyncButton`. Plugin ids in the registry are `@forumone/throughline/<subpath>`, with the audit query plugin at `/audit-query`.
+
+- ea3754f: Publishing moves in from `@forumone/throughline-publishing`, by `docs/spec/1.0-exports.md`:
+
+  - `@forumone/throughline-publishing` and its `/checks` are `@forumone/throughline/publishing`.
+  - `/editorial` is `@forumone/throughline/editorial`.
+  - `/client` and `/rsc` are `@forumone/throughline/client` and `/rsc`, beside core's admin components.
+
+  Admin component paths follow, so a site's `importMap.js` changes: `@forumone/throughline/client#PublishButton`, `#UnpublishButton`, `#SchedulePublishField`, `#CommandPalette` and `#ReportsNav`, and `@forumone/throughline/rsc#ContentHealthView`, `#ContentCalendarView` and `#YourWorkDashboard`. `next` and `@payloadcms/next` are optional peers, used only by those components.
+
 The 0.x entries below are `@forumone/throughline-core`'s, which this package grew from.
 
 ## 0.15.0
