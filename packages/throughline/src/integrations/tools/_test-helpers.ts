@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import type { Inngest } from 'inngest'
-import type { McpToolContext } from '@forumone/throughline'
+import type { McpToolContext } from '../../index.js'
 
 export interface FakeInstance {
   id: string

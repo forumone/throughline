@@ -1,7 +1,7 @@
 import type { Field } from 'payload'
 import type { Inngest } from 'inngest'
-import type { Job, JobContext, WorkflowFailureHandler } from '@forumone/throughline/jobs'
-import type { McpToolDefinition } from '@forumone/throughline'
+import type { Job, JobContext, WorkflowFailureHandler } from '../jobs/index.js'
+import type { McpToolDefinition } from '../index.js'
 
 export type IntegrationCategory =
   | 'crm'

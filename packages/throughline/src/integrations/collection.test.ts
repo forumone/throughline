@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ADMIN_GROUP } from '@forumone/throughline'
+import { DEFAULT_ADMIN_GROUP } from '../index.js'
 import { createIntegrationsCollection } from './collection.js'
 import { IntegrationRegistry } from './registry.js'
 import type { Integration } from './types.js'
@@ -199,7 +199,7 @@ describe('the manual-sync control', () => {
     const component = (field?.admin as { components?: { Field?: unknown } } | undefined)?.components
       ?.Field
     expect(component).toMatchObject({
-      path: '@forumone/throughline-integrations/client',
+      path: '@forumone/throughline/client',
       exportName: 'SyncButton',
       clientProps: { collectionSlug: 'connections' },
     })

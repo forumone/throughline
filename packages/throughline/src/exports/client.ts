@@ -31,3 +31,24 @@ export type {
 export { CommandPalette } from '../editorial/palette/CommandPalette.js'
 export type { CommandPaletteProps } from '../editorial/palette/CommandPalette.js'
 export { ReportsNav } from '../editorial/palette/ReportsNav.js'
+
+// Integrations
+export { SyncButton } from '../integrations/admin/SyncButton.js'
+export type { ThroughlineSyncButtonProps } from '../integrations/admin/SyncButton.js'
+
+export {
+  describeSyncOutcome,
+  fetchSyncStatus,
+  formatSyncTime,
+  syncHasFinished,
+  triggerSync,
+} from '../integrations/admin/sync-client.js'
+export type {
+  FetchSyncStatusArgs,
+  SyncOutcome,
+  SyncStatus,
+  SyncStatusValue,
+  TriggerSyncArgs,
+  TriggerSyncBody,
+  TriggerSyncResult,
+} from '../integrations/admin/sync-client.js'

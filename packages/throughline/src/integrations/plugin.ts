@@ -1,7 +1,7 @@
-import type { CorePlugin, McpToolDefinition } from '@forumone/throughline'
-import { getPluginRegistry } from '@forumone/throughline'
-import { createNamedLogger, defaultLogger } from '@forumone/throughline'
-import { getAuditWriter } from '@forumone/throughline/audit'
+import type { CorePlugin, McpToolDefinition } from '../index.js'
+import { getPluginRegistry } from '../index.js'
+import { createNamedLogger, defaultLogger } from '../index.js'
+import { getAuditWriter } from '../audit/index.js'
 import { type IntegrationsPluginOptions, validateOptions, DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 import { IntegrationRegistry } from './registry.js'
 import { createIntegrationsCollection } from './collection.js'
@@ -9,7 +9,7 @@ import { createSyncEndpoint } from './endpoints/sync.js'
 import { createStatusWriter } from './sync/status.js'
 import { webhookIntegration } from './integrations/index.js'
 import type { Integration, IntegrationContext } from './types.js'
-import { createTerminalFailureHandler, type Job, type JobContext } from '@forumone/throughline/jobs'
+import { createTerminalFailureHandler, type Job, type JobContext } from '../jobs/index.js'
 import {
   INTEGRATIONS_TOOL_DESCRIPTORS,
   createGetIntegrationStatusTool,
@@ -19,7 +19,7 @@ import {
   createTriggerSyncTool,
 } from './tools/index.js'
 
-const PLUGIN_ID = '@forumone/throughline-integrations'
+const PLUGIN_ID = '@forumone/throughline/integrations'
 const PLUGIN_VERSION = '0.1.0'
 
 /*

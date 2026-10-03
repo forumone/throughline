@@ -1,7 +1,7 @@
-import type { WorkflowFailureHandler } from '@forumone/throughline/jobs'
-import type { McpToolCollector } from '@forumone/throughline'
+import type { WorkflowFailureHandler } from '../jobs/index.js'
+import type { McpToolCollector } from '../index.js'
 import type { Inngest } from 'inngest'
-import type { BaseCorePluginOptions, CollectionPluginOptions } from '@forumone/throughline'
+import type { BaseCorePluginOptions, CollectionPluginOptions } from '../index.js'
 import type { Integration } from './types.js'
 
 export const DEFAULT_INTEGRATIONS_SLUG = 'integrations'

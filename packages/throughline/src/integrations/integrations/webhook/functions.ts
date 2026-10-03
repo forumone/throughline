@@ -1,6 +1,6 @@
 import type { InngestFunction } from 'inngest'
-import { defineJob, type Job, type JobContext } from '@forumone/throughline/jobs'
-import { inngestJobs } from '@forumone/throughline/jobs/inngest'
+import { defineJob, type Job, type JobContext } from '../../../jobs/index.js'
+import { inngestJobs } from '../../../jobs/inngest/index.js'
 import type { IntegrationContext } from '../../types.js'
 import { hmacSha256Hex } from './hmac.js'
 import type { WebhookConfig } from './config-fields.js'

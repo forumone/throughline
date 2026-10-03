@@ -1,5 +1,5 @@
 import type { Access, CollectionConfig, Endpoint, FieldAccess } from 'payload'
-import { type PluginAdminOptions, resolveAdminGroup } from '@forumone/throughline'
+import { type PluginAdminOptions, resolveAdminGroup } from '../index.js'
 import type { IntegrationRegistry } from './registry.js'
 import { DEFAULT_INTEGRATIONS_SLUG } from './options.js'
 
@@ -7,7 +7,7 @@ import { DEFAULT_INTEGRATIONS_SLUG } from './options.js'
  * Where Payload resolves the admin controls from. A package specifier, not a
  * path, so the host's import map picks it up without any host-side file.
  */
-const CLIENT_ENTRY = '@forumone/throughline-integrations/client'
+const CLIENT_ENTRY = '@forumone/throughline/client'
 
 export interface CreateIntegrationsCollectionOptions {
   slug?: string
