@@ -1,5 +1,5 @@
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
-import { getPublishingService } from '@forumone/throughline-publishing'
+import { getPublishingService } from '@forumone/throughline/publishing'
 import { buildConfig, getPayload, type Payload } from 'payload'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { playgroundConfig } from './config'

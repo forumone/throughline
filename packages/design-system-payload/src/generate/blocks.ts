@@ -79,7 +79,7 @@ export function isBlockCandidate(component: ManifestComponent, overrides: Overri
 /**
  * The block slug is the manifest component name, byte for byte.
  *
- * Not a stylistic choice. `throughline-publishing`'s composition step maps
+ * Not a stylistic choice. `@forumone/throughline/publishing`'s composition step maps
  * `blockType` straight to `type` with no transformation and looks it up in the
  * manifest; a miss is an `unknown-component` **error**, which blocks publish.
  * Kebab-casing the slugs would make every block on every page unpublishable,

@@ -58,8 +58,7 @@
     }
   },
   "dependencies": {
-    "@forumone/throughline": "workspace:*",
-    "@forumone/throughline-publishing": "workspace:*"
+    "@forumone/throughline": "workspace:*"
   },
   "devDependencies": {
     "@forumone/throughline-eslint-config": "workspace:*",

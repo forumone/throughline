@@ -4,7 +4,7 @@ import type {
   GlobalAfterChangeHook,
   PayloadRequest,
 } from 'payload'
-import { isDraftWrite } from '@forumone/throughline-publishing'
+import { isDraftWrite } from '@forumone/throughline/publishing'
 import { type CacheTags, defaultCacheTags } from './cache-tags.js'
 import { IMMEDIATE, isOutsideNextRequest, loadNextCache } from './next-revalidate.js'
 

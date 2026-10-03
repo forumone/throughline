@@ -16,7 +16,7 @@ import {
   createTerminalFailureHandler,
   type ScheduledPublishRequest,
 } from '@forumone/throughline-workflows'
-import { getPublishingService } from '@forumone/throughline-publishing'
+import { getPublishingService } from '@forumone/throughline/publishing'
 import { getEmailFunctions } from '@forumone/throughline-email'
 import { getFormsFunctions } from '@forumone/throughline-forms'
 import {

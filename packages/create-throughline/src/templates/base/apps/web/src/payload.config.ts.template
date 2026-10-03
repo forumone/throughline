@@ -9,7 +9,7 @@ import { auditPlugin } from '@forumone/throughline/audit'
 import { createInngestClient } from '@forumone/throughline/jobs/inngest'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { componentsPlugin } from '@forumone/throughline-components'
-import { publishingPlugin } from '@forumone/throughline-publishing'
+import { publishingPlugin } from '@forumone/throughline/publishing'
 import {
   approvalsEnv,
   approvalsPlugin,

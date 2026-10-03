@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { ActiveApproval, ApprovalResolver } from '@forumone/throughline-publishing'
+import type { ActiveApproval, ApprovalResolver } from '@forumone/throughline/publishing'
 import { DEFAULT_APPROVALS_SLUG } from './collection.js'
 
 /**
