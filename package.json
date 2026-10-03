@@ -18,7 +18,7 @@
     "format:check": "prettier --check .",
     "changeset": "changeset",
     "version": "changeset version",
-    "publish-packages": "turbo run build && changeset publish"
+    "publish-packages": "turbo run build && changeset publish --tag v0"
   },
   "devDependencies": {
     "@changesets/changelog-git": "^0.2.1",

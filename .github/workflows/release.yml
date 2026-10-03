@@ -45,6 +45,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Under the `v0` dist-tag, not `latest` (`publish-packages` passes
+      # `--tag v0`). 1.0 owns `latest` now, and `@forumone/create-throughline` is
+      # published from both lines: a 0.x fix released here under `latest` would
+      # move `pnpm create @forumone/throughline` back to 0.x for everybody. A
+      # site on 0.x resolves its `^0.x` ranges by version, not by tag, so it
+      # still gets every fix.
       - name: Create Release Pull Request or Publish
         uses: changesets/action@v1
         with:
