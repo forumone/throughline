@@ -18,6 +18,8 @@ Select the packages you changed, choose `patch`, `minor`, or `major` per semver,
 
 Internal config packages (`@forumone/throughline-tsconfig`, `-eslint-config`, `-prettier-config`) are ignored by changesets and never publish. Changes to them don't need a changeset.
 
+`@forumone/throughline`, `@forumone/throughline-design-system` and `@forumone/create-throughline` are one changesets `fixed` group: they release together, at one version. A changeset for any of them moves all three, so name the one you changed.
+
 ### Two lines while 1.0 is in progress
 
 `main` is in changesets pre-release mode (`.changeset/pre.json`, tag `next`) while the packages are consolidated for 1.0. A release from `main` publishes `-next.N` versions under the `next` dist-tag, and leaves `latest` alone.
