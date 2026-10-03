@@ -18,6 +18,12 @@ Select the packages you changed, choose `patch`, `minor`, or `major` per semver,
 
 Internal config packages (`@forumone/throughline-tsconfig`, `-eslint-config`, `-prettier-config`) are ignored by changesets and never publish. Changes to them don't need a changeset.
 
+### Two lines while 1.0 is in progress
+
+`main` is in changesets pre-release mode (`.changeset/pre.json`, tag `next`) while the packages are consolidated for 1.0. A release from `main` publishes `-next.N` versions under the `next` dist-tag, and leaves `latest` alone.
+
+**A fix for 0.x goes to `v0`**, the branch cut from the last 0.x release: base your branch and your pull request on `v0`. Its release PR opens against `v0` and publishes to `latest`. If 1.0 needs the fix too, port it to `main` by hand. See [the 1.0 plan](docs/spec/1.0-plan.md#distribution).
+
 ## Commits
 
 - Use present-tense, imperative commit messages ("add X", not "added X").
