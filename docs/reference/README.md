@@ -16,7 +16,7 @@ The 0.x reference, a page per package, is on the [`v0` branch](https://github.co
 - **[Email](throughline/email.md)**: `/email`, Resend and the approval notifications
 - **[Jobs](throughline/jobs.md)**: `/jobs`, `/jobs/inngest` and `/jobs/payload`, background work on either runner, and the cache-tag hooks
 
-`/editorial`, `/media`, `/fields` and `/observability` are described in [the subpath table](throughline.md#subpaths) and their TSDoc.
+`/editorial`, `/media`, `/fields`, `/observability`, `/testing`, `/cache-tags`, `/client` and `/rsc` are described in [the subpath table](throughline.md#subpaths) and their TSDoc.
 
 ## [`@forumone/throughline-design-system`](design-system.md)
 

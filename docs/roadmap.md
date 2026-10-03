@@ -22,7 +22,7 @@ Running status tracker for the core build. Each phase has a full spec under `doc
 | [C11](#c11--email-package) | Email Package | ✅ Done |
 | [C12](#c12--forms-package) | Forms Package | ✅ Done |
 | [C13](#c13--cli-scaffolder) | CLI Scaffolder | ✅ Done |
-| [C14](#c14--documentation-site) | Documentation (markdown only; site deferred) | ✅ Done |
+| [C14](#c14--documentation) | Documentation (markdown only; site deferred) | ✅ Done |
 
 ### Throughline 1.0
 

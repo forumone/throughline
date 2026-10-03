@@ -21,9 +21,13 @@ pnpm install --frozen-lockfile \
   && pnpm typecheck && pnpm lint \
   && pnpm check:instances && pnpm check:tested && pnpm check:migrations \
   && pnpm validate \
+  && pnpm --filter ./design-system run --if-present build \
   && bash .github/scripts/check-generated.sh \
   && pnpm test
 ```
+
+`fast` then runs `pnpm check:audit`, which reports advisories without failing
+the job.
 
 `--frozen-lockfile` leads because a lockfile missing an entry passes every
 other gate locally and fails in CI. `check-generated.sh` needs the environment
@@ -75,8 +79,8 @@ and demands `--confirm` before overwriting.
 
 ## The design system reaches the CMS through its manifest
 
-`payload.config.ts` hands the design system's manifest to `componentsPlugin`,
-and that manifest is how the CMS knows which components exist and how they may
+`payload.config.ts` hands the design system's manifest to the `components` key
+of its `throughline()` call, and that manifest is how the CMS knows which components exist and how they may
 be composed. It is built from a `<Name>.contract.ts` beside every component.
 {{#if useReferenceDs}}
 - **A new component needs a contract.** `build:manifest` refuses a component
@@ -86,8 +90,9 @@ be composed. It is built from a `<Name>.contract.ts` beside every component.
   that is not there.
 {{else}}
 The design system here is a placeholder. When you build it, give every
-component a contract, publish a manifest, and point `componentsPlugin` at it —
-see `@forumone/throughline-design-system` in the Throughline repository.
+component a contract, publish a manifest, and point `components.manifest` in
+`throughline()` at it — see `@forumone/throughline-design-system` in the
+Throughline repository.
 {{/if}}
 ## Tests
 
@@ -101,7 +106,7 @@ refused. A new collection fails it until you add it to a bucket. Decide which,
 and don't open a collection to anonymous reads to make the test pass. More good
 first tests need no database: field validations, and hooks as functions.
 
-`pnpm test:smoke` runs the Playwright smoke pack in `e2e/` against
+`pnpm --dir apps/web test:smoke` runs the Playwright smoke pack in `e2e/` against
 `next start`, so build first, or against a deployed site when `E2E_BASE_URL`
 is set. Every check is a GET. CI runs it in `verify`, after the production
 build. Add routes to `e2e/site.ts` as the site gains them.

@@ -22,7 +22,7 @@ pnpm --filter "./design-system" validate          # lint contracts + cross-check
 pnpm --filter "./design-system" test              # component tests (vitest + testing-library)
 ```
 
-The web app imports `./manifest` (the built `dist/manifest.json`) and feeds it to the Components MCP server. The root `pnpm dev` builds the design system first so the manifest exists.
+The web app imports `./manifest` (the built `dist/manifest.json`) and passes it to `components.manifest` in the `throughline()` call in `apps/web/src/payload.config.ts`, which serves it over MCP. The root `pnpm dev` builds the design system first so the manifest exists.
 
 ## Branding
 
