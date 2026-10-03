@@ -470,7 +470,7 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [x] One fixed version across the three published packages (changesets `fixed`); `create-throughline` joins the other two at `1.0.0-next.N`
 - [x] Bootstrap npm trusted publishing for the new package names (see the C0 note). Both publish through it: `@forumone/throughline@1.0.0-next.0` (#244) and `@forumone/throughline-design-system@1.0.0-next.0` (#249)
 - [x] Leave forms out of 1.0; tag its last 0.x source. The tag is the release's own, `@forumone/throughline-forms@0.7.9`, and `v0` keeps the source
-- [ ] Regenerate the scaffolder for the new shape; CI generates a site from it and builds that site
+- [x] Regenerate the scaffolder for the new shape; CI generates a site from it and builds that site. The `Scaffold` workflow installs it against the checkout's packed packages and runs the scaffold's own gates, through a migration, `next build` and the smoke pack (#257)
 - [ ] Import codemod (`throughline migrate-imports`) covering every 0.x import path, including the P1/P2 temporary homes
 - [ ] Migration guide in `docs/guides/upgrading.md`, and reference docs for the three packages
 - [ ] PR snapshots (`pr` dist-tag) and `next` snapshots on merge
