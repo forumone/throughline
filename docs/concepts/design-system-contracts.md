@@ -62,23 +62,18 @@ The validator runs on every `propose_components` call (so Claude gets validated 
 
 ## Brand tokens
 
-Tokens are how a single contract powers many brand variants. Components declare which tokens they read; you supply the values. The reference DS uses neutral tokens (mostly grayscale + a single accent). A real client overrides:
+Tokens are how a single contract powers many brand variants. Components declare which tokens they read; the design system supplies the values. The reference DS uses neutral tokens (mostly grayscale + a single accent), authored in `src/tokens/` and emitted as CSS variables in `src/styles/tokens.css`. A real client changes the values there, in its own copy:
 
 ```typescript
-componentsPlugin({
-  manifest: { type: 'object', manifest },
-  brand: {
-    tokens: {
-      'color.brand.primary': '#0a4d8a',
-      'color.brand.accent': '#ffba34',
-      'font.heading': '"Söhne", system-ui, sans-serif',
-      // ...
-    },
-  },
-})
+// design-system/src/tokens/colors.ts
+export const colors = {
+  // ...
+  'color.brand.primary': '#0a4d8a',
+  'color.brand.primaryHover': '#083d6e',
+}
 ```
 
-The contract doesn't change. The components don't change. The CSS variables resolve to brand-specific values at render time.
+The manifest carries the token list, so Claude sees the names a component may use. The contract doesn't change. The components don't change. The CSS variables resolve to brand-specific values at render time. Nothing about brand is configured in Throughline itself.
 
 ## Why every site needs one (eventually)
 
@@ -107,7 +102,7 @@ The contract is also discoverable at runtime: Claude calls `list_components` and
 
 ## Where to look in code
 
-- `packages/design-contract/src/schemas.ts` — `ComponentContractSchema`, `ManifestSchema`
-- `packages/design-contract/src/lint.ts` — `lintManifest`, the rules engine
+- `packages/design-system/src/contract/schema.ts` and `manifest.ts` — `ComponentContractSchema`, `ManifestSchema`
+- `packages/design-system/src/contract/lint.ts` — `lintManifest`, the rules engine
 - `packages/create-throughline/reference-ds/src/components/Hero/Hero.contract.ts` — a worked example
-- `packages/components/src/composition/validator.ts` — what gets enforced at publish time
+- `packages/throughline/src/components/validation/composition.ts` — what gets enforced at publish time

@@ -8,7 +8,7 @@ Three actors:
 
 - **Marketers / editors** — authorized humans interacting through Claude or the Payload admin
 - **Approvers** — authorized humans deciding via email links
-- **Untrusted public** — visitors to the published frontend, form submitters, anyone hitting public endpoints
+- **Untrusted public** — visitors to the published frontend, anyone hitting public endpoints
 
 Three primary protections:
 
@@ -23,21 +23,20 @@ Three primary protections:
 | Payload admin UI | Cookie-based session, signed by `PAYLOAD_SECRET` |
 | MCP endpoint (`/api/mcp`) | Bearer key from `payload-mcp-api-keys`, which `@payloadcms/plugin-mcp` brings |
 | Approval email URLs | HMAC-signed token (signed by `APPROVAL_TOKEN_SECRET`) |
-| Public form submissions | Honeypot + IP-based rate limit; no login |
-| Inngest function delivery | Payload of HMAC-signed events from Inngest |
+| Inngest function delivery (`/api/inngest`) | Requests signed by Inngest, verified with `INNGEST_SIGNING_KEY` |
 
 ### MCP API keys
 
 Keys live in `payload-mcp-api-keys`, the collection `@payloadcms/plugin-mcp` adds. Each key is bound to a person in `users` and carries one checkbox per tool. `/api/mcp` looks up `Authorization: Bearer <key>`, refuses an unknown key, and runs every tool as the person the key is bound to. That person's roles apply, and an unticked tool is denied.
 
-A key is a credential, so only admins should manage keys. The plugin doesn't enforce that by default. Older releases declared the collection with no `access` block, which meant anybody signed in. Current releases let each person manage their own keys. Narrow it to admins with `mcpApiKeyAccess` from `@forumone/throughline-core`. The scaffold does this already:
+A key is a credential, so only admins should manage keys. The plugin doesn't enforce that by default. Older releases declared the collection with no `access` block, which meant anybody signed in. Current releases let each person manage their own keys. Narrow it to admins with `mcpApiKeyAccess` from `@forumone/throughline`. The scaffold does this already:
 
 ```ts
-import { mcpApiKeyAccess } from '@forumone/throughline-core'
+import { mcpApiKeyAccess } from '@forumone/throughline'
 import { mcpPlugin } from '@payloadcms/plugin-mcp'
 
 mcpPlugin({
-  mcp: { tools: mcpTools.tools },
+  mcp: { tools: suite.mcpTools },
   overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
 })
 ```
@@ -48,38 +47,25 @@ Best practices:
 
 - One key per consumer (Claude Desktop, Claude Code, your CI bot, etc.) — easier to revoke
 - Rotate on team changes (someone leaves, a laptop is lost)
-- Scope by capability when supported (e.g., a key for read-only audit access is safe to share more broadly)
+- Untick the tools a consumer doesn't need (e.g., a key with only the audit read tools is safe to share more broadly). Every checkbox defaults to on, so a new key reaches every tool until you narrow it
 
 ### Approval tokens
 
-Each approval email contains three URLs of the shape:
+Each approval request email contains three URLs — approve, request changes, discuss — of the shape:
 
 ```
-/api/approvals/decision?token=<HMAC>&action=<approve|decline|request-changes>
+/api/approvals/action?token=<token>
 ```
 
-The token encodes `{ approvalId, userId, action }` and is HMAC-SHA256-signed with `APPROVAL_TOKEN_SECRET`. The server verifies before applying the decision. Tokens have a short expiry (default 14 days, matching the approval's expiry).
+The token encodes `approvalId:action:approverId:issuedAt` and is HMAC-SHA256-signed with `APPROVAL_TOKEN_SECRET`, so the action is inside the signature rather than a query parameter. The endpoint verifies it with a constant-time compare, shows a confirmation page, and applies the decision only on the confirming second request. A token is valid for 72 hours, well inside the approval's own expiry (7 days by default, `expirationDays`).
 
 This means:
 
 - An approver doesn't need to log in to decide — useful for non-developer reviewers
-- A leaked email URL can be replayed until the approval expires (or you rotate the secret)
-- A leaked secret invalidates every email URL in flight; rotate carefully
+- A token is single-use: the approval records it in `consumedTokens`, so a leaked URL that has been used cannot be replayed. One that hasn't been used works until it expires (or you rotate the secret)
+- Rotating the secret invalidates every email URL in flight; rotate carefully
 
-If your domain requires login-on-every-decision, the approver can also call `decide_approval` through the Approvals MCP, which uses MCP API key auth.
-
-### Form submission auth
-
-Forms are public-by-default. The framework enforces:
-
-- **Honeypot field** — a hidden field bots fill, which the server rejects. Catches dumb bots.
-- **IP rate limiting** — submissions from one IP-hash exceeding N per hour get 429'd. The IP is HMAC-hashed (using `FORMS_IP_HASH_SECRET`) so logs don't store raw IPs.
-- **Allowlisted destinations** — submissions can only deliver to destinations on the per-form allowlist. Forms can't be used as open relays.
-
-For higher-trust forms, layer:
-
-- **CAPTCHA / Turnstile** — wire in your form rendering, not in core
-- **Auth-required forms** — gate with Payload's collection-level access; the form's submit endpoint inherits
+If your domain requires login-on-every-decision, the approver can also call `respond_to_approval` through `/api/mcp`, which uses MCP API key auth.
 
 ## Authorization
 
@@ -92,9 +78,10 @@ The `users` collection has a `roles` field. Common roles:
 - **`admin`** — anything
 - **`editor`** — create/update/delete content; publish only when policy allows
 - **`approver`** — grant/decline approvals; doesn't imply edit access
-- **`form-admin`** — create/edit forms; read submissions
 
-Roles gate MCP tool access. The Components plugin's `propose_components` tool requires `admin` or `editor`; the Audit plugin's read tools require `admin`, `editor`, or `auditor` (configurable). The Forms plugin's submission-read tools require `admin` or `form-admin`.
+Roles gate some MCP tools, not all. The audit read tools give `admin` and `editor` everything and scope anyone else to their own actions. The integrations tools let `admin` and `editor` read and test, and only `admin` trigger a sync. The publishing and approvals tools refuse a call with no user, and `respond_to_approval` requires the caller to be in one of the request's approver groups and not its requester. The component tools check no role: any key whose checkbox allows them can call them. `check_slug` and the references tools take a `canUse` option for a stricter rule.
+
+Forms, and the `form-admin` role it brought, are not part of 1.0; they stay on the 0.x line (the `v0` branch).
 
 Custom roles are easy: add to the `users.roles` field options, add to the access function for whatever resources you're gating.
 
@@ -102,10 +89,10 @@ Custom roles are easy: add to the `users.roles` field options, add to the access
 
 Payload's `defaultAccess`, and many hand-written rules, treat any `req.user` as a signed-in person. In a Throughline site that is not true. The MCP key collection sets `auth.useAPIKey`, and **before Payload 3.89.0** that registered Payload's API-key strategy for every REST route. A request with `Authorization: payload-mcp-api-keys API-Key <key>` then got the *key document* as `req.user`. It has no roles, so role checks refused it. `Boolean(req.user)` didn't, so a rule like "published, or anybody signed in" served every draft to anyone holding a key, with no MCP involved.
 
-Payload 3.89.0 fixed this upstream, and every Throughline package now requires `payload@^3.89.0`. Don't rely on that alone. A site's own access layer should refuse the key principal too, so the hole stays closed even if that one upstream fix regresses. Core exports the check:
+Payload 3.89.0 fixed this upstream, and `@forumone/throughline` requires `payload@^3.89.0`. Don't rely on that alone. A site's own access layer should refuse the key principal too, so the hole stays closed even if that one upstream fix regresses. `@forumone/throughline` exports the check:
 
 ```ts
-import { isSignedIn, signedIn } from '@forumone/throughline-core'
+import { isSignedIn, signedIn } from '@forumone/throughline'
 
 // A predicate, for rules that do more than one thing:
 export const publishedOrSignedIn: Access = ({ req }) =>
@@ -131,8 +118,8 @@ The publish pipeline is the single sanctioned path to `_status: 'published'`. Se
 
 Why this matters for security:
 
-- **Claude can't ship content that fails policy.** If the brand-voice check rejects, publishing fails.
-- **Editors can't ship without approval** when the page requires it. The admin UI's "Publish" button calls the same endpoint Claude would; same gates fire.
+- **Claude can't ship content that fails policy.** If a gate rejects — composition, accessibility, an embargo, a missing approval, or a check you added — publishing fails.
+- **Editors can't ship without approval** when the page requires it. The admin UI's "Publish" button goes through the same pipeline Claude's `publish` tool does; same gates fire.
 - **A compromised MCP API key still can't bypass policy.** The attacker can edit drafts, but they can't publish anything that fails the gates.
 
 The boundary is enforced at the application layer. Database access bypasses it (anyone with `psql` can write `_status: 'published'` directly). Treat database credentials as sensitive accordingly.
@@ -144,9 +131,9 @@ The boundary is enforced at the application layer. Database access bypasses it (
 | User passwords | `users` collection (Payload-managed) | bcrypt at rest; never logged |
 | Sessions | Cookies | Signed (not encrypted) by `PAYLOAD_SECRET` |
 | MCP API keys | `payload-mcp-api-keys` collection | Encrypted with `PAYLOAD_SECRET`, plus an HMAC index for lookup (Payload's API-key fields). Rotating `PAYLOAD_SECRET` invalidates every key |
-| Integration configs | `integrations` collection | Plaintext at rest |
+| Integration configs | `integrations` collection, `config` field | Plaintext at rest; the field is readable and writable by admins only |
 | Audit log diffs | `audit-events` collection, `diff` column | Plaintext; each entry is `{ before, after }` and can hold sensitive values |
-| Approval tokens (in email URLs) | Not stored after send; signed | HMAC; verify-only |
+| Approval tokens (in email URLs) | Not stored at send; a used token is kept in the approval's `consumedTokens` | HMAC; verify-only |
 
 If your compliance posture requires field-level encryption (HIPAA, PCI), that's a Phase 2 expansion — Payload supports custom field hooks that can transparently en/decrypt values, but it's not built into Throughline.
 
@@ -163,25 +150,24 @@ What Throughline core deliberately doesn't ship:
 - **SSO / SAML / OIDC** — Payload supports these via plugins (`@payloadcms/plugin-cloud-sso`, custom auth strategies). Throughline's user/group model integrates with whatever auth you wire.
 - **Field-level encryption** — possible via Payload field hooks, not built-in.
 - **Secrets management** — the framework reads from `process.env`. For Vault / Secrets Manager / KMS integration, inject env vars from your secrets system at deploy time.
-- **DLP / content scanning** — if your domain requires scanning content before publish, write an `AccessibilityCheck` that calls your DLP service.
+- **DLP / content scanning** — if your domain requires scanning content before publish, write an `AccessibilityCheck` (from `@forumone/throughline/publishing`) that calls your DLP service.
 - **VPN / IP allowlisting on admin** — handle at the platform level (Cloudflare Access, Vercel firewalls, your VPN provider).
-- **Audit log tamper-evidence** — the audit log is a regular Postgres table. For tamper-evident logging (hash-chained, append-only), wire to a system designed for that (Datadog audit, AWS CloudTrail, internal append-only store) and write to it from the `audit/event.recorded` Inngest event.
+- **Audit log tamper-evidence** — the audit log is a regular Postgres table. For tamper-evident logging (hash-chained, append-only), wire to a system designed for that (Datadog audit, AWS CloudTrail, internal append-only store) and write to it from the `audit/event.recorded` event, with a handler in `throughline({ auditEcho: { handlers } })`.
 
 ## Reasonable defaults checklist
 
 Before going live:
 
 - [ ] All secrets are 48+ random bytes, generated with `openssl rand -base64`
-- [ ] `PAYLOAD_SECRET`, `APPROVAL_TOKEN_SECRET`, `FORMS_IP_HASH_SECRET` are different values
-- [ ] MCP API keys are scoped per-consumer, not shared
+- [ ] `PAYLOAD_SECRET` and `APPROVAL_TOKEN_SECRET` are different values
+- [ ] MCP API keys are one per consumer, not shared, with unneeded tools unticked
 - [ ] `mcpPlugin` is passed `overrideApiKeyCollection: mcpApiKeyAccess(isAdmin)`, so only admins manage keys
-- [ ] No access rule treats `Boolean(req.user)` as "signed in"; use `isSignedIn` from `@forumone/throughline-core`
+- [ ] No access rule treats `Boolean(req.user)` as "signed in"; use `isSignedIn` from `@forumone/throughline`
 - [ ] `payload` is 3.89.0 or later
 - [ ] Payload admin is behind your platform's auth/firewall (or only accessible from approved IPs)
-- [ ] Form destinations are an explicit allowlist; no wildcards
 - [ ] Database backups are configured (provider-managed for Neon/Supabase; explicit for self-hosted)
 - [ ] Resend domain is DNS-verified (SPF + DKIM + DMARC)
-- [ ] Inngest signing key is set (so spoofed events get rejected)
+- [ ] Inngest signing key is set (so spoofed calls to `/api/inngest` get rejected)
 - [ ] Vercel project's environment variables are scoped to Production only when needed (don't leak prod keys to preview deploys unless you actually want that)
 
 ## Reporting security issues

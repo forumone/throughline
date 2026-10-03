@@ -1,6 +1,6 @@
 # First Claude connection
 
-End state: Claude Desktop (or Claude Code) connected to your local Throughline server, able to list pages, draft new content, and request a publish.
+End state: Claude Desktop (or Claude Code) connected to your local Throughline server, able to read your design system, compose layouts against it, and publish or request approval for a page.
 
 Prerequisite: you've completed [Scaffolding a project](scaffolding-a-project.md) and have `pnpm dev` running.
 
@@ -11,30 +11,38 @@ One endpoint, one key, every tool: `POST /api/mcp`, served by
 
 | Tools | Capability |
 | --- | --- |
-| Components | propose components, validate compositions |
-| Publishing | publish, schedule, rollback |
-| Approvals | request, list, decide on approvals |
-| Audit | read-only queries over the audit log |
-| Forms | manage form definitions and submissions |
-| Integrations | trigger and inspect third-party integrations |
+| Components | `list_components`, `get_contract`, `get_variants`, `get_tokens`, `suggest_for_intent`, `validate_composition`, `find_anti_pattern` |
+| Publishing | `publish`, `unpublish`, `schedule_publish`, `get_publish_status`, `rollback` |
+| Approvals | `request_approval`, `respond_to_approval`, `get_approval_status`, `list_pending_approvals`, `list_my_requests` |
+| Audit | `query_audit`, `get_change_history`, `who_changed_what`, `what_changed_in_range`, `get_recent_failures` — read-only |
+| Integrations | `list_integrations`, `get_integration_status`, `trigger_sync`, `test_integration`, `list_integration_types` |
+| Job failures, fields | `list_job_failures`, `check_slug` — always on |
 
-Each plugin builds its tools at `onInit` and hands them to a collector; the host
-passes that collector's array to `mcpPlugin`. There is nothing per-server to
-configure in your client. Payload's own generic CRUD tools are available too, but
-only over collections the host opts in by naming them in `mcpPlugin`.
+That is what the scaffold's `throughline()` call turns on. A site that adds the
+`editorial` key gets `find_content_needing_attention`, `get_content_calendar`,
+`list_my_work` and `search_content`; one that adds `references` gets
+`find_references` and `can_delete`.
 
-This used to be six endpoints with six keys, on a JSON-RPC subset of the protocol
-written here. If you have a client configured that way, replace all six entries
-with the one below.
+Each plugin declares its tools to one collector while the config is built;
+`throughline()` creates that collector and the host passes it to `mcpPlugin` as
+`suite.mcpTools`. There is nothing per-server to configure in your client.
+Payload's own generic CRUD tools (`findPages`, `createPages`, `updatePages`, …)
+are available too, but only over collections the host opts in through
+`mcpPlugin`'s `collections` option — and the scaffold opts in none.
+
+In 0.x this was six endpoints with six keys, each key an env var. If you have a
+client configured that way, replace all six entries with the one below.
 
 ## Make a key
 
-Payload admin → **MCP** → **Payload MCP API Keys** → new document.
+Payload admin → **MCP** → **API Keys** → new document. In the scaffold only an
+admin can open that collection (`mcpApiKeyAccess(isAdmin)` in `payload.config.ts`).
 
-- **User** — required. The key inherits this user's access control, and every tool
-  logs it as the actor. A key saved with no user is a 500 on first use, not a 401.
+- **User** — filled in for you and not editable: a key is bound to whoever creates
+  it. It inherits that user's access control, and every tool logs that user as the
+  actor. To get a key that acts as somebody else, that person creates it.
 - **Label** — anything; it is how you will recognise the key later.
-- Tick **Enable API Key**, save, and copy the key. It is shown once.
+- Tick **Enable API Key**, save, and copy the key.
 
 ## Claude Desktop
 
@@ -96,7 +104,7 @@ authenticated and every tool was gated off. Check the **Tools** panel on the key
 document — every checkbox there should be ticked on a new key. If the panel is
 missing entirely, a server is registered *after* `mcpPlugin` in the host's plugin
 array, so its tools were declared into an array that had already been read. See
-[`throughline()`](../reference/throughline.md#throughline), which registers every plugin before handing `suite.mcpTools` to `mcpPlugin`.
+[`throughline()`](../reference/throughline.md#throughline): `suite.plugin` goes before `mcpPlugin` in `plugins`.
 
 ## Test the connection
 
@@ -106,13 +114,13 @@ Ask Claude:
 List the components available in my design system.
 ```
 
-Claude should call `propose_components` (or `list_components`, depending on the tool name in your version) and return the 12 reference components, each with its categories and a brief description. If the call fails with `401 Unauthorized`, the API key is wrong or wasn't picked up — restart your client and double-check the env var.
+Claude should call `list_components` and, with the reference design system, return its 12 components, each with a brief description. If the call fails with `401 Unauthorized`, the API key is wrong or wasn't picked up — restart your client and double-check the key in its config.
 
 ```
 Draft a homepage for a climate nonprofit. Use the Hero, Stats, and CTASection components.
 ```
 
-Claude should call `propose_components` to vet the choices and return a JSON layout that satisfies the design system's rules (correct slot fills, valid prop combinations, no anti-pattern violations).
+Claude should reach for `suggest_for_intent` or `get_contract` to pick and fill the components, then `validate_composition` to check the layout against the design system's rules (known components and variants, no forbidden neighbours, per-page limits, required siblings present) before showing it to you.
 
 ## The rest
 
@@ -121,14 +129,14 @@ tool-by-tool reference, see the [reference section](../reference/).
 
 ## Troubleshooting
 
-- **`401 Unauthorized`** — the key is wrong, disabled, or was never enabled. Check **Enable API Key** on the key document in the Payload admin. Nothing here reads a key from `.env.local`.
+- **`401 Unauthorized`** — the key is wrong, disabled, or was never enabled. Check **Enable API Key** on the key document in the Payload admin. Nothing reads a key from `.env.local`.
 - **`200` with an empty tool list** — authentication worked and per-tool gating denied everything. Look at the **Tools** panel on the key: a missing panel means a server is registered after `mcpPlugin`, and unticked boxes are just unticked boxes.
 - **One tool refused while others work** — its checkbox is off on that key. Tools default to on when a key is created, so this is somebody's choice, including a key created before that tool existed.
 - **`406 Not Acceptable`** — your `Accept` header doesn't offer `text/event-stream`.
-- **A tool you expected is missing** — the plugin that owns it wasn't given the `mcpTools` collector. Nothing errors in that case; its tools are simply absent.
+- **A tool you expected is missing** — the plugin that owns it is off: its key is not in the `throughline()` call (`editorial` and `references` are not, in the scaffold). A plugin wired by hand without the `mcpTools` collector is the same. Nothing errors in either case; its tools are simply absent.
 - **`fetch failed`** — your local server isn't running or is on a different port. Confirm `pnpm dev` is up at `http://localhost:3000`.
 - **Tools don't appear in Claude** — restart your MCP client after editing config. Many clients only read the config file at startup.
-- **Claude calls a tool but it returns "denied"** — your user doesn't have the required role. Tools that mutate content require `admin` or `editor`; approval-related tools require `approver`; form-admin tools require `form-admin`. Edit your user in the Payload admin and re-fetch the user list in Claude.
+- **Claude calls a tool and it returns an error instead of a result** — the tool refused for the key's user. The publishing tools enforce the collection's own access rules as that user. `respond_to_approval` refuses a user who is not in one of the request's approver `groups`, and anyone deciding their own request. Change the user in the Payload admin, or use a key bound to somebody else.
 
 ## Next
 

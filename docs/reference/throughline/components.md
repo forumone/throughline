@@ -29,25 +29,19 @@ Part of [`@forumone/throughline`](../throughline.md#installation), which lists t
 ## Usage
 
 ```ts
-import { buildConfig } from 'payload'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
-import { componentsPlugin } from '@forumone/throughline/components'
 import manifest from '@my-company/design-system/manifest' with { type: 'json' }
 
-const inngest = createInngestClient({ id: 'my-site' })
-
-export default buildConfig({
-  // collections, db, secret...
-  plugins: [
-    auditPlugin({ inngest }), // must come first (componentsPlugin requires audit-log)
-    componentsPlugin({
-      manifest: { type: 'object', manifest },
-      matching: { strategy: 'tfidf' },
-    }),
-  ],
+export const suite = throughline({
+  jobs: inngestJobs(inngest),
+  collections: ['pages'],
+  components: {
+    manifest: { type: 'object', manifest },
+    matching: { strategy: 'tfidf' },
+  },
 })
 ```
+
+Registered by hand instead, it goes after `auditPlugin`, which it requires, and takes `mcpTools` itself. The snippets below show the `components` key.
 
 ## Manifest sources
 
@@ -56,27 +50,27 @@ Three ways to supply the manifest:
 **Imported object** — simplest; bundle the manifest with the app.
 
 ```ts
-componentsPlugin({ manifest: { type: 'object', manifest: importedManifest } })
+components: { manifest: { type: 'object', manifest: importedManifest } }
 ```
 
 **Remote URL** — for design systems deployed independently.
 
 ```ts
-componentsPlugin({
+components: {
   manifest: {
     type: 'url',
     url: 'https://design-system.example.com/manifest.json',
     refreshInterval: 3600, // seconds; manifest is re-fetched after the TTL expires
   },
-})
+}
 ```
 
 **Payload collection** — when the manifest is admin-editable.
 
 ```ts
-componentsPlugin({
+components: {
   manifest: { type: 'payload-collection', slug: 'design-system-manifest' },
-})
+}
 ```
 
 The loader reads the most recent document by `updatedAt`, optionally filtered by `documentId`, and looks for a `data` field on it before falling back to the document itself.
@@ -86,10 +80,10 @@ The loader reads the most recent document by `updatedAt`, optionally filtered by
 The current shipping strategy is **TF-IDF**: zero external dependencies, weights `intent` more than `description`, fast enough that the first response after deploy is sub-100ms.
 
 ```ts
-componentsPlugin({
+components: {
   manifest: {/* ... */},
   matching: { strategy: 'tfidf', maxRecommendations: 5 },
-})
+}
 ```
 
 An embeddings-based matcher is on the roadmap. The matcher interface is strategy-agnostic, so swapping it in won't change the tool surface. Until then, real recommendation quality depends on contract authoring — specifically, on how vividly each `intent` field describes the component's editorial purpose.

@@ -18,16 +18,16 @@ NEXT_PUBLIC_SERVER_URL          # https://your-domain.com (or http://localhost:3
 | ------------------------ | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URI`           | From Neon / Supabase / your DB provider (or the Vercel–Neon integration's `DATABASE_URL`) | Reported by `assertEnvironment` in the scaffold                                                                       |
 | `PAYLOAD_SECRET`         | `openssl rand -base64 48`                                                                 | Reported by `assertEnvironment` in the scaffold, as is one under 32 characters                                        |
-| `NEXT_PUBLIC_SERVER_URL` | Your deployed domain                                                                      | Reported by `assertEnvironment` in the scaffold. Unchecked, webhooks, email links and the Inngest serve URL all break |
+| `NEXT_PUBLIC_SERVER_URL` | Your deployed domain                                                                      | Reported by `assertEnvironment` in the scaffold. Unchecked, approval emails cannot be built                           |
 
 `NEXT_PUBLIC_SERVER_URL` ends up in:
 
-- The `Origin` and `Host` checks Payload runs
-- Approval email action URLs (the `?token=...&action=...` link)
-- Webhook destinations' default URL roots
-- `revalidateOnPublish`'s path computation
+- Approval email action URLs (`/api/approvals/action?token=...`), unless `approvals.publicUrl` is set
+- The preview link `request_approval` attaches to a request (`/api/preview?collection=...&slug=...`), under the same fallback
 
-In local dev, `http://localhost:3000`. In production, your full HTTPS URL.
+Nothing else in the suite reads it. In local dev, `http://localhost:3000`. In production, your full HTTPS URL.
+
+The database string may also arrive under the Vercel–Neon integration's names (`DATABASE_URL`, `POSTGRES_URL` and their unpooled pair); the scaffold's `apps/web/src/lib/database.ts` lists the order it tries them in, and why `DATABASE_URI` leads. `MIGRATION_DATABASE_URL` is optional: a schema-owner credential only `pnpm migrate` uses, so the running app can connect as a role that reads and writes rows and no more.
 
 ## Inngest
 
@@ -38,18 +38,20 @@ INNGEST_SIGNING_KEY             # production: from Inngest app's Keys page
 
 In local dev with `npx inngest-cli dev`, leave both blank. The dev server discovers your endpoint without keys.
 
-In production, set both. Without them, Inngest events can't be received and workflows don't run. The Publishing pipeline still works (it doesn't depend on workflows) but downstream subscribers (email, integrations) silently don't fire.
+In production, set both. Without them, Inngest events can't be sent or received, and on an Inngest site every job in `suite.jobs` is an Inngest function: revalidation on publish, scheduled publishing, approval expiry, the approval emails, integration syncs and the healthcheck all stop. A publish itself still succeeds — the pipeline reports success when only the event fails to send — so the symptom is a published page that never revalidates and an approver who never hears about it.
+
+A site whose jobs run on Payload Jobs (`payloadJobs()` from `@forumone/throughline/jobs/payload`) needs neither variable.
 
 ## Email (Resend)
 
 ```
 RESEND_API_KEY                  # from Resend dashboard
 EMAIL_FROM_ADDRESS              # must be on a Resend-verified domain
-EMAIL_FROM_NAME                 # display name; e.g. "Acme Climate"
-EMAIL_REPLY_TO                  # optional; defaults to FROM_ADDRESS
+EMAIL_FROM_NAME                 # optional display name; falls back to the email tokens' brandName
+EMAIL_REPLY_TO                  # optional; unset, replies go to the From address
 ```
 
-`RESEND_API_KEY` and `EMAIL_FROM_ADDRESS` are declared in `emailEnv`. Without either (and without the matching `apiKey` / `fromAddress` option), the Email plugin refuses to start. A key that is set but wrong is only found on first send, when the worker fails and the audit log records `email.send-failed`.
+`RESEND_API_KEY` and `EMAIL_FROM_ADDRESS` are declared in `emailEnv`. Without either (and without the matching `apiKey` / `fromAddress` option), the Email plugin refuses to start. A key that is set but wrong is only found on first send: the notification job fails, retries, and once out of retries is recorded in `job-failures` and posted to `ERROR_WEBHOOK_URL`. See [Observability](observability.md#job-failures).
 
 ## Approval tokens
 
@@ -63,17 +65,7 @@ This signs the URLs in approval emails. If it changes after emails are sent, tho
 
 Missing or shorter than 32 characters? The Approvals plugin refuses to start. Declared in `approvalsEnv`.
 
-## Forms
-
-```
-FORMS_IP_HASH_SECRET            # 32+ chars; HMAC-SHA256 keyed
-```
-
-Generate: `openssl rand -base64 48`.
-
-The Forms plugin hashes submitter IPs (rather than storing them raw) for spam-rate-limiting. The HMAC means a hash is reversible only with this key. Treat it as a secret.
-
-Missing or shorter than 32 chars? The Forms plugin refuses to start. Declared in `formsEnv`.
+`FORMS_IP_HASH_SECRET` is not a 1.0 variable: the Forms plugin is not part of Throughline 1.0 and stays on the 0.x line (the `v0` branch).
 
 ## MCP keys are not environment variables
 
@@ -84,21 +76,14 @@ six per-server endpoints they authenticated against; if they are still in a
 An MCP key now lives in two places and neither is an env var: a row in
 `payload-mcp-api-keys`, created in the Payload admin under **MCP**, and the
 `Authorization: Bearer <key>` header in the client's own config. One key reaches
-every tool on `/api/mcp`.
+every tool on `/api/mcp` that its checkboxes allow.
 
-The one adjacent variable that remains is `PUBLISHING_SYSTEM_API_KEY`, and it is not
-an MCP key — Inngest calls the publish pipeline directly for scheduled publishes.
-See below.
-
-## System keys
-
-```
-PUBLISHING_SYSTEM_API_KEY
-```
-
-A separate API key for the scheduled-publish workflow. The `createExecuteScheduledPublishesFunction` cron calls Publishing MCP with this key, on behalf of "the system" (no human user). Treat it like the others: create in the API Keys collection with `name: 'system'`, paste here.
-
-If unset, scheduled publishes can't execute and the cron logs `unauthorized` errors.
+`PUBLISHING_SYSTEM_API_KEY` is gone too, and nothing reads it. Scheduled
+publishes run in process: `publishAtScheduledTimeJob` and its daily backstop,
+`executeScheduledPublishesJob`, call `publishScheduledThroughPipeline`, which
+publishes through the same pipeline an editor's publish does, as
+`scheduled-publish`. See [Why scheduled publishes go through the
+pipeline](../reference/throughline/jobs.md#why-scheduled-publishes-go-through-the-pipeline).
 
 ## Optional error reporting
 
@@ -106,9 +91,12 @@ If unset, scheduled publishes can't execute and the cron logs `unauthorized` err
 ERROR_WEBHOOK_URL               # where error reports are POSTed as JSON
 ```
 
-Read by `reportError` in `@forumone/throughline-core/observability`, which the
-scaffold calls from `instrumentation.ts` (unhandled request errors) and from the
-workflow failure handlers (jobs out of retries, failing healthchecks). Any URL
+Read by `reportError` in `@forumone/throughline/observability`, which the
+scaffold calls from `instrumentation.ts` (unhandled request errors), and which
+the failure handlers in `@forumone/throughline/jobs` call: the terminal-failure
+handler the scaffold's Inngest route gives every job (jobs out of retries), and
+the healthcheck handler `throughline()` gives the healthcheck by default
+(failing checks). Any URL
 that accepts a JSON POST: a log drain, an alerting endpoint, a Slack incoming
 webhook, a proxy in front of an error tracker. Each report carries a one-line
 `text`, so Slack needs nothing in between.
@@ -124,33 +112,19 @@ import. See [Observability](observability.md#error-reporting).
 BLOB_READ_WRITE_TOKEN           # Vercel Blob storage; provided by Vercel integration
 ```
 
-The scaffold's `payload.config.ts` includes a Vercel Blob storage adapter. Drop or replace if you're using S3, R2, or self-hosted storage. See Payload's storage adapter docs.
+For a Vercel Blob storage adapter, if you add one to `payload.config.ts`; drop the variable if you use S3, R2 or self-hosted storage. See Payload's storage adapter docs. `@forumone/throughline/media`'s client-upload hardening also falls back to it when it is passed no token.
 
-## Optional embeddings
+## No embeddings variable
 
-```
-VOYAGE_API_KEY                  # for the Components plugin's embedding-based intent matching
-```
-
-The Components plugin's `propose_components` tool ranks candidates by intent match. Default strategy is TF-IDF (no API key needed); for higher-quality matching, opt into embeddings:
-
-```typescript
-componentsPlugin({
-  manifest: {/* ... */},
-  matching: { strategy: 'voyage', model: 'voyage-3-lite' },
-})
-```
-
-With `strategy: 'voyage'`, you must supply `VOYAGE_API_KEY`.
+`VOYAGE_API_KEY` is read by nothing. The Components plugin's `suggest_for_intent` tool ranks candidates with TF-IDF, which needs no key, and `matching.strategy` accepts `'tfidf'` and nothing else.
 
 ## Local-dev convenience
 
 ```
-NEXT_PUBLIC_PAYLOAD_PRELOAD=true   # warms up Payload on first request
 NODE_OPTIONS=--max-old-space-size=4096   # avoids OOM on large block schemas
 ```
 
-Neither is required. Use them when local dev feels sluggish or fails on memory.
+Not required. Use it when local dev fails on memory.
 
 ## Payload CLI runner
 
@@ -196,17 +170,16 @@ without, as data, and a site checks all of it at once.
 
 ### What the plugins declare
 
-| Export                                                | Variable                | Minimum length | Used when                 |
-| ----------------------------------------------------- | ----------------------- | -------------- | ------------------------- |
-| `approvalsEnv` from `@forumone/throughline-approvals` | `APPROVAL_TOKEN_SECRET` | 32             | `tokenSecret` is omitted  |
-| `emailEnv` from `@forumone/throughline-email`         | `RESEND_API_KEY`        | —              | `apiKey` is omitted       |
-| `emailEnv`                                            | `EMAIL_FROM_ADDRESS`    | —              | `fromAddress` is omitted  |
-| `formsEnv` from `@forumone/throughline-forms`         | `FORMS_IP_HASH_SECRET`  | 32             | `ipHashSecret` is omitted |
+| Export                                                | Variable                | Minimum length | Used when                |
+| ----------------------------------------------------- | ----------------------- | -------------- | ------------------------ |
+| `approvalsEnv` from `@forumone/throughline/approvals` | `APPROVAL_TOKEN_SECRET` | 32             | `tokenSecret` is omitted |
+| `emailEnv` from `@forumone/throughline/email`         | `RESEND_API_KEY`        | —              | `apiKey` is omitted      |
+| `emailEnv`                                            | `EMAIL_FROM_ADDRESS`    | —              | `fromAddress` is omitted |
 
-No other plugin refuses to start over a variable: core, publishing, workflows,
-integrations, components and audit read nothing they require. Each entry is an
-`EnvRequirement` (`{ name, minLength?, why }`, from
-`@forumone/throughline-plugin-contract`), and the plugin's own init check is
+No other plugin refuses to start over a variable: publishing, jobs,
+integrations, components, audit, editorial and the rest read nothing they
+require. Each entry is an `EnvRequirement` (`{ name, minLength?, why }`, from
+`@forumone/throughline`), and the plugin's own init check is
 driven by the same entry, so the declaration and the check cannot drift. Each
 plugin's tests assert that — with only the declared variables set it starts,
 and without any one of them it refuses. A site that passes the value as an
@@ -214,23 +187,21 @@ option instead leaves that plugin's list out.
 
 ### `assertEnvironment`
 
-`assertEnvironment` from `@forumone/throughline-core` takes the plugins' lists
+`assertEnvironment` from `@forumone/throughline` takes the plugins' lists
 and the site's own variables, and throws one `EnvironmentError` listing every
 missing or too-short value, each with why it is needed. The scaffold calls it
 first in `apps/web/src/payload.config.ts`, at module scope, so it runs before
 any plugin can fail on its own narrower check:
 
 ```typescript
-import { assertEnvironment } from '@forumone/throughline-core'
-import { approvalsEnv } from '@forumone/throughline-approvals'
-import { emailEnv } from '@forumone/throughline-email'
-import { formsEnv } from '@forumone/throughline-forms'
+import { assertEnvironment } from '@forumone/throughline'
+import { approvalsEnv } from '@forumone/throughline/approvals'
+import { emailEnv } from '@forumone/throughline/email'
 import { databaseConnectionString } from './lib/database'
 
 assertEnvironment(
   approvalsEnv,
   emailEnv,
-  formsEnv,
   {
     name: 'PAYLOAD_SECRET',
     minLength: 32,

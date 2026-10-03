@@ -172,7 +172,7 @@ throughline({
 
 ### `@payloadcms/plugin-mcp`'s key collection
 
-`payload-mcp-api-keys` comes from Payload's plugin, which takes no group option and so lands ungrouped. Group it through the plugin's `overrideApiKeyCollection`, after `mcpApiKeyAccess`:
+`payload-mcp-api-keys` comes from Payload's plugin, which files it under its own `MCP` group and takes no group option. To move it beside the suite's collections, set it through the plugin's `overrideApiKeyCollection`, after `mcpApiKeyAccess`:
 
 ```typescript
 overrideApiKeyCollection: (collection) => {

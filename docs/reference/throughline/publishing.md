@@ -20,26 +20,19 @@ Part of [`@forumone/throughline`](../throughline.md#installation), which lists t
 ## Usage
 
 ```ts
-import { buildConfig } from 'payload'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
-import { publishingPlugin } from '@forumone/throughline/publishing'
+import { throughline } from '@forumone/throughline'
+import { inngestJobs } from '@forumone/throughline/jobs/inngest'
 
-const inngest = createInngestClient({ id: 'my-site' })
-
-export default buildConfig({
-  // collections, db, secret...
-  plugins: [
-    auditPlugin({ inngest }),
-    publishingPlugin({
-      inngest,
-      collections: [{ slug: 'pages' }],
-    }),
-  ],
+export const suite = throughline({
+  jobs: inngestJobs(inngest),
+  collections: ['pages'],
+  publishing: {
+    urls: { pages: (slug) => `/${slug}` }, // for the revalidation job
+  },
 })
 ```
 
-Publishable collections must have drafts enabled (`versions: { drafts: true }`).
+Publishable collections must have drafts enabled (`versions: { drafts: true }`). Registered by hand instead, it goes after `auditPlugin`, and takes `inngest` and `mcpTools` itself.
 
 ## Publishing from the admin
 
@@ -60,7 +53,7 @@ The Publish button is hidden on the create view: the pipeline's first step is `e
 To supply your own controls instead, either set `admin.components.edit.PublishButton` on the collection yourself (an explicit host setting always wins), or turn the feature off entirely:
 
 ```ts
-publishingPlugin({ inngest, collections: [{ slug: 'pages' }], adminComponents: false })
+throughline({ /* … */ publishing: { adminComponents: false } })
 ```
 
 With `adminComponents: false` the admin has **no** working publish path until you supply one — the native buttons will still be rejected by the hook.
@@ -78,26 +71,18 @@ it.
 
 ### Serving these tools through Payload's MCP plugin
 
-Payload ships `@payloadcms/plugin-mcp` — the official MCP SDK, streamable HTTP, sessions, and per-key per-tool capability checkboxes an admin can see and change. It is now the only way these tools reach a client:
+Payload ships `@payloadcms/plugin-mcp` — the official MCP SDK, streamable HTTP, sessions, and per-key per-tool capability checkboxes an admin can see and change. It is the only way these tools reach a client:
 
 ```ts
-import { createMcpToolCollector } from '@forumone/throughline'
-import { mcpPlugin } from '@payloadcms/plugin-mcp'
-
-const mcpTools = createMcpToolCollector()
-
 plugins: [
-  auditPlugin({ inngest }),
-  publishingPlugin({ inngest, collections: [{ slug: 'pages' }], mcpTools }),
-  mcpPlugin({ mcp: { tools: mcpTools.tools } }),
+  suite.plugin,
+  mcpPlugin({ mcp: { tools: suite.mcpTools }, overrideApiKeyCollection: mcpApiKeyAccess(isAdmin) }),
 ]
 ```
 
-Every handler here is built at `onInit`, because every one closes over `payload`; `mcpPlugin` takes its tools as a config option. The collector bridges that in two steps: this plugin **declares** its tools' names and descriptions as the config is built — which is when `mcpPlugin` reads the array to generate one per-key checkbox per tool — and **binds** the handlers at `onInit`, which is still before any request. Hand over `mcpTools.tools` itself rather than a copy.
+Every handler here is built at `onInit`, because every one closes over `payload`; `mcpPlugin` takes its tools as a config option. The collector `throughline()` builds bridges that in two steps: this plugin **declares** its tools' names and descriptions as the config is built — which is when `mcpPlugin` reads the array to generate one per-key checkbox per tool — and **binds** the handlers at `onInit`, which is still before any request. Hand over `suite.mcpTools` itself rather than a copy.
 
-**`publishingPlugin` must come before `mcpPlugin` in that array.** Declaring after it has been read means no checkboxes, and a tool with no checkbox is denied to every key with no error anywhere.
-
-Omit `mcpTools` and this plugin's tools are unreachable — there is no per-server endpoint left as a fallback, and nothing errors, because from Payload's side nothing is misconfigured. The admin controls, the trust boundary and `publishDocument` all still work.
+**`suite.plugin` must come before `mcpPlugin` in that array.** Declaring after it has been read means no checkboxes, and a tool with no checkbox is denied to every key with no error anywhere.
 
 One thing does not survive the move: `plugin-mcp` resolves a key to its linked user and does not carry the key document forward, so the calling key's _name_ is not recoverable. Audit rows record the strategy instead, or a name the host passes as `apiKeyName`.
 

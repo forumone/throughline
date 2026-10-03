@@ -24,7 +24,7 @@ that throws. The collection is `audit-events`; the table is `audit_events`.
 That "MCP tool call" is the shape of the whole thing, and explains the columns.
 `mcpServer` and `mcpTool` are `NOT NULL`, so every row answers "which tool did
 this" — which also means a code path that is not a tool has nowhere to write
-without borrowing a server's name. The one cron that writes here does exactly
+without borrowing a server's name. The one job that writes here does exactly
 that (`expire-stale-approvals` writes as `approvals`/`expire-stale-approvals`),
 because expiring an approval is an approval action and has an owning server.
 
@@ -42,7 +42,7 @@ below needs the second:
 | `actor.type` | `actor_type` | `'user' \| 'system' \| 'integration'`, `NOT NULL` |
 | `actor.userId` | `actor_user_id` | `varchar`, not a foreign key |
 | `actor.userName` | `actor_user_name` | |
-| `actor.apiKeyName` | `actor_api_key_name` | `'mcp-api-key'` for a key-authenticated call; `'workflow:<id>'` for a cron |
+| `actor.apiKeyName` | `actor_api_key_name` | `'mcp-api-key'` for a key-authenticated call; `'workflow:expire-stale-approvals'` for the expiry job; `'scheduled-publish'` for a scheduled publish; `'action-token'` for an email link; `'integration:<id>'` for a sync |
 | `actor.apiKeyId` | `actor_api_key_id` | |
 | `actor.sessionId` | `actor_session_id` | Would group one conversation's writes. **Always NULL today** — `McpToolContext.sessionId` exists and nothing on the request path sets it |
 | `action` | `action` | `enum_audit_events_action`, `NOT NULL` — the list below |
@@ -81,37 +81,40 @@ The action list is a taxonomy, not an inventory, and the difference is what
 | `design.validate` | `components/tools/validate-composition.ts` |
 | `design.find_anti_pattern` | `components/tools/find-anti-pattern.ts` |
 | `design.list` / `design.get_contract` | **nothing.** `list_components`, `get_contract`, `get_variants` and `get_tokens` write no row |
-| `publishing.publish` / `.unpublish` | `publishing/service.ts` |
-| `publishing.schedule` / `.rollback` | those two tools |
+| `publishing.publish` / `.unpublish` / `.schedule` | `publishing/service.ts` — scheduling and unscheduling both write `.schedule` |
+| `publishing.rollback` | `publishing/tools/rollback.ts` |
 | `publishing.draft` | **nothing** |
 | `approval.requested` | `approvals/tools/request-approval.ts` |
-| `approval.granted` / `.declined` / `.changes_requested` / `.discussed` | `approvals/tools/respond-to-approval.ts` and the email-action endpoint |
-| `approval.expired` | `workflows/expire-stale-approvals.ts` — the one cron that writes here |
-| `form.created` / `.updated` | the three forms write tools |
-| `form.submission_received` | **nothing.** `forms/submit/endpoint.ts` writes no audit row at all; the record of a submission is the document it creates in the submissions collection, plus the Inngest fan-out |
+| `approval.granted` / `.declined` / `.changes_requested` / `.discussed` | `approvals/tools/respond-to-approval.ts` and the email-action endpoint, `approvals/endpoints/action.ts` |
+| `approval.expired` | `approvals/jobs/expire-stale-approvals.ts` — the one job that writes here |
+| `form.created` / `.updated` / `.submission_received` | **nothing.** Forms is not part of 1.0; the values stay in the enum so a database migrated under 0.x keeps its rows |
 | `integration.synced` / `.failed` | `integrations/plugin.ts` and the webhook integration, with the failure message |
-| `system.error` | **every tool in every server, when its handler throws.** See below |
+| `system.error` | **every tool in the publishing, approvals, components, audit and integrations servers, when its handler throws.** See below |
 | `system.healthcheck` | **nothing.** The healthcheck's failures go to `onFailure` — see Healthchecks |
 
-Nine of the twenty-seven actions have no writer — ten before this commit gave
-`system.error` one. That gap is the difference
+Eleven of the twenty-seven actions have no writer. That gap is the difference
 between a taxonomy and an inventory and the reason this table exists. The four
 `content.*` ones are the ones to understand: `@payloadcms/plugin-mcp` generates
 find/create/update/delete tools from a host's field configs, and those are the
 plugin's own — they do not pass through this suite's adapter and they write no
 audit row. A host that enables them by passing `collections` to `mcpPlugin` is
-giving an agent write access to content with no audit trail. `apps/web` passes
-none, so none are registered, which is why nothing is missing there yet.
+giving an agent write access to content with no audit trail. The scaffold passes
+none, so none are registered.
 
-So, positively: publishes, approvals, integration syncs and failures, form
-definition changes, three of the seven design queries, and every tool crash.
-Not: generic CRUD, frontend requests, form submissions, or healthcheck results.
+So, positively: publishes, approvals, integration syncs and failures, three of
+the seven design queries, and tool crashes in five servers. Not: generic CRUD,
+frontend requests, or healthcheck results.
+
+Paths in this section are under `packages/throughline/src/`.
 
 ### `system.error`
 
-`core/src/mcp/payload-mcp.ts` wraps every tool handler the suite serves —
-every server, including the four design queries and the five audit reads that
-write no row of their own. When one throws, the throw
+`mcp/payload-mcp.ts` wraps every tool handler the suite serves, and records a
+crash for every server that hands the collector an audit writer: publishing,
+approvals, components, audit and integrations — including the four design
+queries and the five audit reads that write no row of their own. The editorial,
+references, `check_slug` and `list_job_failures` tools are added without one, so
+a crash there is logged and not recorded. When a recorded tool throws, the throw
 still propagates, because the MCP client needs the JSON-RPC error, and a row is
 written first:
 
@@ -126,27 +129,28 @@ actor         whoever called, and their `_meta` prompt and reasoning
 
 Three things it deliberately does not record: the stack, because
 `error_message` is readable by every admin and editor and a stack names file
-paths; the tool's arguments, because a tool's input can carry a draft body or a
-form submission; and anything at all when the recording itself fails, which is
+paths; the tool's arguments, because a tool's input can carry a draft body; and anything at all when the recording itself fails, which is
 logged and swallowed so this wrapper can never replace a tool's real error with
 its own.
 
 `mcpServer` comes from a map, not from the server's own name — the components
 server declares itself `components` and the enum value is `component`. See
-`core/src/mcp/audit-server.ts`; adding a server without a name in that map is a
-boot-time refusal rather than a silently dropped row.
+`mcp/audit-server.ts`; adding a server with an audit writer but without a name
+in that map is a boot-time refusal rather than a silently dropped row.
 
 **This is not an error tracker.** Nothing reads `audit_events` for alerting:
 the only consumers are the five read-side MCP tools and whoever runs the SQL
 below, i.e. a human who already suspects something. It records crashes for the
-person investigating one. Paging is the host's job — in `apps/web` that is
+person investigating one. Paging is the host's job — in the scaffold that is
 `instrumentation.ts`.
 
 ### Common queries via the Audit MCP
 
-The five read tools are `query_audit`, `get_change_history`,
-`who_changed_what`, `what_changed_in_range` and `get_recent_failures`. All five
-are admin/editor only.
+The five read tools come with `auditQuery` in `throughline()`:
+`query_audit`, `get_change_history`, `who_changed_what`,
+`what_changed_in_range` and `get_recent_failures`. Admins and editors read
+everything; anyone else is scoped to their own actions, and the broad-scope
+tools refuse them. See [Audit queries](../reference/throughline/audit.md#access-control).
 
 ```
 Show me the recent audit events for the About us page.
@@ -178,26 +182,29 @@ values are exactly the list above.
 ### What's NOT in the audit log
 
 - Frontend page renders (use platform analytics)
-- Read operations, except `content.find` and the `design.*` reads
-- Anything that did not come through an MCP tool — a REST or Local API write,
-  the admin UI, a migration, a seed script
-- Form submissions (see the table above)
+- Read operations, except the three `design.*` queries above
+- Anything that did not come through an MCP tool or the publish pipeline — a
+  REST or Local API write, an ordinary admin save, a migration, a seed script.
+  The admin's Publish, Unpublish and Schedule buttons do go through the
+  pipeline, and are recorded
 - Healthcheck results (see the table above) — failing ones are in
   [job failures](#job-failures)
-- Workflows that ran out of retries — [job failures](#job-failures)
+- Jobs that ran out of retries — [job failures](#job-failures)
 - Inngest function internal step state (use the Inngest dashboard)
 - HTTP request logs (use platform logs)
 
 ### Retention
 
-By default, audit rows live forever. For high-volume sites, write a cron to age
-out:
+By default, audit rows live forever. For high-volume sites, write a job to age
+out, and serve it beside `suite.jobs`:
 
 ```typescript
-inngest.createFunction(
-  { id: 'audit-log-retention' },
-  { cron: '0 3 * * *' }, // 3am daily
-  async ({ step }) => {
+import { defineJob, jobPayload } from '@forumone/throughline/jobs'
+
+export const auditRetention = defineJob(
+  { id: 'audit-log-retention', on: { cron: '0 3 * * *' } }, // 3am daily
+  async ({ step, payload: fromRunner }) => {
+    const payload = jobPayload(undefined, fromRunner, 'audit-log-retention')
     await step.run('delete-old', async () => {
       await payload.delete({
         collection: 'audit-events',
@@ -216,31 +223,31 @@ cases may want longer.
 
 ## Job failures
 
-`jobFailuresPlugin` (from `@forumone/throughline-core/observability`) adds a
+`jobFailuresPlugin` (from `@forumone/throughline/observability`) adds a
 `job-failures` collection: one row per background job that ran out of retries,
-and one per healthcheck run with a failing check. The scaffold registers it.
-Admins read it in the admin; nobody can create, edit or delete a row through
-the admin or REST — the writer uses the Local API.
+and one per healthcheck run with a failing check. `throughline()` always
+registers it. Admins read it in the admin, or through the `list_job_failures`
+MCP tool; nobody can create, edit or delete a row through the admin or REST —
+the writer uses the Local API.
 
-Rows are written by the two handlers in `@forumone/throughline-workflows`:
+Rows are written by the two handlers in `@forumone/throughline/jobs`, and a
+`throughline()` site gets both without naming either per job. The jobs adapter
+gives every job in `suite.jobs` the terminal-failure handler — the scaffold's
+`app/api/inngest/route.ts`:
 
 ```typescript
-import {
-  createHealthcheckFailureHandler,
-  createTerminalFailureHandler,
-} from '@forumone/throughline-workflows'
+import { createTerminalFailureHandler } from '@forumone/throughline/jobs'
+import { inngestJobs } from '@forumone/throughline/jobs/inngest'
 
-const onTerminalFailure = createTerminalFailureHandler({ payload })
+const jobs = inngestJobs(inngest, { onFailure: createTerminalFailureHandler({ payload }), payload })
 
-createExpireStaleApprovalsFunction({ inngest, payload, onTerminalFailure })
-createHealthcheckFunction({
-  inngest,
-  payload,
-  checks: [createPayloadReachableCheck()],
-  onFailure: createHealthcheckFailureHandler({ payload }),
-  onTerminalFailure,
-})
+export const { GET, POST, PUT } = serve({ client: inngest, functions: jobs.functions(suite.jobs) })
 ```
+
+On Payload Jobs it is `payloadJobs({ onFailure: createTerminalFailureHandler({ payload }) })`.
+And `throughline({ healthcheck: { checks } })` defaults the healthcheck's
+`onFailure` to `createHealthcheckFailureHandler()`, which writes to the
+Payload the run was given.
 
 Each failure goes to three places, in this order, and each works without the
 others:
@@ -260,9 +267,11 @@ log rather than lost.
 
 `createTerminalFailureHandler` works as the `onFailure` of any Inngest
 function, not just this suite's — it reads `function_id`, `run_id` and the
-triggering event's name from Inngest's `function.failed` payload. The
-functions the email, forms and integrations plugins build are not given it by
-the scaffold; pass it to those yourself if you build them yourself.
+triggering event's name from Inngest's `function.failed` payload. Every job in
+`suite.jobs`, the approval emails and each integration's jobs included, gets it
+from the adapter. A site's own functions get it the same way if they go through
+`jobs.functions(...)`; one built with `inngest.createFunction` directly needs it
+passed by hand.
 
 ### Why not the audit log
 
@@ -281,7 +290,7 @@ audit rows are kept indefinitely.
 | --- | --- | --- |
 | `createdAt` | `created_at` | When the failure was reported |
 | `kind` | `kind` | `enum_job_failures_kind`: `'job' \| 'healthcheck'` |
-| `source` | `source` | The Inngest function id, or the healthcheck's id |
+| `source` | `source` | The job's id (its Inngest function id, on Inngest), or the healthcheck's id |
 | `summary` | `summary` | `[environment] kind: message — source` |
 | `message` | `message` | The error's message; for a healthcheck, the failing check names |
 | `errorName` | `error_name` | `TypeError`, etc. |
@@ -308,7 +317,7 @@ and can be much shorter.
 
 ## Error reporting
 
-`@forumone/throughline-core/observability` posts error reports to a webhook:
+`@forumone/throughline/observability` posts error reports to a webhook:
 `ERROR_WEBHOOK_URL`, or the `url` you pass to `createErrorReporter`. Which
 error tracker a site uses is the site's choice, so this does not pick one —
 the receiver can be a log drain, an alerting endpoint, a Slack incoming
@@ -317,13 +326,13 @@ webhook, or a small proxy in front of Sentry.
 Every report is JSON with a one-line `text` added (`[production] job: … —
 expire-stale-approvals`), which is what makes a plain Slack webhook work; other
 receivers ignore it. Three kinds are sent: `request` (from `onRequestError`),
-`job` and `healthcheck` (from the workflow handlers above).
+`job` and `healthcheck` (from the failure handlers above).
 
 The scaffold wires the request half in `apps/web/src/instrumentation.ts`:
 
 ```typescript
 import type { Instrumentation } from 'next'
-import { buildRequestErrorReport, reportError } from '@forumone/throughline-core/observability'
+import { buildRequestErrorReport, reportError } from '@forumone/throughline/observability'
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
   const report = buildRequestErrorReport(error, request, context)
@@ -349,14 +358,16 @@ Rules the reporter keeps:
   `register()` warns when reports are going nowhere.
 
 To authenticate to the receiver, `createErrorReporter({ webhookHeaders: {
-authorization: '…' } })` and pass that reporter as the workflow handlers'
-`report` option.
+authorization: '…' } })` and pass that reporter as the failure handlers'
+`report` option. For the healthcheck that means passing your own
+`onFailure: createHealthcheckFailureHandler({ report })` in
+`throughline({ healthcheck })`.
 
 ## Inngest dashboard
 
-Every workflow run shows up here. Filter by:
+Every job run shows up here. Filter by:
 
-- **Function** — `notify-approval-request`, `pagestore-sync-published`, etc.
+- **Function** — `notify-approval-request`, `expire-stale-approvals`, etc.
 - **Status** — running / completed / failed / cancelled
 - **Time range** — last hour / day / week
 - **Event** — every run is associated with the event that triggered it
@@ -370,10 +381,10 @@ Practical patterns:
 - **Per-incident triage**: filter to a specific function and time window when investigating
 - **Trend watching**: the dashboard's metrics view shows function call rates and error rates over time — alert on sudden changes
 
-The dashboard is the source of truth for "did this workflow actually run?".
+The dashboard is the source of truth for "did this job actually run?".
 A run that ran out of retries is also in [job failures](#job-failures) if the
-function was given `createTerminalFailureHandler` — a successful run is
-recorded nowhere else.
+function was given `createTerminalFailureHandler` — every `suite.jobs` job is —
+and a successful run is recorded nowhere else.
 
 ## Resend delivery logs
 
@@ -400,7 +411,7 @@ A reasonable starting set, with where the signal actually comes from today:
 | Tool crash rate | Audit log — `system.error` | any, in a quiet system |
 | Email send failure rate | Resend dashboard | any send-failed in the last hour |
 | Inngest function failure rate | Inngest dashboard | any function with >1% error rate over 1 hour |
-| Workflows out of retries | `job-failures`, and the error webhook | any |
+| Jobs out of retries | `job-failures`, and the error webhook | any |
 | Healthcheck failures | `job-failures` (`kind = 'healthcheck'`), and the error webhook | any check failing for >2 consecutive runs |
 | Unhandled request errors | The error webhook, from `instrumentation.ts` | a burst |
 | Approval expiry rate | Audit log — `approval.expired` | a spike, meaning approvers aren't responsive |
@@ -411,8 +422,9 @@ and the webhook rows need nothing else.
 
 ## Healthchecks
 
-The Workflows package's `createHealthcheckFunction` runs registered checks on a
-cron. The framework provides two:
+`healthcheckJob` runs registered checks on a cron, and `throughline()` adds it
+to `suite.jobs` when `healthcheck` is set. `@forumone/throughline/integrations`
+provides two checks:
 
 - **`createPayloadReachableCheck(collectionSlug?)`** — confirms Payload is
   responsive by querying a collection. Defaults to `users`.
@@ -422,42 +434,44 @@ cron. The framework provides two:
 Both take positional arguments, not an options object.
 
 ```typescript
-createHealthcheckFunction({
-  inngest,
-  payload,
-  schedule: '*/15 * * * *', // the option is `schedule`, not `cron`
-  checks: [
-    createPayloadReachableCheck(),
-    createManifestReachableCheck(process.env.DS_MANIFEST_URL!),
-    {
-      name: 'redis',
-      run: async () => {
-        try {
-          await redis.ping()
-          return { ok: true }
-        } catch (e) {
-          return { ok: false, details: String(e) }
-        }
+import { createManifestReachableCheck, createPayloadReachableCheck } from '@forumone/throughline/integrations'
+
+throughline({
+  // …
+  healthcheck: {
+    schedule: '*/15 * * * *', // the default; the option is `schedule`, not `cron`
+    checks: [
+      createPayloadReachableCheck(),
+      createManifestReachableCheck(process.env.DS_MANIFEST_URL!),
+      {
+        name: 'redis',
+        run: async () => {
+          try {
+            await redis.ping()
+            return { ok: true }
+          } catch (e) {
+            return { ok: false, details: String(e) }
+          }
+        },
       },
-    },
-  ],
-  // Log, a job-failures row, and the error webhook. The default is a bare
-  // `console.error`.
-  onFailure: createHealthcheckFailureHandler({ payload }),
+    ],
+    // Omitted, `onFailure` is createHealthcheckFailureHandler(): the log, a
+    // job-failures row, and the error webhook.
+  },
 })
 ```
 
 **Failing checks do not land in the audit log.** They are passed to
 `onFailure`, once per run, with every failed check's name and details.
-`createHealthcheckFailureHandler` records them in
-[job failures](#job-failures) and reports them; without it, the default is a
-`console.error`. The `system.healthcheck` audit action exists in the enum and
-nothing writes it.
+Under `throughline()` that defaults to `createHealthcheckFailureHandler()`,
+which records them in [job failures](#job-failures) and reports them.
+`healthcheckJob` used on its own defaults to a bare `console.error`. The
+`system.healthcheck` audit action exists in the enum and nothing writes it.
 
-The function also sends a `system/healthcheck` Inngest event on every run,
+The job also sends a `system/healthcheck` event on every run,
 failures or not, so an external dashboard can watch for the *absence* of a
 heartbeat — which is the failure mode `onFailure` cannot report, because a
-function that never ran cannot call it.
+job that never ran cannot call it.
 
 ## Tracing requests
 
@@ -521,7 +535,7 @@ ORDER BY time_to_decide DESC;
 -- One conversation's writes, in order. Returns nothing today: the column is
 -- filled from `McpToolContext.sessionId`, and the adapter that builds that
 -- context from a `plugin-mcp` request does not set it. Kept because the query
--- is right and the gap is one line in `core/src/mcp/payload-mcp.ts`.
+-- is right and the gap is one line in `packages/throughline/src/mcp/payload-mcp.ts`.
 SELECT created_at, action, mcp_tool, summary, success
 FROM audit_events
 WHERE actor_session_id = '<session-id>'
@@ -533,18 +547,18 @@ operational queries SQL is faster.
 
 ## Where to look in code
 
-- `packages/core/src/audit/types.ts` — the action taxonomy. A name here is not
-  a promise that anything writes it; the table above is the inventory.
-- `packages/core/src/audit/collection.ts` — the fields, and which are required
-- `packages/core/src/audit/writer.ts` — how rows are written, and why a write
-  failure is swallowed
-- `packages/core/src/mcp/payload-mcp.ts` — the `system.error` wrapper
-- `packages/core/src/mcp/audit-server.ts` — collector server name → `mcpServer`
-- `packages/audit/src/tools/*.ts` — the five read-side MCP tools
-- `packages/workflows/src/healthcheck.ts` — the healthcheck function and its
-  two check helpers
-- `packages/core/src/observability/collection.ts` — the `job-failures` fields
-- `packages/core/src/observability/writer.ts` — report → row, and why it never throws
-- `packages/core/src/observability/report.ts` — report shapes, the header
+- `packages/throughline/src/audit/types.ts` — the action taxonomy. A name here
+  is not a promise that anything writes it; the table above is the inventory.
+- `packages/throughline/src/audit/collection.ts` — the fields, and which are required
+- `packages/throughline/src/audit/writer.ts` — how rows are written, and why a
+  write failure is swallowed
+- `packages/throughline/src/mcp/payload-mcp.ts` — the `system.error` wrapper
+- `packages/throughline/src/mcp/audit-server.ts` — collector server name → `mcpServer`
+- `packages/throughline/src/audit/query/tools/*.ts` — the five read-side MCP tools
+- `packages/throughline/src/integrations/jobs/healthcheck.ts` — the healthcheck
+  job and its two check helpers
+- `packages/throughline/src/observability/collection.ts` — the `job-failures` fields
+- `packages/throughline/src/observability/writer.ts` — report → row, and why it never throws
+- `packages/throughline/src/observability/report.ts` — report shapes, the header
   allowlist, and the webhook reporter
-- `packages/workflows/src/failure-handler.ts` — the two failure handlers
+- `packages/throughline/src/jobs/failure-handler.ts` — the two failure handlers

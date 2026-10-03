@@ -62,21 +62,19 @@ Add `Programs` to `collections` in `buildConfig`.
 ## 2. Wire publishing for the collection
 
 ```typescript
-publishingPlugin({
-  inngest,
-  collections: [
-    { slug: 'pages' },
-    { slug: 'programs' }, // <-- add
-  ],
+export const suite = throughline({
   // ...
-}),
+  collections: ['pages', 'programs'], // <-- add
+})
 ```
 
-This tells the Publishing plugin to:
+`collections` is the suite's list of governed content. It tells the publishing plugin to:
 
 - Install the `_status`-blocking hooks on `programs`
 - Register the collection's `publish` / `unpublish` / `schedule_publish` MCP tools
 - Wire the policy gates against this collection's `policy` group
+
+It also puts the collection in "Your work" and in the scheduled-publishing jobs. A collection whose SEO group is not called `seo`, or whose other field names differ, says so in `publishing.collectionOptions.programs`.
 
 ## 3. Allow Payload MCP CRUD
 
@@ -85,8 +83,8 @@ The Payload MCP plugin (`@payloadcms/plugin-mcp`) opts collections in explicitly
 ```typescript
 mcpPlugin({
   collections: {
-    pages: { operations: { find: true, create: true, update: true } },
-    programs: { operations: { find: true, create: true, update: true } }, // <-- add
+    pages: { enabled: { find: true, create: true, update: true } },
+    programs: { enabled: { find: true, create: true, update: true } }, // <-- add
   },
 }),
 ```
@@ -132,18 +130,20 @@ If your blocks come from the reference DS, you already have a renderer to plug i
 
 Two things keep the cache honest for a new collection.
 
-**Tell the publish workflow where its documents live.** `createRevalidateOnPublishFunction` has no built-in paths, so add an entry to `urlBuilders` in `apps/web/src/app/api/inngest/route.ts`:
+**Tell the revalidation job where its documents live.** It has no built-in paths, so add an entry to `publishing.urls` in `throughline()`:
 
 ```typescript
-const urlBuilders = {
-  pages: (slug: string) => (slug === 'home' ? '/' : `/${slug}`),
-  programs: (slug: string) => `/programs/${slug}`,
-}
+publishing: {
+  urls: {
+    pages: (slug: string) => (slug === 'home' ? '/' : `/${slug}`),
+    programs: (slug: string) => `/programs/${slug}`,
+  },
+},
 ```
 
 Without it, a publish drops the collection's cache tags but revalidates no page path, and the run logs a warning.
 
-**Drop its tags on every visible change.** The workflow only hears publish events. Add the tag hooks so a save, an unpublish and a delete all invalidate, using the scheme in `apps/web/src/lib/cache-tags.ts`:
+**Drop its tags on every visible change.** The job only hears publish events. Add the tag hooks so a save, an unpublish and a delete all invalidate, using the scheme in `apps/web/src/lib/cache-tags.ts`:
 
 ```typescript
 const Programs: CollectionConfig = {
@@ -164,7 +164,7 @@ const Programs: CollectionConfig = {
 pnpm --filter <your-web-app-package> payload generate:types
 ```
 
-This rewrites `apps/web/src/payload-types.ts`. The `payload` script runs the CLI through `throughline-payload`, so a hung run is killed after five minutes rather than spinning on after you give up on it; see the [core reference](../reference/throughline.md#throughline-payload-bin). Use the generated `Program` type in your route.
+This rewrites `apps/web/src/payload-types.ts`. The `payload` script runs the CLI through `throughline-payload`, so a hung run is killed after five minutes rather than spinning on after you give up on it; see [the `throughline-payload` bin](../reference/throughline.md#throughline-payload-bin). Use the generated `Program` type in your route.
 
 ## 7. Try it from Claude
 
@@ -217,7 +217,6 @@ The test also fails for collections a plugin brings. When you add a plugin, put 
 
 - Tell the audit log about this collection (it auto-records)
 - Tell the components plugin (composition validation reads the collection's blocks generically)
-- Add a Forms-related anything (forms are their own collection)
 - Edit any plugin's source
 
-The seam is configuration. New collections compose against the existing plugins by listing themselves in three places: `collections`, `publishingPlugin.collections`, and the Payload MCP allowlist. A fourth, the access bucket map, is a test rather than configuration, and it fails until you decide.
+The seam is configuration. New collections compose against the existing plugins by listing themselves in three places: `buildConfig`'s `collections`, `throughline()`'s `collections`, and the Payload MCP allowlist. A fourth, the access bucket map, is a test rather than configuration, and it fails until you decide.

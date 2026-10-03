@@ -1,35 +1,35 @@
 # Building a core plugin
 
-Every package in `@forumone/throughline-*` that extends Payload follows the same pattern. This guide shows you how to add a new plugin package so it composes cleanly with the rest of the framework.
+Every part of `@forumone/throughline` that extends Payload is a plugin on its own subpath — `/publishing`, `/approvals`, `/audit` — and follows the same pattern. This guide shows you how to add one to the package so it composes cleanly with the rest of the suite, and how `throughline()` comes to register it.
 
-The canonical reference implementation lives in `packages/plugin-contract/src/example-plugin-pattern.ts`. When in doubt, copy from there.
+Read an existing one alongside: `src/approvals/` is a complete, small example.
 
-## Package structure
+## Where it lives
 
 ```
-packages/my-plugin/
-├── src/
-│   ├── index.ts                # Main export: the plugin function + options type
-│   ├── options.ts              # Zod schema + inferred options type
-│   ├── collections/            # Payload collections the plugin injects
-│   ├── mcp/                    # MCP server implementation (if applicable)
-│   │   ├── server.ts
-│   │   ├── tools/
-│   │   └── auth.ts
-│   ├── hooks/                  # Payload hooks
-│   └── endpoints/              # Next.js API route handlers
-├── eslint.config.js            # re-exports @forumone/throughline-eslint-config
-├── package.json
-├── tsconfig.json               # extends @forumone/throughline-tsconfig/library.json
-├── README.md
-└── CHANGELOG.md                # managed by changesets
+packages/throughline/src/my-feature/
+├── index.ts                # the subpath's public surface: the plugin function + options type
+├── plugin.ts               # the plugin function
+├── options.ts              # Zod schema + inferred options type
+├── collection.ts           # Payload collections the plugin injects
+├── tools/                  # MCP tool descriptors and factories (if applicable)
+├── jobs/                   # background jobs, with defineJob (if applicable)
+└── endpoints/              # HTTP handlers of its own (if applicable)
 ```
+
+Then:
+
+- **Add the subpath** to `package.json`'s `exports`: `"./my-feature": { "types": "./dist/my-feature/index.d.ts", "default": "./dist/my-feature/index.js" }`.
+- **Import siblings by their declaring module** (`../audit/plugin.js`), never through another subpath's `index.ts`.
+- **An optional peer** the feature needs goes in `peerDependenciesMeta` as optional, is imported only from this subpath, and is listed in `src/peers.test.ts`, which fails a static import that would load it from anywhere else.
+- **Regenerate the codemod's table** with `node scripts/migrate-table.mjs`: a test fails when `src/migrate/exports.json` is behind the package's exports.
+- **Give `throughline()` a key for it**, below.
 
 ## The plugin function
 
 ```typescript
-import type { CorePlugin } from '@forumone/throughline-plugin-contract'
-import { getPluginRegistry } from '@forumone/throughline-plugin-contract'
+import type { CorePlugin } from '../plugin-contract/index.js'
+import { getPluginRegistry } from '../plugin-contract/registry.js'
 import type { MyPluginOptions } from './options.js'
 import { validateOptions } from './options.js'
 
@@ -76,8 +76,8 @@ export const myPlugin: CorePlugin<MyPluginOptions> = (options) => (incomingConfi
       validated.mcpTools?.add([myTool(payload)], { serverName: 'my-plugin' })
 
       getPluginRegistry(payload).register({
-        id: '@forumone/throughline-my-plugin',
-        version: packageJson.version,
+        id: '@forumone/throughline/my-feature',
+        version: PLUGIN_VERSION,
         capabilities: ['my-capability'],
       })
     },
@@ -92,18 +92,15 @@ Three structural rules that are non-negotiable:
 - Route prefixes for top-level endpoints MUST NOT include `/api`. Payload's API base (`config.routes.api`, default `/api`) is prepended automatically, so a `path: '/api/my-plugin/webhook'` registers at `/api/api/my-plugin/webhook`.
 - Do not serve an MCP endpoint. Declare your tools as the config is built, bind their handlers at `onInit`, and let the host serve them on one `/api/mcp`.
 - If your plugin declares a collection, accept `admin: { group }` and apply it to every collection you declare — see below.
-- Your plugin must be registered before `mcpPlugin` in the host's array. That is a requirement, not a convention: declaring after it has read the array means no checkboxes, and no checkbox means the tool is denied to every key.
+- Your plugin must be registered before `mcpPlugin` in the host's array. That is a requirement, not a convention: declaring after it has read the array means no checkboxes, and no checkbox means the tool is denied to every key. `throughline()` meets it for you, because `suite.plugin` goes before `mcpPlugin`.
 
 ## Admin sidebar group
 
 A plugin that declares a collection extends `CollectionPluginOptions` and spreads `resolveAdminGroup(options.admin)` into each collection's `admin` block. That gives every Throughline collection the same sidebar placement — the `Throughline` group by default, a host-chosen group, or ungrouped for `false` — and leaves the host no reason to reach into your collections from a late-running plugin.
 
 ```typescript
-import {
-  type BaseCorePluginOptions,
-  type CollectionPluginOptions,
-  resolveAdminGroup,
-} from '@forumone/throughline-plugin-contract'
+import type { BaseCorePluginOptions, CollectionPluginOptions } from '../plugin-contract/index.js'
+import { resolveAdminGroup } from '../plugin-contract/admin.js'
 
 export interface MyPluginOptions extends BaseCorePluginOptions, CollectionPluginOptions {
   // …
@@ -151,8 +148,8 @@ If your plugin falls back to `process.env` for something it cannot start without
 
 ```typescript
 // options.ts
-import { checkEnvValue } from '@forumone/throughline-core'
-import type { EnvRequirement } from '@forumone/throughline-plugin-contract'
+import { checkEnvValue } from '../env/index.js'
+import type { EnvRequirement } from '../plugin-contract/index.js'
 
 const SIGNING_SECRET_ENV = {
   name: 'MY_PLUGIN_SIGNING_SECRET',
@@ -186,38 +183,46 @@ The conventions:
 - **Declare only what the plugin refuses to start without.** A variable with a sensible default, or one only read on first use, is not a requirement — the site decides whether its own deployment needs it.
 - **Write `why` for the person fixing a deploy**: what the value is for and how to get one. It is printed beside the name. Never a value, or anything derived from one.
 - **Keep the init check.** It is the backstop for a site that does not call `assertEnvironment`, and because it reads the same entry, the two cannot disagree.
-- **Test that they agree.** With only the declared variables set and no options, `validateOptions` passes; with any one unset, or one character under its `minLength`, it throws. See `packages/approvals/src/env.test.ts`.
+- **Test that they agree.** With only the declared variables set and no options, `validateOptions` passes; with any one unset, or one character under its `minLength`, it throws. See `src/approvals/env.test.ts`.
 
-A site then passes your list to `assertEnvironment` from `@forumone/throughline-core` at the top of its `payload.config.ts`, with every other plugin's and its own, and gets every missing variable reported in one error. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
+A site then passes your list to `assertEnvironment` from `@forumone/throughline` at the top of its `payload.config.ts`, with every other plugin's and its own, and gets every missing variable reported in one error. See [Environment variables](../operations/environment-variables.md#checking-everything-at-startup).
 
-## MCP server endpoint
+## MCP tools
 
-Core plugins expose MCP servers as Next.js endpoints registered through Payload's `endpoints` config. This means client apps get the MCP endpoint automatically when they install the plugin — no manual route wiring.
-
-See `C5-component-server.md` and `C6-publishing-server.md` for complete reference implementations once those phases land.
+Plugins do not serve MCP. Each declares its tools into the `mcpTools` collector it is given and binds their handlers at `onInit`, as above, and the host serves every tool on one `/api/mcp` through `@payloadcms/plugin-mcp`. `throughline()` builds the collector and hands it to every plugin; `suite.mcpTools` is what the host passes to `mcpPlugin`.
 
 ## Cross-plugin dependencies
 
-Plugins that need a sibling plugin check the registry in `onInit`:
+Plugins that need a sibling check the registry in `onInit`:
 
 ```typescript
 onInit: async (payload) => {
   if (incomingConfig.onInit) await incomingConfig.onInit(payload)
   const registry = getPluginRegistry(payload)
-  registry.requireCapability('audit-log', '@forumone/throughline-publishing')
-  registry.register({ id: '@forumone/throughline-publishing', version, capabilities: ['publishing'] })
+  registry.requireCapability('audit-log', '@forumone/throughline/my-feature')
+  registry.register({ id: '@forumone/throughline/my-feature', version, capabilities: ['my-feature'] })
 }
 ```
 
-Never import another core plugin package directly — go through the registry.
+A sibling's runtime surface — the audit writer, the publishing service — is reached through its accessor (`getAuditWriter(payload)`), not by calling the sibling's plugin. The registry is internal: it is how the suite's own plugins check each other, and a site never sees it.
 
-## `package.json` conventions
+## Registering it in `throughline()`
 
-- `"type": "module"` — ESM only
-- Declare exports via the `exports` field, not `main`/`module`/`types` individually
-- Depend on `@forumone/throughline-plugin-contract` as a workspace dependency
-- Peer-depend on `payload` with a caret range matching the supported major
-- Never depend on other core plugin packages directly; use the registry
+`src/throughline.ts` is where a plugin is switched on. Add a key to `ThroughlineOptions`, typed as your options less what the suite supplies (`Omit<MyPluginOptions, Supplied>`), and push your plugin where its dependencies are already registered:
+
+```typescript
+if (options.myFeature) {
+  plugins.push(myFeaturePlugin({ ...options.myFeature, ...logger, ...adminFor(options.myFeature), mcpTools }))
+}
+```
+
+If it has jobs, add them to `suiteJobs` under the same key. Then add the key to the options table in [the reference](../reference/throughline.md#throughline-options), and a case to `src/throughline.test.ts`, which builds the whole composition with every plugin on.
+
+## Conventions
+
+- ESM only, with the `.js` suffix on relative imports
+- Never import from `apps/`, a site, or a design system: the platform does not know about the instance
+- `payload` is the one required peer; anything else is optional, and loaded only by the subpath that needs it
 
 ## Testing
 
@@ -228,8 +233,8 @@ Every plugin ships with unit tests (Vitest) covering:
 - Pure helper functions
 - Tool handlers invoked through their contract (not via HTTP)
 
-Integration tests (Playwright against `apps/playground`) verify the plugin composes correctly with Payload.
+The `Scaffold` CI job then builds a generated site against the packed package, which is the check that the plugin composes with a real Payload.
 
 ## Publishing
 
-Plugins publish on the repo's standard changesets flow. After making a change, run `pnpm changeset`, pick the affected packages, and commit the generated `.changeset/*.md` file alongside your diff. The release workflow bumps versions and publishes to npm on merge to `main`.
+A new plugin is a minor release of `@forumone/throughline`. Run `pnpm changeset`, pick `@forumone/throughline` (the other two packages follow it, at one version), and commit the generated `.changeset/*.md` file alongside your diff. The release workflow bumps versions and publishes to npm when its release PR merges.

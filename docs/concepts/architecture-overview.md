@@ -3,9 +3,9 @@
 A Throughline project is one Next.js application running Payload CMS, plus an Inngest endpoint, plus a set of MCP tool servers reached through a single MCP endpoint. There is no separate backend — everything lives in `apps/web`.
 
 "Server" here means a bounded set of tools and the plugin that owns them, not a
-port or a route. Each plugin builds its tools at `onInit` and hands them to a
-collector; the host passes that collector's array to `@payloadcms/plugin-mcp`,
-which serves all of them on one endpoint.
+port or a route. Each plugin builds its tools at `onInit` and hands them to the
+collector `throughline()` builds; the host passes `suite.mcpTools` to
+`@payloadcms/plugin-mcp`, which serves all of them on one endpoint.
 
 ## The runtime
 
@@ -24,11 +24,10 @@ which serves all of them on one endpoint.
        │                         publishing  publish / schedule / rollback
        │                         approvals   request / decide / list
        │                         audit       query change history
-       │                         forms       form definitions
+       │                         editorial   health / calendar / your work
        │                         integrations trigger / inspect
        │  /api/publishing/*    admin publish controls       │
        │  /api/approvals/action  approval link target       │
-       │  /api/forms/submit    public form post             │
        │  /api/inngest         workflow webhook             │
        │  /admin               Payload admin UI             │
        │  /(frontend)          your published site          │
@@ -54,8 +53,8 @@ Each row is a plugin's contribution to the one endpoint, not an endpoint of its 
 | **Publishing** | The trust boundary. Publishes drafts through a seven-stage policy pipeline. Direct `_status` writes through Payload MCP are blocked. |
 | **Approvals** | Manages approval workflows. Resolves approver groups to users. Issues HMAC-signed action tokens for email-based decisions. |
 | **Audit** | Read-only queries over the audit log. "Who changed what, when, and what was the result?" |
-| **Forms** | Wraps Payload's Form Builder. Adds an allowlist for destinations, spam mitigation, IP-hashed submissions. |
-| **Integrations** | A registry of `Integration` implementations (CRM, marketing automation, analytics). Each integration owns its config schema, healthcheck, and Inngest workers. |
+| **Editorial** | Content health, the content calendar, "Your work", and command-palette search. What needs attention, and what is coming up. |
+| **Integrations** | A registry of `Integration` implementations (CRM, marketing automation, analytics). Each integration owns its config fields, healthcheck, and jobs. |
 
 ## Why MCP, not REST or GraphQL
 
@@ -87,10 +86,10 @@ publishingPlugin.publish()
   ├─ writes audit event content.published
   └─ inngest.send('content/page.published')
                        │
-                       └─ workflows package handlers:
+                       └─ subscribed jobs (suite.jobs):
                           ├─ revalidate the Next.js cache
                           ├─ fan out to integrations
-                          └─ workflow X, Y, Z (added in your project)
+                          └─ job X, Y, Z (added in your project)
 ```
 
 Subscribers don't know about each other. Adding a new subscriber is `inngest.createFunction({ trigger: { event: 'content/page.published' }, ... })`. Removing one is deleting that file. See [Event-driven workflows](event-driven-workflows.md).
@@ -101,7 +100,6 @@ Throughline core is intentionally generic. It doesn't know about Forum One or an
 
 - Real collections (your content model)
 - Real groups + a real `groupResolver` (your user/SSO mapping)
-- Real allowlisted destinations (your forms can email/webhook)
 - Real integrations (your CRM, your analytics)
 - Optional brand layer on top of the reference design system, or your own DS that satisfies the same contract
 
@@ -111,13 +109,14 @@ The seam between core and project is a configuration boundary, not a fork. Upgra
 
 | Concern | File |
 | --- | --- |
-| Plugin order + wiring | `apps/web/src/payload.config.ts` |
-| Inngest functions registered | `apps/web/src/app/api/inngest/route.ts` |
-| The MCP endpoint | `POST /api/mcp`, served by `@payloadcms/plugin-mcp` — the host registers it with a collector's array, and each plugin fills that array at `onInit` |
-| Audit log records | `audit-log` collection in Payload |
+| Plugin order + wiring | `throughline()` in `apps/web/src/payload.config.ts`; the order itself is in `packages/throughline/src/throughline.ts` |
+| Jobs served | `apps/web/src/app/api/inngest/route.ts`, serving `suite.jobs` |
+| The MCP endpoint | `POST /api/mcp`, served by `@payloadcms/plugin-mcp` — the host passes it `suite.mcpTools`, and each plugin fills that array at `onInit` |
+| Audit log records | `audit-events` collection |
+| Jobs out of retries | `job-failures` collection |
 | Approval records | `approvals` collection |
 | API keys | `payload-mcp-api-keys` collection, from `@payloadcms/plugin-mcp` |
-| Design system manifest | wherever `componentsPlugin({ manifest })` points |
+| Design system manifest | wherever `throughline({ components: { manifest } })` points |
 
 ## Next reading
 

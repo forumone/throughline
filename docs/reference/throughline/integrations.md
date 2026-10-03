@@ -59,32 +59,25 @@ Part of [`@forumone/throughline`](../throughline.md#installation), which lists t
 ## Usage
 
 ```ts
-import { buildConfig } from 'payload'
-import { auditPlugin } from '@forumone/throughline/audit'
-import { createInngestClient } from '@forumone/throughline/jobs/inngest'
-import { integrationsPlugin } from '@forumone/throughline/integrations'
-
-const inngest = createInngestClient({ id: 'my-site' })
-
-export default buildConfig({
-  // collections, db, secret...
-  plugins: [auditPlugin({ inngest }), integrationsPlugin({ inngest })],
+export const suite = throughline({
+  jobs: inngestJobs(inngest),
+  collections: ['pages'],
+  integrations: {},
 })
 ```
 
 ## Adding integrations
 
 ```ts
-import { integrationsPlugin } from '@forumone/throughline/integrations'
 import { salesforceIntegration } from '@your-org/throughline-salesforce'
 
-integrationsPlugin({
-  inngest,
-  integrations: [salesforceIntegration],
+throughline({
+  // …
+  integrations: { integrations: [salesforceIntegration] },
 })
 ```
 
-The webhook integration is registered automatically. Additional integrations are appended; duplicate ids throw at plugin init.
+The webhook integration is registered automatically. Additional integrations are appended; duplicate ids throw at plugin init. Each one's `createJobs` lands in `suite.jobs`. See [Adding an integration](../../guides/adding-an-integration.md).
 
 ## Reporting a run's status
 

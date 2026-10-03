@@ -248,8 +248,7 @@ publish: async ({ collection, id, reasoning }) => {
 }
 ```
 
-Injected rather than built in because this package depends on `core` alone, and the
-service lives in the publishing package.
+Injected rather than built in so a site can publish a due document some other way; the default, `publishScheduledThroughPipeline`, is what `throughline()` passes.
 
 It used to `fetch` `POST /api/publishing/mcp` with a bearer key from
 `PUBLISHING_SYSTEM_API_KEY`. That endpoint is gone — one `/api/mcp` replaced the six

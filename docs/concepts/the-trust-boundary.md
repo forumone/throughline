@@ -75,9 +75,9 @@ inngest.send('content/page.published', {
 })
 ```
 
-Subscribers (the Workflows package, the Integrations registry, anything you wire) react:
+Subscribers (the suite's jobs, each integration's, anything you wire) react:
 
-- `createRevalidateOnPublishFunction` calls `revalidatePath(...)` to flush the Next.js cache
+- `revalidateOnPublishJob` calls `revalidatePath(...)` to flush the Next.js cache
 - Integrations that subscribed receive the event and do their thing (sync to a CRM, post to Slack)
 - Your custom workflows receive the event and do whatever else
 
@@ -94,10 +94,10 @@ The boundary's job is to make conversational publishing *safe*. Not to make the 
 
 ## Where to look in code
 
-- `packages/publishing/src/pipeline/*.ts` — the seven stages, one file each
-- `packages/publishing/src/tools/publish.ts` — the MCP entry point that drives the pipeline
-- `packages/core/src/audit/hooks.ts` — the `_status`-blocking hooks installed by `auditPlugin`
-- `packages/components/src/contracts/composition-validator.ts` — what "composition" means in stage 2
+- `packages/throughline/src/publishing/pipeline/steps/*.ts` — the seven stages, one file each
+- `packages/throughline/src/publishing/tools/publish.ts` — the MCP entry point that drives the pipeline
+- `packages/throughline/src/publishing/hooks/block-status-writes.ts` — the `_status`-blocking hooks installed by `publishingPlugin`
+- `packages/throughline/src/components/validation/composition.ts` — what "composition" means in stage 2
 
 ## Next reading
 
