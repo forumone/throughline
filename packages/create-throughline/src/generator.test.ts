@@ -94,6 +94,30 @@ describe('generate (with reference DS)', () => {
     expect(webJson.name).toBe('demo-web')
   })
 
+  /*
+  `@forumone/throughline`'s optional peers are optional for a site that does
+  not use the feature, and required for one that does. The scaffold turns on
+  email and runs on Inngest, so it has to install what those need: when they
+  became optional peers, the template still had them arriving as the package's
+  own dependencies, and a scaffolded site could not load its config.
+  */
+  it("installs the optional peers the scaffold's features need, at the package's ranges", async () => {
+    await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
+    const web = JSON.parse(await readFile(join(target, 'apps/web/package.json'), 'utf-8')) as {
+      dependencies: Record<string, string>
+    }
+    const throughline = JSON.parse(
+      await readFile(resolve(__dirname, '..', '..', 'throughline', 'package.json'), 'utf-8'),
+    ) as { peerDependencies: Record<string, string> }
+    for (const peer of ['inngest', 'resend', '@react-email/components', '@react-email/render']) {
+      expect(web.dependencies[peer], peer).toBeDefined()
+      expect(throughline.peerDependencies[peer], peer).toBeDefined()
+    }
+    for (const peer of ['resend', '@react-email/components', '@react-email/render']) {
+      expect(web.dependencies[peer], peer).toBe(throughline.peerDependencies[peer])
+    }
+  })
+
   it('pins every Throughline package to its current workspace version', async () => {
     await generate(makeAnswers(target), { templatesDir: TEMPLATES_DIR, skipSideEffects: true })
     const current = await readWorkspaceVersions(resolve(__dirname, '..', '..'))

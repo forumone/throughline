@@ -1,0 +1,138 @@
+name: Scaffold
+
+# Generates a site from this checkout's create-throughline, installed against
+# this checkout's @forumone/throughline and @forumone/throughline-design-system,
+# and holds it to the gates the scaffold's own CI runs: the `fast` tier, then
+# the `verify` tier's migration, production build and smoke pack. What a person
+# gets from `pnpm create` has to build, and nothing else here checks that it
+# does: the scaffolder's unit tests read the template as text.
+#
+# Its own workflow, so it can run only when what it exercises changes. A full
+# Next install, a Postgres service and a production build are minutes a pull
+# request about something else should not spend.
+
+on:
+  pull_request:
+    paths:
+      - 'packages/throughline/**'
+      - 'packages/design-system/**'
+      - 'packages/create-throughline/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/scaffold.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: scaffold-${{ github.ref }}
+  cancel-in-progress: true
+
+# What the scaffold's payload.config.ts checks at load, as its own CI sets them:
+# placeholders, never a real value.
+env:
+  DATABASE_URI: postgres://ci:ci@localhost:5432/ci
+  PAYLOAD_SECRET: ci-placeholder-not-a-secret-000000000000
+  APPROVAL_TOKEN_SECRET: ci-placeholder-not-a-secret-000000000000
+  RESEND_API_KEY: re_ci_placeholder
+  EMAIL_FROM_ADDRESS: ci@example.com
+  NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v4
+
+      # The scaffold's CI runs Node 22.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the packages a site installs, and the scaffolder
+        run: >-
+          pnpm turbo run build
+          --filter=@forumone/throughline
+          --filter=@forumone/throughline-design-system
+          --filter=@forumone/create-throughline
+
+      - name: Pack them, as npm would serve them
+        run: |
+          mkdir -p "$RUNNER_TEMP/tarballs"
+          pnpm --filter @forumone/throughline pack --pack-destination "$RUNNER_TEMP/tarballs"
+          pnpm --filter @forumone/throughline-design-system pack --pack-destination "$RUNNER_TEMP/tarballs"
+
+      - name: Generate a site
+        run: node packages/create-throughline/scripts/scaffold-site.mjs "$RUNNER_TEMP/site" "$RUNNER_TEMP/tarballs"
+
+      # A new project has no lockfile yet, so this is the one install here that
+      # is not frozen.
+      - name: Install the site
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm install
+
+      - name: Its first run, as the post-install steps list it
+        run: bash packages/create-throughline/scripts/scaffold-first-run.sh "$RUNNER_TEMP/site"
+
+      # The scaffold's own `fast` tier.
+      - name: Typecheck
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm typecheck
+      - name: Lint
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm lint
+      - name: Check singletons resolve once
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm check:instances
+      - name: Check every package that ships code has tests
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm check:tested
+      - name: Validate the design-system manifest
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm validate
+      - name: Check generated Payload artifacts are current
+        working-directory: ${{ runner.temp }}/site
+        run: bash .github/scripts/check-generated.sh
+      - name: Test
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm test
+
+      # And its `verify` tier, from an empty database: the first migration a
+      # person creates, then the production build and the smoke pack on it.
+      - name: Create and apply the first migration
+        working-directory: ${{ runner.temp }}/site
+        run: |
+          pnpm --dir apps/web migrate:create initial
+          pnpm check:migrations
+          pnpm --dir apps/web migrate
+      - name: Build
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm build
+      - name: Install Chromium for the smoke pack
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm --dir apps/web test:smoke:install
+      - name: Smoke test
+        working-directory: ${{ runner.temp }}/site
+        run: pnpm --dir apps/web test:smoke

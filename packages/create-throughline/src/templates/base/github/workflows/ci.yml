@@ -75,6 +75,13 @@ jobs:
       - name: Validate the design-system manifest
         run: pnpm validate
 
+      # payload.config.ts imports the design system's built manifest, and the
+      # Payload commands below load the config outside turbo, which would
+      # otherwise have built it first. A placeholder design system has nothing
+      # to build.
+      - name: Build the design system
+        run: pnpm --filter ./design-system run --if-present build
+
       - name: Check generated Payload artifacts are current
         run: bash .github/scripts/check-generated.sh
 
@@ -120,6 +127,13 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      # payload.config.ts imports the design system's built manifest, and the
+      # Payload commands below load the config outside turbo, which would
+      # otherwise have built it first. A placeholder design system has nothing
+      # to build.
+      - name: Build the design system
+        run: pnpm --filter ./design-system run --if-present build
 
       # A fresh database, migrated exactly as a deploy would migrate it. A
       # migration that does not apply cleanly from empty fails here rather than

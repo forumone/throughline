@@ -38,6 +38,13 @@ export function printNextSteps(answers: Answers): void {
   lines.push(`       ${pc.dim('openssl rand -base64 48  # PAYLOAD_SECRET')}`)
   lines.push(`       ${pc.dim('openssl rand -base64 48  # APPROVAL_TOKEN_SECRET')}`)
 
+  // The config imports the design system's built manifest, and every Payload
+  // command below loads the config. `pnpm dev` builds it too, but runs last.
+  if (answers.useReferenceDs) {
+    lines.push(formatStep(step++, 'Build the design system, which the Payload config reads:'))
+    lines.push(`       ${pc.dim('pnpm --filter ./design-system build')}`)
+  }
+
   // `push: false`: the schema exists only once a migration has created it.
   lines.push(formatStep(step++, 'Create and apply the first migration:'))
   lines.push(`       ${pc.dim('pnpm --dir apps/web migrate:create initial')}`)
