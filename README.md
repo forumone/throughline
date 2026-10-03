@@ -1,5 +1,7 @@
 # @forumone/throughline
 
+> **This is the closed 0.x line.** It releases nothing more. Throughline 1.0 is on `main`, published as `@forumone/throughline`, `@forumone/throughline-design-system` and `@forumone/create-throughline`; [Upgrading from 0.x](https://github.com/forumone/throughline/blob/main/docs/guides/upgrading.md) moves a site onto it.
+
 A conversational content management framework. Exposes Payload CMS as a set of MCP servers so marketers can operate websites through Claude rather than a traditional admin UI.
 
 ## Documentation
