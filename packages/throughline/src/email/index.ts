@@ -1,3 +1,8 @@
+/**
+ * `@forumone/throughline/email`: the email plugin and its Resend client, brand
+ * tokens, the three approval notifications as jobs, and their React Email
+ * templates. Was `@forumone/throughline-email` (and its `/templates`) in 0.x.
+ */
 export { emailJobs, emailPlugin, getEmailClient, getEmailFunctions } from './plugin.js'
 
 export { createEmailClient } from './client.js'
@@ -12,7 +17,7 @@ export type {
 export { defaultTokens, mergeTokens } from './tokens.js'
 export type { EmailBrandTokens } from './tokens.js'
 
-export { DEFAULT_APPROVALS_COLLECTION_SLUG, emailEnv, validateOptions } from './options.js'
+export { emailEnv } from './options.js'
 export type {
   ApprovalActionKind,
   BuildActionUrlArgs,
@@ -22,9 +27,6 @@ export type {
 } from './options.js'
 
 export {
-  createNotifyApprovalRequestFunction,
-  createNotifyApprovalDecisionFunction,
-  createNotifyApprovalExpiredFunction,
   notifyApprovalRequestJob,
   notifyApprovalDecisionJob,
   notifyApprovalExpiredJob,

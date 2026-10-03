@@ -1,7 +1,7 @@
-import { checkEnvValue } from '@forumone/throughline'
+import { checkEnvValue } from '../index.js'
 import type { Inngest } from 'inngest'
-import type { WorkflowFailureHandler } from '@forumone/throughline/jobs'
-import type { BaseCorePluginOptions, EnvRequirement } from '@forumone/throughline'
+import type { WorkflowFailureHandler } from '../jobs/index.js'
+import type { BaseCorePluginOptions, EnvRequirement } from '../index.js'
 import type { EmailBrandTokens } from './tokens.js'
 
 export type ApprovalActionKind = 'approve' | 'decline' | 'changes' | 'discuss'
@@ -76,8 +76,6 @@ export interface EmailPluginOptions extends BaseCorePluginOptions {
     approvalId: string
   }) => Promise<string>
 }
-
-export const DEFAULT_APPROVALS_COLLECTION_SLUG = 'approvals'
 
 const API_KEY_ENV = {
   name: 'RESEND_API_KEY',

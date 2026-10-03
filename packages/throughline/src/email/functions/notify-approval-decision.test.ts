@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createNotifyApprovalDecisionFunction } from './notify-approval-decision.js'
-import {
-  createFakeEmailClient,
-  createFakeInngest,
-  createFakePayload,
-} from './_test-helpers.js'
+import { notifyApprovalDecisionJob } from './notify-approval-decision.js'
+import { createFakeEmailClient, createFakeInngest, createFakePayload, notifyFunction } from './_test-helpers.js'
 import { defaultTokens } from '../tokens.js'
 import type { EmailPluginOptions } from '../options.js'
 
@@ -29,12 +25,12 @@ function makeOptions(overrides: Partial<EmailPluginOptions> = {}): EmailPluginOp
   }
 }
 
-describe('createNotifyApprovalDecisionFunction', () => {
+describe('notifyApprovalDecisionJob', () => {
   it('subscribes to notification/send-approval-decision', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({ 'a-1': baseApproval })
     const client = createFakeEmailClient()
-    createNotifyApprovalDecisionFunction({
+    notifyFunction(notifyApprovalDecisionJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -53,7 +49,7 @@ describe('createNotifyApprovalDecisionFunction', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({ 'a-1': baseApproval })
     const client = createFakeEmailClient()
-    createNotifyApprovalDecisionFunction({
+    notifyFunction(notifyApprovalDecisionJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -72,7 +68,7 @@ describe('createNotifyApprovalDecisionFunction', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({ 'a-1': baseApproval })
     const client = createFakeEmailClient()
-    createNotifyApprovalDecisionFunction({
+    notifyFunction(notifyApprovalDecisionJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -90,7 +86,7 @@ describe('createNotifyApprovalDecisionFunction', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({ 'a-1': baseApproval })
     const client = createFakeEmailClient()
-    createNotifyApprovalDecisionFunction({
+    notifyFunction(notifyApprovalDecisionJob, {
       inngest: fake.inngest,
       payload,
       client,

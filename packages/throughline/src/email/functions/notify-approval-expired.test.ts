@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createNotifyApprovalExpiredFunction } from './notify-approval-expired.js'
-import {
-  createFakeEmailClient,
-  createFakeInngest,
-  createFakePayload,
-} from './_test-helpers.js'
+import { notifyApprovalExpiredJob } from './notify-approval-expired.js'
+import { createFakeEmailClient, createFakeInngest, createFakePayload, notifyFunction } from './_test-helpers.js'
 import { defaultTokens } from '../tokens.js'
 import type { EmailPluginOptions } from '../options.js'
 
@@ -20,12 +16,12 @@ function makeOptions(overrides: Partial<EmailPluginOptions> = {}): EmailPluginOp
   }
 }
 
-describe('createNotifyApprovalExpiredFunction', () => {
+describe('notifyApprovalExpiredJob', () => {
   it('subscribes to approval/expired', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({})
     const client = createFakeEmailClient()
-    createNotifyApprovalExpiredFunction({
+    notifyFunction(notifyApprovalExpiredJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -47,7 +43,7 @@ describe('createNotifyApprovalExpiredFunction', () => {
       },
     })
     const client = createFakeEmailClient()
-    createNotifyApprovalExpiredFunction({
+    notifyFunction(notifyApprovalExpiredJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -75,7 +71,7 @@ describe('createNotifyApprovalExpiredFunction', () => {
       },
     })
     const client = createFakeEmailClient()
-    createNotifyApprovalExpiredFunction({
+    notifyFunction(notifyApprovalExpiredJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -96,7 +92,7 @@ describe('createNotifyApprovalExpiredFunction', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({})
     const client = createFakeEmailClient()
-    createNotifyApprovalExpiredFunction({
+    notifyFunction(notifyApprovalExpiredJob, {
       inngest: fake.inngest,
       payload,
       client,

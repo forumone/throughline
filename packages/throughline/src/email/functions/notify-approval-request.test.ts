@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createNotifyApprovalRequestFunction } from './notify-approval-request.js'
-import {
-  createFakeEmailClient,
-  createFakeInngest,
-  createFakePayload,
-} from './_test-helpers.js'
+import { notifyApprovalRequestJob } from './notify-approval-request.js'
+import { createFakeEmailClient, createFakeInngest, createFakePayload, notifyFunction } from './_test-helpers.js'
 import { defaultTokens } from '../tokens.js'
 import type { EmailPluginOptions } from '../options.js'
 
@@ -35,12 +31,12 @@ function makeOptions(overrides: Partial<EmailPluginOptions> = {}): EmailPluginOp
   }
 }
 
-describe('createNotifyApprovalRequestFunction', () => {
+describe('notifyApprovalRequestJob', () => {
   it('subscribes to notification/send-approval-request', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({ 'a-1': baseApproval })
     const client = createFakeEmailClient()
-    createNotifyApprovalRequestFunction({
+    notifyFunction(notifyApprovalRequestJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -55,7 +51,7 @@ describe('createNotifyApprovalRequestFunction', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({ 'a-1': baseApproval })
     const client = createFakeEmailClient()
-    createNotifyApprovalRequestFunction({
+    notifyFunction(notifyApprovalRequestJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -84,7 +80,7 @@ describe('createNotifyApprovalRequestFunction', () => {
       'a-2': { ...baseApproval, id: 'a-2', notifiedApprovers: [] },
     })
     const client = createFakeEmailClient()
-    createNotifyApprovalRequestFunction({
+    notifyFunction(notifyApprovalRequestJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -104,7 +100,7 @@ describe('createNotifyApprovalRequestFunction', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({ 'a-1': baseApproval })
     const client = createFakeEmailClient()
-    createNotifyApprovalRequestFunction({
+    notifyFunction(notifyApprovalRequestJob, {
       inngest: fake.inngest,
       payload,
       client,
@@ -127,7 +123,7 @@ describe('createNotifyApprovalRequestFunction', () => {
     const fake = createFakeInngest()
     const payload = createFakePayload({})
     const client = createFakeEmailClient()
-    createNotifyApprovalRequestFunction({
+    notifyFunction(notifyApprovalRequestJob, {
       inngest: fake.inngest,
       payload,
       client,

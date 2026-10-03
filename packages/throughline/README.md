@@ -231,7 +231,7 @@ Each plugin that falls back to `process.env` exports what it needs as data — `
 ```ts
 import { assertEnvironment } from '@forumone/throughline'
 import { approvalsEnv } from '@forumone/throughline-approvals'
-import { emailEnv } from '@forumone/throughline-email'
+import { emailEnv } from '@forumone/throughline/email'
 
 assertEnvironment(
   approvalsEnv,

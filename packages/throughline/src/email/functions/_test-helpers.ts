@@ -1,3 +1,6 @@
+import { inngestJobs } from '../../jobs/inngest/adapter.js'
+import type { Job, JobContext } from '../../jobs/types.js'
+import type { WorkflowFailureHandler } from '../../jobs/workflow-types.js'
 import type { Inngest, InngestFunction } from 'inngest'
 import type { Payload } from 'payload'
 import type { EmailClient, SendEmailParams } from '../client.js'
@@ -71,4 +74,19 @@ export function createFakeEmailClient(): FakeEmailClient {
     },
   }
   return Object.assign(client, { sends }) as FakeEmailClient
+}
+
+/**
+ * A notification as the Inngest function `emailPlugin` registers: what the
+ * 0.x `createNotify…Function` factories built, which these suites were written
+ * against. They are gone in 1.0; each call site became
+ * `notifyFunction(<the job>, <the factory's deps>)`.
+ */
+export function notifyFunction<Deps extends { inngest: Inngest; id?: string; onFailure?: WorkflowFailureHandler }>(
+  job: (resolve: (context: JobContext) => Deps, id?: string) => Job,
+  deps: Deps,
+): InngestFunction.Any {
+  return inngestJobs(deps.inngest, deps.onFailure ? { onFailure: deps.onFailure } : {}).toFunction(
+    job(() => deps, deps.id),
+  )
 }

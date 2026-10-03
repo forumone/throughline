@@ -1,11 +1,10 @@
-import type { Inngest, InngestFunction } from 'inngest'
+import type { Inngest } from 'inngest'
 import {
   defineJob,
   type Job,
   type JobContext,
   type WorkflowFailureHandler,
-} from '@forumone/throughline/jobs'
-import { inngestJobs } from '@forumone/throughline/jobs/inngest'
+} from '../../jobs/index.js'
 import type { Payload } from 'payload'
 import type { EmailClient } from '../client.js'
 import type { EmailBrandTokens } from '../tokens.js'
@@ -13,7 +12,8 @@ import {
   ApprovalDecisionEmail,
   type ApprovalDecisionKind,
 } from '../templates/index.js'
-import { DEFAULT_APPROVALS_COLLECTION_SLUG, type EmailPluginOptions } from '../options.js'
+import { DEFAULT_APPROVALS_SLUG } from '../../approvals/collection.js'
+import type { EmailPluginOptions } from '../options.js'
 import { unwrapRelationshipId } from './_shared.js'
 
 export interface NotifyApprovalDecisionDeps {
@@ -52,8 +52,7 @@ export type NotifyApprovalDecisionJobDeps = Omit<NotifyApprovalDecisionDeps, 'in
 
 /**
  * The same notification as a runner-neutral job. `resolve` supplies its
- * dependencies when it runs: the factory below passes the ones it was built
- * with, and `emailJobs` reads them from `context.payload`, for a runner
+ * dependencies when it runs: the plugin passes the ones it was built with, and `emailJobs` reads them from `context.payload`, for a runner
  * whose jobs are declared before Payload exists.
  */
 export function notifyApprovalDecisionJob(
@@ -76,7 +75,7 @@ export function notifyApprovalDecisionJob(
         return { skipped: true, reason: 'unknown-decision' }
       }
 
-      const collectionSlug = deps.options.approvalsCollectionSlug ?? DEFAULT_APPROVALS_COLLECTION_SLUG
+      const collectionSlug = deps.options.approvalsCollectionSlug ?? DEFAULT_APPROVALS_SLUG
 
       const approval = await step.run('load-approval', async () =>
         deps.payload.findByID({ collection: collectionSlug, id: approvalId, depth: 1 }) as Promise<
@@ -130,8 +129,4 @@ export function notifyApprovalDecisionJob(
       return { approvalId, decision, sent: 1 }
     },
   )
-}
-
-export function createNotifyApprovalDecisionFunction(deps: NotifyApprovalDecisionDeps): InngestFunction.Any {
-  return inngestJobs(deps.inngest, deps.onFailure ? { onFailure: deps.onFailure } : {}).toFunction(notifyApprovalDecisionJob(() => deps, deps.id))
 }

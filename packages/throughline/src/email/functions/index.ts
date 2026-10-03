@@ -1,5 +1,4 @@
 export {
-  createNotifyApprovalRequestFunction,
   notifyApprovalRequestJob,
 } from './notify-approval-request.js'
 export type {
@@ -7,7 +6,6 @@ export type {
   NotifyApprovalRequestJobDeps,
 } from './notify-approval-request.js'
 export {
-  createNotifyApprovalDecisionFunction,
   notifyApprovalDecisionJob,
 } from './notify-approval-decision.js'
 export type {
@@ -15,7 +13,6 @@ export type {
   NotifyApprovalDecisionJobDeps,
 } from './notify-approval-decision.js'
 export {
-  createNotifyApprovalExpiredFunction,
   notifyApprovalExpiredJob,
 } from './notify-approval-expired.js'
 export type {

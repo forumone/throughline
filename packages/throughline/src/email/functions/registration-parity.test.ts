@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { EmailPluginOptions } from '../options.js'
 import { defaultTokens } from '../tokens.js'
-import { createFakeEmailClient, createFakeInngest, createFakePayload } from './_test-helpers.js'
-import { createNotifyApprovalDecisionFunction } from './notify-approval-decision.js'
-import { createNotifyApprovalExpiredFunction } from './notify-approval-expired.js'
-import { createNotifyApprovalRequestFunction } from './notify-approval-request.js'
+import {
+  createFakeEmailClient,
+  createFakeInngest,
+  createFakePayload,
+  notifyFunction,
+} from './_test-helpers.js'
+import { notifyApprovalDecisionJob } from './notify-approval-decision.js'
+import { notifyApprovalExpiredJob } from './notify-approval-expired.js'
+import { notifyApprovalRequestJob } from './notify-approval-request.js'
 
 /*
 What each notification registers with Inngest, frozen before the three moved
@@ -21,9 +26,9 @@ const options = {
   buildActionUrl: async () => 'https://example.com/x',
 } as EmailPluginOptions
 
-function registered(build: typeof createNotifyApprovalRequestFunction) {
+function registered(build: typeof notifyApprovalRequestJob) {
   const fake = createFakeInngest()
-  build({
+  notifyFunction(build, {
     inngest: fake.inngest,
     payload: createFakePayload({}),
     client: createFakeEmailClient(),
@@ -36,7 +41,7 @@ function registered(build: typeof createNotifyApprovalRequestFunction) {
 
 describe('notification registrations', () => {
   it('notify-approval-request', () => {
-    expect(registered(createNotifyApprovalRequestFunction)).toMatchInlineSnapshot(`
+    expect(registered(notifyApprovalRequestJob)).toMatchInlineSnapshot(`
       {
         "id": "notify-approval-request",
         "retries": 3,
@@ -49,7 +54,7 @@ describe('notification registrations', () => {
     `)
   })
   it('notify-approval-decision', () => {
-    expect(registered(createNotifyApprovalDecisionFunction)).toMatchInlineSnapshot(`
+    expect(registered(notifyApprovalDecisionJob)).toMatchInlineSnapshot(`
       {
         "id": "notify-approval-decision",
         "retries": 3,
@@ -62,7 +67,7 @@ describe('notification registrations', () => {
     `)
   })
   it('notify-approval-expired', () => {
-    expect(registered(createNotifyApprovalExpiredFunction)).toMatchInlineSnapshot(`
+    expect(registered(notifyApprovalExpiredJob)).toMatchInlineSnapshot(`
       {
         "id": "notify-approval-expired",
         "retries": 3,
@@ -83,13 +88,13 @@ describe('a terminal-failure handler', () => {
   "(failure)" registration. `emailPlugin` now passes one.
   */
   it.each([
-    createNotifyApprovalRequestFunction,
-    createNotifyApprovalDecisionFunction,
-    createNotifyApprovalExpiredFunction,
+    notifyApprovalRequestJob,
+    notifyApprovalDecisionJob,
+    notifyApprovalExpiredJob,
   ])('is registered when given, and changes nothing else', (build) => {
     const onFailure = async () => undefined
     const fake = createFakeInngest()
-    build({
+    notifyFunction(build, {
       inngest: fake.inngest,
       payload: createFakePayload({}),
       client: createFakeEmailClient(),

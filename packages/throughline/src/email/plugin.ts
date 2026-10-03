@@ -1,21 +1,19 @@
-import type { CorePlugin } from '@forumone/throughline'
-import { getPluginRegistry } from '@forumone/throughline'
-import { createNamedLogger, defaultLogger } from '@forumone/throughline'
+import type { CorePlugin } from '../index.js'
+import { getPluginRegistry } from '../index.js'
+import { createNamedLogger, defaultLogger } from '../index.js'
 import type { InngestFunction } from 'inngest'
-import { createTerminalFailureHandler, type Job, type JobContext } from '@forumone/throughline/jobs'
+import { createTerminalFailureHandler, type Job, type JobContext } from '../jobs/index.js'
 import { type EmailPluginOptions, validateOptions } from './options.js'
 import { mergeTokens } from './tokens.js'
 import { createEmailClient, type EmailClient } from './client.js'
+import { inngestJobs } from '../jobs/inngest/adapter.js'
 import {
-  createNotifyApprovalDecisionFunction,
-  createNotifyApprovalExpiredFunction,
-  createNotifyApprovalRequestFunction,
   notifyApprovalDecisionJob,
   notifyApprovalExpiredJob,
   notifyApprovalRequestJob,
 } from './functions/index.js'
 
-const PLUGIN_ID = '@forumone/throughline-email'
+const PLUGIN_ID = '@forumone/throughline/email'
 const PLUGIN_VERSION = '0.1.0'
 
 const EMAIL_CLIENT_SYMBOL = Symbol.for('@forumone/throughline/email-client')
@@ -67,11 +65,11 @@ export const emailPlugin: CorePlugin<EmailPluginOptions> =
         const onFailure = options.onTerminalFailure ?? createTerminalFailureHandler({ payload })
         const deps = inngest ? { inngest, payload, client, tokens, options, onFailure } : undefined
         const functions: InngestFunction.Any[] = deps
-          ? [
-              createNotifyApprovalRequestFunction(deps),
-              createNotifyApprovalDecisionFunction(deps),
-              createNotifyApprovalExpiredFunction(deps),
-            ]
+          ? inngestJobs(deps.inngest, { onFailure }).functions([
+              notifyApprovalRequestJob(() => deps),
+              notifyApprovalDecisionJob(() => deps),
+              notifyApprovalExpiredJob(() => deps),
+            ])
           : []
 
         Object.defineProperty(payload, EMAIL_FUNCTIONS_SYMBOL, {
