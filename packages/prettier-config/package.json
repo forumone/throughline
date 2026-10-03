@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-prettier-config",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Shared Prettier config for @forumone/throughline packages.",
   "type": "module",
