@@ -473,6 +473,8 @@ Gate: `1.0.0` is on npm. Breaking changes start here, and only here.
 - [x] Regenerate the scaffolder for the new shape; CI generates a site from it and builds that site. The `Scaffold` workflow installs it against the checkout's packed packages and runs the scaffold's own gates, through a migration, `next build` and the smoke pack (#257)
 - [x] Import codemod (`throughline migrate-imports`) covering every 0.x import path, including the P1/P2 temporary homes. On forumone-2026: 163 files rewritten, five imports left for the `throughline()` call to replace
 - [ ] Migration guide in `docs/guides/upgrading.md`, and reference docs for the three packages
+    - [x] `docs/guides/upgrading.md`, and `upgrading-core-packages.md` for releases after it
+    - [ ] reference docs for the three packages
 - [ ] PR snapshots (`pr` dist-tag) and `next` snapshots on merge
 - [ ] forumone-2026's `chore/throughline-next` builds against each `next.N`
 - [ ] Exit pre-release mode and release `1.0.0`
