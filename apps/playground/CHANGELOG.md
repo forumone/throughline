@@ -1,5 +1,16 @@
 # @forumone/throughline-playground
 
+## 0.0.50
+
+### Patch Changes
+
+- Updated dependencies [3406ccb]
+- Updated dependencies [8212772]
+- Updated dependencies [c897829]
+  - @forumone/throughline@1.1.0
+  - @forumone/throughline-design-system@1.1.0
+  - @forumone/throughline-reference-ds@0.3.10
+
 ## 0.0.49
 
 ### Patch Changes
