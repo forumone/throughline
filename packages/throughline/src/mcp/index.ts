@@ -31,3 +31,4 @@ export {
   mcpApiKeyAccess,
   signedIn,
 } from './api-key-access.js'
+export type { McpApiKeyAccessOptions } from './api-key-access.js'

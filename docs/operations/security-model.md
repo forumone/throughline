@@ -43,6 +43,16 @@ mcpPlugin({
 
 `isAdmin` is your site's own `Access` rule. The helper applies it to `read`, `create`, `update`, `delete` and `unlock`, and refuses an MCP key principal before it asks the rule, so a key can never manage keys. It changes `access` and nothing else. To set other options too, such as the collection's `admin.group`, call it inside your own override and spread the result.
 
+**A key for a person.** The plugin binds a new key to whoever creates it and never lets that change. With keys admin-only, that means every key runs as an admin, with an admin's permissions and in an admin's name in the audit log. Pass `holder` to let an admin choose who a new key belongs to:
+
+```ts
+overrideApiKeyCollection: mcpApiKeyAccess(isAdmin, {
+  holder: (user) => isEditorOrAbove(user) || 'Only an editor or an admin can hold a key.',
+}),
+```
+
+An admin can pick the key's user when creating it, and the creator is still the default. Nobody can change the user afterwards, admins included. Before the key is saved, the chosen person is loaded and passed to `holder`, which returns `true` or the reason for refusing. That check runs only when a key is created. If someone later loses the role, their key stays, and their own access rules refuse it tool by tool.
+
 Best practices:
 
 - One key per consumer (Claude Desktop, Claude Code, your CI bot, etc.) — easier to revoke
