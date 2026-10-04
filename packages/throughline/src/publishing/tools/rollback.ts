@@ -80,6 +80,13 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
         collection: collection.slug,
         id: input.versionId,
         draft: true,
+        /*
+        This is the publishing server, which the status guard's own refusal
+        names — and, like `unpublish` and the pipeline's execute step, it says
+        so. Safe because the write is a draft: the only status it can set is
+        `draft`. Without it the guard refused every rollback.
+        */
+        context: { bypassPublishingServer: true },
         ...enforce,
       })
 

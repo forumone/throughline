@@ -2,4 +2,4 @@
 '@forumone/throughline': patch
 ---
 
-`rollback` restores the version as a draft, as its description promises. Before, rolling back to a version that had been published wrote `_status: 'published'`, which skipped the pipeline. On a site that blocks direct status writes, every such rollback was refused instead.
+`rollback` restores the version as a draft, as its description promises. Before, rolling back wrote the version's own `_status` without saying it came from the publishing server, so on a site that blocks direct status writes every rollback was refused.
