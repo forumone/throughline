@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { createGetPublishStatusTool } from './get-publish-status.js'
 import { attachComponentValidator, callTool, makeDeps } from './_test-helpers.js'
 
+vi.mock('payload', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  createLocalReq: async ({ user }: { user?: unknown }) => ({ user }),
+}))
+
 const passingDoc = {
   _status: 'draft',
   updatedAt: '2026-04-23T12:00:00.000Z',
@@ -70,5 +75,55 @@ describe('get_publish_status tool', () => {
 
     expect(result.hasUnpublishedChanges).toBe(true)
     expect(result.lastPublished).toBe('2026-04-22T12:00:00.000Z')
+  })
+
+  it('lists every blocker at once, the first also in the fields it always used', async () => {
+    const badDoc = { ...passingDoc, seo: { description: 'no title' } }
+    const deps = makeDeps({
+      document: badDoc,
+      payloadFindByID: vi.fn(async () => badDoc),
+    })
+    attachComponentValidator(deps.payload, async () => ({
+      valid: false,
+      issues: [{ severity: 'error', rule: 'max-per-page', message: 'Too many heroes', blockIndex: 1 }],
+    }))
+
+    const result = (await callTool(createGetPublishStatusTool(deps), {
+      collection: 'pages',
+      id: 'p1',
+    })) as {
+      wouldPublish: { blockedAt?: string; blockers?: { blockedAt?: string; issues: unknown[] }[] }
+    }
+
+    expect(result.wouldPublish.blockedAt).toBe('composition')
+    expect(result.wouldPublish.blockers?.map((b) => b.blockedAt)).toEqual([
+      'composition',
+      'required-fields',
+    ])
+    expect(result.wouldPublish.blockers?.[0]?.issues).toHaveLength(1)
+  })
+
+  it("returns the collection's preview link, absolute, and null where there is none", async () => {
+    const deps = makeDeps({
+      document: passingDoc,
+      payloadFindByID: vi.fn(async () => passingDoc),
+    })
+    attachComponentValidator(deps.payload, async () => ({ valid: true, issues: [] }))
+    const call = async () =>
+      (await callTool(createGetPublishStatusTool(deps), { collection: 'pages', id: 'p1' })) as {
+        previewUrl: string | null
+      }
+
+    expect((await call()).previewUrl).toBeNull()
+
+    const payload = deps.payload as unknown as Record<string, unknown>
+    payload['collections'] = {
+      pages: {
+        config: { admin: { preview: (doc: { slug: string }) => `/next/preview?slug=${doc.slug}` } },
+      },
+    }
+    payload['config'] = { ...(payload['config'] as object), serverURL: 'https://example.test' }
+
+    expect((await call()).previewUrl).toBe('https://example.test/next/preview?slug=hello')
   })
 })

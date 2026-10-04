@@ -11,6 +11,7 @@ import type { McpToolContext, McpToolDefinition } from '../plugin-contract/index
 import type { McpToolDescriptor } from '../mcp/collector.js'
 import { deniedEnvelope } from '../mcp/envelope.js'
 import { matchRank } from '../editorial/palette/sources.js'
+import { previewUrl } from '../utils/preview-url.js'
 import { describeFields, writableFields, type DescribeContext } from './describe.js'
 import type { ContentCollectionOptions, RelatedKindOptions } from './options.js'
 
@@ -100,26 +101,8 @@ export function adminUrl(payload: Payload, collection: string, id: number | stri
   return `${payload.config.routes.admin}/collections/${collection}/${encodeURIComponent(String(id))}`
 }
 
-/**
- * The collection's own Preview link, absolute. `null` when it has none, or has
- * none for this document yet — a draft with no slug, for instance.
- */
-export async function previewUrl(
-  payload: Payload,
-  collection: string,
-  doc: Record<string, unknown>,
-  req: PayloadRequest,
-): Promise<string | null> {
-  const preview = payload.collections[collection as CollectionSlug]?.config.admin?.preview
-  if (typeof preview !== 'function') return null
-  try {
-    const url = await preview(doc, { locale: req.locale ?? undefined, req, token: null } as never)
-    if (typeof url !== 'string' || url === '') return null
-    return url.startsWith('/') ? `${payload.config.serverURL ?? ''}${url}` : url
-  } catch {
-    return null
-  }
-}
+/** The collection's own Preview link, absolute. Shared with `get_publish_status`. */
+export { previewUrl }
 
 export async function requestAs(payload: Payload, ctx: McpToolContext): Promise<PayloadRequest> {
   return createLocalReq({ user: userOf(ctx) ?? undefined } as never, payload)

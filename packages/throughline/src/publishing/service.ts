@@ -1,11 +1,12 @@
-import type { Payload, TypedUser } from 'payload'
+import { createLocalReq, type CollectionSlug, type Payload, type TypedUser } from 'payload'
 import type { AuditActor, AuditWriter } from '../audit/writer.js'
 import type { AuthenticatedUser } from '../plugin-contract/mcp.js'
 import type { Logger } from '../plugin-contract/index.js'
 import { sendEventSafely } from './events.js'
 import { type PublishingPluginOptions, resolveCollection } from './options.js'
-import { runPreflightPipeline, runPublishPipeline } from './pipeline/index.js'
-import type { PipelineIssue, PipelineMeta } from './pipeline/types.js'
+import { runPreflightPipeline, runPreflightReport, runPublishPipeline } from './pipeline/index.js'
+import type { PipelineIssue, PipelineMeta, PipelineResult } from './pipeline/types.js'
+import { previewUrl } from '../utils/preview-url.js'
 
 const SERVICE_SYMBOL = Symbol.for('@forumone/throughline/publishing-service')
 
@@ -96,6 +97,13 @@ export interface PublishStatusOutcome {
   code?: string
   issues?: PipelineIssue[]
   suggestion?: string
+  /**
+   * Every preflight block, in pipeline order, when there is more than none.
+   * The fields above are the first of them, as they always were.
+   */
+  blockers?: PipelineResult[]
+  /** Where a person sees the draft: the collection's `admin.preview`, or `null`. */
+  previewUrl: string | null
   /** Last successful publish, or `null` if never published. */
   publishedAt: string | null
   hasUnpublishedChanges: boolean
@@ -466,7 +474,7 @@ export function createPublishingService(
       const collection = resolveCollection(options, request.collection)
       const document = await loadDocument(collection.slug, request.id, request.actor)
 
-      const result = await runPreflightPipeline({
+      const blockers = await runPreflightReport({
         payload,
         inngest: options.inngest,
         options,
@@ -475,6 +483,24 @@ export function createPublishingService(
         documentId: request.id,
         actor: toPipelineActor(request.actor),
       })
+      const result = blockers[0] ?? { success: true }
+
+      // A request only when there is a preview to ask: building one is not free.
+      const hasPreview =
+        typeof payload.collections?.[collection.slug as CollectionSlug]?.config.admin?.preview ===
+        'function'
+      const preview =
+        hasPreview && Object.keys(document).length > 0
+          ? await previewUrl(
+              payload,
+              collection.slug,
+              document,
+              await createLocalReq(
+                { user: request.actor.enforceAccessAs ?? undefined } as never,
+                payload,
+              ),
+            )
+          : null
 
       const updatedAt = stringField(document, 'updatedAt')
       const publishedAt = stringField(document, collection.publishedAtField)
@@ -487,6 +513,8 @@ export function createPublishingService(
         ...(result.code ? { code: result.code } : {}),
         ...(result.issues ? { issues: result.issues } : {}),
         ...(result.suggestion ? { suggestion: result.suggestion } : {}),
+        ...(blockers.length > 0 ? { blockers } : {}),
+        previewUrl: preview,
         publishedAt: publishedAt ?? null,
         hasUnpublishedChanges: Boolean(
           updatedAt && publishedAt && Date.parse(updatedAt) > Date.parse(publishedAt),

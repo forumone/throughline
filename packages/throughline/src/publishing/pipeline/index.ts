@@ -102,4 +102,31 @@ export async function runPreflightPipeline(context: PipelineContext): Promise<Pi
   return failure ?? { success: true }
 }
 
+/**
+ * Every preflight block at once, for `get_publish_status`. Empty when the
+ * document would publish.
+ *
+ * `runPreflightPipeline` stops at the first failing step, which is right for
+ * publishing and scheduling, where the first refusal is the answer. It is the
+ * wrong shape for "what is left to fix?". A draft with a composition problem
+ * and a missing required field took one round trip to learn of the first and
+ * another to learn of the second. forumone-2026#827.
+ *
+ * `exist` still stops the report: every later step reads the document, and
+ * there is none. After that the steps are independent checks on the same
+ * document, so each one runs and each failure is kept, in pipeline order.
+ */
+export async function runPreflightReport(context: PipelineContext): Promise<PipelineResult[]> {
+  const [first, ...rest] = PREFLIGHT_STEPS
+  const head = await runSteps(context, [first!])
+  if (head.failure) return [head.failure]
+
+  const failures: PipelineResult[] = []
+  for (const step of rest) {
+    const { failure } = await runSteps(context, [step])
+    if (failure) failures.push(failure)
+  }
+  return failures
+}
+
 export type { PipelineContext, PipelineResult, PipelineStep, PipelineStepResult } from './types.js'

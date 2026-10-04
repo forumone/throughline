@@ -32,7 +32,7 @@ export const PUBLISHING_TOOLS = {
   getPublishStatus: {
     name: 'get_publish_status',
     description:
-      'Returns the current publishability of a document without actually publishing. Reports current status, whether unpublished changes exist, the last publish timestamp, and a preflight result indicating whether `publish` would currently succeed. Read-only; no audit record is written.',
+      'Returns the current publishability of a document without actually publishing: a dry run of every check `publish` makes. Reports current status, whether unpublished changes exist, the last publish timestamp, and whether `publish` would currently succeed, with every blocker at once in `wouldPublish.blockers` so they can all be fixed before asking again. `previewUrl` is where a person sees the draft (they must be signed in). Read-only; no audit record is written.',
   },
   rollback: {
     name: 'rollback',
