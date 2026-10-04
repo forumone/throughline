@@ -234,6 +234,72 @@ describe('create_draft', () => {
     ).resolves.not.toHaveProperty('error')
   })
 
+  describe('with a converter for the field', () => {
+    const state = { root: { type: 'root', children: [{ type: 'heading', children: [] }] } }
+    const withConverter = (convert: ReturnType<typeof vi.fn>) => {
+      const s = setup()
+      s.deps.collections['pages']!.richText = { body: convert }
+      return s
+    }
+
+    it('converts { markdown } and saves the editor state it returns', async () => {
+      const convert = vi.fn(async () => ({ state }))
+      const { deps, create } = withConverter(convert)
+      const out = await createCreateDraftTool(deps).handler(
+        { collection: 'pages', data: { title: 'X', body: { markdown: '# Hello' } } },
+        editor,
+      )
+      expect(convert).toHaveBeenCalledWith({ markdown: '# Hello' })
+      expect(create.mock.calls[0]![0].data.body).toBe(state)
+      expect(out).not.toHaveProperty('error')
+    })
+
+    it('converts { html } too, on update as on create', async () => {
+      const convert = vi.fn(async () => ({ state }))
+      const { deps, update } = withConverter(convert)
+      await createUpdateDraftTool(deps).handler(
+        { collection: 'pages', id: 7, patch: { body: { html: '<h2>Hi</h2>' } } },
+        editor,
+      )
+      expect(convert).toHaveBeenCalledWith({ html: '<h2>Hi</h2>' })
+      expect(update.mock.calls[0]![0].data).toEqual({ body: state })
+    })
+
+    it('refuses, saving nothing, when the conversion would lose something', async () => {
+      const convert = vi.fn(async () => ({
+        refused: 'a table would be dropped.',
+        details: [{ tag: 'table' }],
+      }))
+      const { deps, create } = withConverter(convert)
+      const out = await createCreateDraftTool(deps).handler(
+        { collection: 'pages', data: { title: 'X', body: { html: '<table></table>' } } },
+        editor,
+      )
+      expect(out).toEqual({
+        error: 'body could not be converted without losing something: a table would be dropped. Nothing was saved.',
+        field: 'body',
+        details: [{ tag: 'table' }],
+      })
+      expect(create).not.toHaveBeenCalled()
+    })
+
+    it('still refuses a bare string, and says what it takes', async () => {
+      const { deps } = withConverter(vi.fn())
+      const out = await createCreateDraftTool(deps).handler(
+        { collection: 'pages', data: { title: 'X', body: '# Hello' } },
+        editor,
+      )
+      expect(out).toMatchObject({ error: expect.stringMatching(/takes \{ markdown: "…" \}, \{ html: "…" \}/) })
+    })
+
+    it('passes an editor state through without converting it', async () => {
+      const convert = vi.fn()
+      const { deps } = withConverter(convert)
+      await createCreateDraftTool(deps).handler({ collection: 'pages', data: { title: 'X', body: state } }, editor)
+      expect(convert).not.toHaveBeenCalled()
+    })
+  })
+
   it('refuses a key with nobody behind it before anything else', async () => {
     const { deps, find, create } = setup()
     const out = await createCreateDraftTool(deps).handler({ collection: 'pages', data: { title: 'X' } }, anonymousContext)

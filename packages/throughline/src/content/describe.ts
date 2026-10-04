@@ -40,6 +40,8 @@ export interface FieldDescription {
   filter?: unknown
   /** A group's or array row's fields. */
   fields?: FieldDescription[]
+  /** What a rich-text field may be written as. */
+  accepts?: string[]
   /** A blocks field's blocks: what may be added. */
   blocks?: BlockDescription[]
 }

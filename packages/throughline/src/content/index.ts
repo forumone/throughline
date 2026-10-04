@@ -3,6 +3,8 @@ export type {
   ContentCollectionOptions,
   ContentPluginOptions,
   RelatedKindOptions,
+  RichTextConverter,
+  RichTextSource,
 } from './options.js'
 export {
   describeField,

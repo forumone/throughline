@@ -166,7 +166,18 @@ export function createDescribeContentTypeTool(
         collection: input.collection,
         ...(typeof labels.singular === 'string' ? { label: labels.singular } : {}),
         drafts: Boolean(config.versions && (config.versions as { drafts?: unknown }).drafts),
-        fields: await describeFields(writableFields(config.fields, options.fields), describeCtx),
+        fields: (
+          await describeFields(writableFields(config.fields, options.fields), describeCtx)
+        ).map((field) =>
+          field.type === 'richText'
+            ? {
+                ...field,
+                accepts: options.richText?.[field.name]
+                  ? ['{ markdown: "…" }', '{ html: "…" }', 'an editor state ({ root: … })']
+                  : ['an editor state ({ root: … })'],
+              }
+            : field,
+        ),
         ...(options.templateDraws?.length
           ? {
               templateDraws: options.templateDraws,
