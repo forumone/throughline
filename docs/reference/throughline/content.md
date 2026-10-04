@@ -29,6 +29,14 @@ throughline({
 - **`fields`** lists the top-level fields an author may set, by the name they are stored under. A group or an array is named whole. It's an allow-list: a field added to the collection later can't be written over MCP until someone adds it here. A misspelt name stops the boot.
 - **`templateDraws`** lists the blocks the page template already renders from the document's own fields, so the agent doesn't repeat them in `layout`.
 - **`richText`** maps a rich-text field to the site's converter, so an agent can write it as `{ markdown }` or `{ html }`. The converter returns `{ state }` or `{ refused, details }`, and should refuse rather than drop anything it can't carry across. A field without a converter takes only an editor state, because a draft save skips validation and a Markdown string would be stored as a string.
+- **`blockRichText`** (plugin-level) is the converter for rich text below the top level, such as an accordion item's content or a rich-text field in a group or an array row. Without it, those fields take an editor state only.
+
+**Every value is checked for its shape before it's saved, at any depth.** A draft save skips validation, and Payload coerces what it's handed rather than refusing it. So a link sent as a string (`"/contact"`) used to be saved as an empty `{ mode: "internal" }`. Now a write is refused, saying the shape the field takes, when it sends any of these:
+- a non-object for a group, which includes a link;
+- a non-array for an array or a blocks field;
+- a row or a block that isn't an object.
+
+`get` returns `valueShapes`, which says how a link, rich text, an image and an array are written. Each described link field also carries its `shape`. forumone-2026#832.
 - **`related`** lists the things a document links to, by the `kind` the agent passes to `find_related`. A kind can allow exact filters, such as a taxonomy's `type`. An upload collection's results include alt text and dimensions.
 
 Everything else comes from the live config. That includes field types, limits, whether a field is required, a select's options and a relationship's target. A blocks field's allowed blocks come from its own `filterOptions`, the same function the admin's block picker calls. When `publishing` is on, `throughline()` adds what its required-fields step asks for: the SEO title and description, the slug, and any `requiredFields`.

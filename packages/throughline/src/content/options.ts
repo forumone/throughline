@@ -89,4 +89,12 @@ export interface ContentPluginOptions {
    * from its `recipes` option.
    */
   composedBlockType?: string
+  /**
+   * Converts Markdown or HTML for a rich-text field below the top level: an
+   * accordion item's content, a rich-text field in a group. Without it such a
+   * field takes an editor state only, and a write of anything else is refused
+   * rather than stored as an object that renders nothing (forumone-2026#832).
+   * Top-level fields keep their own converters, in `collections[slug].richText`.
+   */
+  blockRichText?: RichTextConverter
 }

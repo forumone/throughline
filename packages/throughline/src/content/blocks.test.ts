@@ -376,3 +376,23 @@ describe('edit_blocks', () => {
     expect(update).not.toHaveBeenCalled()
   })
 })
+
+describe('a block\'s values (#832)', () => {
+  it('are refused in the wrong shape, and nothing is saved', async () => {
+    const { deps, update } = setup()
+    const out = await createEditBlocksTool(deps).handler(
+      {
+        ...at,
+        field: 'layout',
+        operations: [{ op: 'insert', block: { blockType: 'Quote', text: 'Said', source: 'Ann' } }],
+      },
+      editor,
+    )
+    expect(out).toMatchObject({
+      error: expect.stringContaining('Nothing was saved'),
+      problems: [{ path: expect.stringMatching(/^layout\[\d\]\.source$/) }],
+    })
+    expect(update).not.toHaveBeenCalled()
+  })
+})
+

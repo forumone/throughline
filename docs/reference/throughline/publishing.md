@@ -220,6 +220,8 @@ For each such block, the step requires that:
 
 The recipe is read past access control, so a draft recipe fails for not being approved, not for not being found. `recipeField` and `contentField` name the block's fields, and default to `recipe` and `content`.
 
+The composition step also refuses an **empty block** (`empty-block`): one whose contract has content to fill (text, rich text, a link, an image, a video, an array or a group), every piece of which is empty. Without it, a call to action with no heading, label or link publishes as an empty band. It doesn't apply to a component with no content fields, or one that fetches its own data. Settings such as a select or a checkbox don't count as content.
+
 The composition step also checks **placement** for every block. A component whose contract places it only `inline` (inside another component) can't stand on a page by itself.
 
 ## Custom accessibility checks

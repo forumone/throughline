@@ -358,3 +358,63 @@ describe('adminOnly', () => {
     expect(tool.handler).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('a pending approval (#832)', () => {
+  const pending = { id: 'r1', createdAt: '2026-10-04T10:00:00Z', expiresAt: '2026-10-11T10:00:00Z' }
+  it('is named by check, which says not to request another', async () => {
+    const find = vi.fn(async () => ({ docs: [pending] }))
+    const s = setup(
+      {
+        get_publish_status: moduleTool('get_publish_status', {
+          wouldPublish: { canPublish: false, blockers: [{ code: 'approval-required' }] },
+        }),
+      },
+      { approvalsCollection: 'approval-requests', payload: { find } as unknown as Payload },
+    )
+    const out = await s.tool('check')({ collection: 'pages', id: 2 })
+    expect(out).toMatchObject({
+      pendingApproval: { approvalId: 'r1', expiresAt: '2026-10-11T10:00:00Z' },
+      next: expect.stringContaining('Do not request another'),
+    })
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'approval-requests',
+        overrideAccess: false,
+        where: { and: [{ targetCollection: { equals: 'pages' } }, { targetId: { equals: '2' } }, { status: { equals: 'pending' } }] },
+      }),
+    )
+  })
+
+  it('stops publish from filing a second request', async () => {
+    const s = setup(
+      { publish: moduleTool('publish', { published: false, code: 'approval-required' }) },
+      { approvalsCollection: 'approval-requests', payload: { find: vi.fn(async () => ({ docs: [pending] })) } as unknown as Payload },
+    )
+    const out = await s.tool('publish')({
+      collection: 'pages',
+      id: 2,
+      action: 'now',
+      approval: { changesSummary: 'A new page about the partner program.', approverGroups: ['comms'] },
+    })
+    expect(out).toMatchObject({ approvalRequired: true, pendingApproval: { approvalId: 'r1' } })
+    expect(s.called('request_approval')).toEqual([])
+  })
+
+  it('is not looked for when approvals are off', async () => {
+    const s = setup({
+      get_publish_status: moduleTool('get_publish_status', {
+        wouldPublish: { canPublish: false, blockers: [{ code: 'approval-required' }] },
+      }),
+    })
+    expect(await s.tool('check')({ collection: 'pages', id: 2 })).not.toHaveProperty('pendingApproval')
+  })
+})
+
+describe('design_guide for a component (#832)', () => {
+  it('says how each kind of value is written', async () => {
+    const s = setup({ get_contract: moduleTool('get_contract', { name: 'CTA' }) }, { blockRichText: true })
+    const out = await s.tool('design_guide')({ component: 'CTA' })
+    expect(out).toMatchObject({ name: 'CTA', valueShapes: { link: expect.stringContaining('Never a plain string') } })
+  })
+})
+

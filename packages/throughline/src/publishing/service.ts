@@ -7,6 +7,7 @@ import { type PublishingPluginOptions, resolveCollection } from './options.js'
 import { runPreflightPipeline, runPreflightReport, runPublishPipeline } from './pipeline/index.js'
 import type { PipelineIssue, PipelineMeta, PipelineResult } from './pipeline/types.js'
 import { previewUrl } from '../utils/preview-url.js'
+import { documentContentHash } from '../utils/content-hash.js'
 
 const SERVICE_SYMBOL = Symbol.for('@forumone/throughline/publishing-service')
 
@@ -471,6 +472,32 @@ export function createPublishingService(
     },
 
     async getStatus(request) {
+      /*
+      A newer save is not a change. After a rollback to the published version,
+      or a draft saved with nothing altered, the draft is newer and the same,
+      and this said there were unpublished changes (forumone-2026#832). So a
+      newer draft is compared with what is live, by the hash the approval step
+      uses.
+      */
+      const differsFromLive = async (
+        slug: string,
+        req: PublishRequest,
+        draft: Record<string, unknown>,
+        updated: string | undefined,
+        published: string | undefined,
+      ): Promise<boolean> => {
+        if (!updated || !published || Date.parse(updated) <= Date.parse(published)) return false
+        const live = (await payload.findByID({
+          collection: slug,
+          id: req.id,
+          draft: false,
+          disableErrors: true,
+          ...(req.actor.enforceAccessAs ? { user: req.actor.enforceAccessAs, overrideAccess: false } : {}),
+        })) as Record<string, unknown> | null
+        if (!live) return true
+        return (await documentContentHash(draft)) !== (await documentContentHash(live))
+      }
+
       const collection = resolveCollection(options, request.collection)
       const document = await loadDocument(collection.slug, request.id, request.actor)
 
@@ -516,9 +543,7 @@ export function createPublishingService(
         ...(blockers.length > 0 ? { blockers } : {}),
         previewUrl: preview,
         publishedAt: publishedAt ?? null,
-        hasUnpublishedChanges: Boolean(
-          updatedAt && publishedAt && Date.parse(updatedAt) > Date.parse(publishedAt),
-        ),
+        hasUnpublishedChanges: await differsFromLive(collection.slug, request, document, updatedAt, publishedAt),
       }
     },
   }

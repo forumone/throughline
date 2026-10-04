@@ -55,16 +55,17 @@ describe('get_publish_status tool', () => {
     expect(result.wouldPublish.blockedAt).toBe('required-fields')
   })
 
-  it('flags hasUnpublishedChanges when updatedAt is newer than publishedAt', async () => {
+  it('flags hasUnpublishedChanges when the newer draft differs from what is live', async () => {
     const doc = {
       ...passingDoc,
-      _status: 'published',
+      _status: 'draft',
       updatedAt: '2026-04-23T12:00:00.000Z',
       publishedAt: '2026-04-22T12:00:00.000Z',
     }
+    const live = { ...doc, _status: 'published', title: 'What is live' }
     const deps = makeDeps({
       document: doc,
-      payloadFindByID: vi.fn(async () => doc),
+      payloadFindByID: vi.fn(async ({ draft }: { draft?: boolean }) => (draft === false ? live : doc)),
     })
     attachComponentValidator(deps.payload, async () => ({ valid: true, issues: [] }))
 
@@ -75,6 +76,28 @@ describe('get_publish_status tool', () => {
 
     expect(result.hasUnpublishedChanges).toBe(true)
     expect(result.lastPublished).toBe('2026-04-22T12:00:00.000Z')
+  })
+
+  it('does not, when the newer draft is the same as what is live (after a rollback, say)', async () => {
+    const doc = {
+      ...passingDoc,
+      _status: 'draft',
+      updatedAt: '2026-04-23T12:00:00.000Z',
+      publishedAt: '2026-04-22T12:00:00.000Z',
+    }
+    const live = { ...doc, _status: 'published', updatedAt: '2026-04-22T12:00:00.000Z' }
+    const deps = makeDeps({
+      document: doc,
+      payloadFindByID: vi.fn(async ({ draft }: { draft?: boolean }) => (draft === false ? live : doc)),
+    })
+    attachComponentValidator(deps.payload, async () => ({ valid: true, issues: [] }))
+
+    const result = (await callTool(createGetPublishStatusTool(deps), {
+      collection: 'pages',
+      id: 'p1',
+    })) as { hasUnpublishedChanges: boolean }
+
+    expect(result.hasUnpublishedChanges).toBe(false)
   })
 
   it('lists every blocker at once, the first also in the fields it always used', async () => {
