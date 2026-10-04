@@ -53,6 +53,7 @@ export const AUDIT_MCP_SERVERS = [
   'references',
   'fields',
   'observability',
+  'content',
 ] as const
 
 export type AuditMcpServer = (typeof AUDIT_MCP_SERVERS)[number]

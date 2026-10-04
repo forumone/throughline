@@ -10,6 +10,8 @@ import { DEFAULT_AUDIT_SLUG } from './audit/collection.js'
 import { auditQueryPlugin } from './audit/query/plugin.js'
 import type { AuditQueryPluginOptions } from './audit/query/options.js'
 import { componentsPlugin } from './components/plugin.js'
+import { contentPlugin } from './content/plugin.js'
+import type { ContentCollectionOptions, ContentPluginOptions } from './content/options.js'
 import type { ComponentsPluginOptions } from './components/options.js'
 import { editorialPlugin, type EditorialPluginOptions } from './editorial/plugin.js'
 import type { WorkOptions } from './editorial/work/work.js'
@@ -114,6 +116,12 @@ export interface ThroughlineOptions {
   integrations?: Omit<IntegrationsPluginOptions, Supplied | 'onTerminalFailure'>
   /** On when present: what refers to a document, and the delete guards. */
   references?: Omit<ReferencesPluginOptions, Supplied>
+  /**
+   * On when present: the content tools, which read and write drafts of the
+   * collections named here. Each collection's publish requirements are filled
+   * in from `publishing` when it is on.
+   */
+  content?: Omit<ContentPluginOptions, Supplied>
   /** On when present: content health, the calendar, "Your work" and the palette. */
   editorial?: Omit<EditorialPluginOptions, Supplied | 'work'> & {
     work?: Omit<WorkOptions, 'collections'> & { dashboard?: boolean }
@@ -279,6 +287,15 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
     plugins.push(referencesPlugin({ ...options.references, mcpTools }))
   }
   plugins.push(fieldsPlugin({ ...options.fields, mcpTools }))
+  if (options.content) {
+    plugins.push(
+      contentPlugin({
+        ...options.content,
+        collections: withPublishRequirements(options.content.collections, options.publishing),
+        mcpTools,
+      }),
+    )
+  }
   if (options.editorial) {
     const { work, ...rest } = options.editorial
     plugins.push(editorialPlugin({ ...rest, work: { ...work, collections }, mcpTools }))
@@ -293,6 +310,35 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
     return next
   }
   return { plugin, mcpTools: mcpTools.tools, jobs }
+}
+
+/*
+What the publish pipeline's required-fields step will ask of each collection,
+said once here rather than by the site: the SEO group's title and description,
+the slug, and the collection's own `requiredFields`. A site's own
+`publishRequires` comes after them.
+*/
+export function withPublishRequirements(
+  collections: Readonly<Record<string, ContentCollectionOptions>>,
+  publishing: ThroughlinePublishingOptions | undefined,
+): Record<string, ContentCollectionOptions> {
+  if (!publishing) return { ...collections }
+  const seo = publishing.seoField ?? 'seo'
+  return Object.fromEntries(
+    Object.entries(collections).map(([slug, entry]) => {
+      const own = publishing.collectionOptions?.[slug]
+      const field = own?.seoField ?? seo
+      const requires = [
+        `${field}.title`,
+        `${field}.description`,
+        own?.slugField ?? 'slug',
+        ...(own?.requiredFields ?? []).map((required) => `${required.path}: ${required.message}`),
+        'Alt text on every image, a heading order that does not skip levels, and a label on every link.',
+        ...(entry.publishRequires ?? []),
+      ]
+      return [slug, { ...entry, publishRequires: requires }]
+    }),
+  )
 }
 
 function suiteJobs(

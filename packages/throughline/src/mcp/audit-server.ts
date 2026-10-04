@@ -20,6 +20,7 @@ names line up. The seventh does not:
     references         references
     fields             fields
     observability      observability
+    content            content
     -                  payload
 
 So `mcpServer: serverName as AuditMcpServer` compiles and is wrong for the
@@ -44,6 +45,7 @@ const AUDIT_SERVER_BY_COLLECTOR_NAME: Readonly<Record<string, AuditMcpServer>> =
   references: 'references',
   fields: 'fields',
   observability: 'observability',
+  content: 'content',
 }
 
 /**
