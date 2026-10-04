@@ -69,9 +69,12 @@ function signedInOrLogin(props: AdminViewServerProps, here: string): UserDoc {
   return user
 }
 
+/** A tool description's first sentence, as plain text, for the consent screen. */
 function firstSentence(text: string): string {
-  const match = /^(.+?[.!?])(\s|$)/.exec(text)
-  return (match?.[1] ?? text).trim()
+  const plainText = text.replace(/`/g, '')
+  // "e.g." and "i.e." end in a full stop without ending the sentence.
+  const match = /^(.+?(?<!\be\.g|\bi\.e)[.!?])(\s|$)/.exec(plainText)
+  return (match?.[1] ?? plainText).trim()
 }
 
 function when(value: unknown): string {

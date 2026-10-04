@@ -18,7 +18,7 @@ export const MCP_CSS = `
 .tl-mcp__notice { padding: calc(var(--base) * 0.6) var(--base); border-left: 3px solid var(--theme-warning-500); background: var(--theme-warning-50, var(--theme-elevation-50)); }
 .tl-mcp__error { color: var(--theme-error-500); margin: 0; }
 .tl-mcp__actions { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--base) * 0.5); margin-top: calc(var(--base) * 1.5); }
-.tl-mcp__tools { list-style: none; padding: 0; }
+.tl-mcp__tools { list-style: none; padding: 0; margin-top: calc(var(--base) * 1.25); }
 .tl-mcp__tools li { margin-bottom: calc(var(--base) * 0.4); }
 .tl-mcp__table { width: 100%; border-collapse: collapse; }
 .tl-mcp__table th, .tl-mcp__table td { text-align: left; padding: calc(var(--base) * 0.4) calc(var(--base) * 0.5); border-bottom: 1px solid var(--theme-elevation-100); vertical-align: middle; }
