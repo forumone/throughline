@@ -312,7 +312,14 @@ export function createFindRelatedTool(
       const and: Where[] = Object.entries(input.where ?? {}).map(([key, value]) => ({
         [key]: { equals: value },
       }))
-      if (q) and.push({ [titleField]: { like: q } })
+      if (q) {
+        const searched = kind.searchFields?.length ? kind.searchFields : [titleField]
+        and.push(
+          searched.length === 1
+            ? { [searched[0]!]: { like: q } }
+            : { or: searched.map((field) => ({ [field]: { like: q } })) },
+        )
+      }
 
       const { docs } = await deps.payload.find({
         collection: kind.collection as CollectionSlug,

@@ -39,6 +39,11 @@ export interface RelatedKindOptions {
   collection: string
   /** Fields a lookup may also match on exactly, e.g. a taxonomy's `type`. */
   filters?: readonly string[]
+  /**
+   * Fields the query is matched against, OR'd. Default: the collection's
+   * `useAsTitle`. For media, whose title is usually a filename, add `alt`.
+   */
+  searchFields?: readonly string[]
   /** What the kind is, for the tool's description. */
   description?: string
 }

@@ -94,7 +94,7 @@ function makeDeps(overrides: { find?: ReturnType<typeof vi.fn>; findByID?: Retur
     },
     related: {
       people: { collection: 'people' },
-      media: { collection: 'media' },
+      media: { collection: 'media', searchFields: ['alt', 'filename'] },
       topics: { collection: 'terms', filters: ['type'] },
     },
   }
@@ -223,6 +223,17 @@ describe('find_related', () => {
       filename: 'team.jpg',
       mimeType: 'image/jpeg',
     })
+  })
+
+  it('matches every search field the kind names, so an image is found by its alt text', async () => {
+    const find = vi.fn(async () => ({ docs: [] }))
+    const { deps } = makeDeps({ find })
+    await createFindRelatedTool(deps).handler({ kind: 'media', query: 'team' }, editor)
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { and: [{ or: [{ alt: { like: 'team' } }, { filename: { like: 'team' } }] }] },
+      }),
+    )
   })
 
   it('filters exactly on the fields the kind allows, and refuses any other', async () => {

@@ -191,6 +191,38 @@ describe('describeFields', () => {
     ])
   })
 
+  it("passes on what a relationship's own filterOptions requires of its target", async () => {
+    const related: Field[] = [
+      {
+        name: 'topics',
+        type: 'relationship',
+        relationTo: 'terms',
+        hasMany: true,
+        filterOptions: () => ({ type: { equals: 'topic' } }),
+      },
+      {
+        name: 'owners',
+        type: 'relationship',
+        relationTo: 'people',
+        filterOptions: { roles: { in: ['editor', 'admin'] } },
+      },
+      { name: 'any', type: 'relationship', relationTo: 'people', filterOptions: () => true },
+    ]
+    const out = await describeFields(related, {
+      ...ctx,
+      findWith: new Map([
+        ['terms', 'taxonomy-terms'],
+        ['people', 'people'],
+      ]),
+    })
+    expect(out[0]).toMatchObject({ findWith: 'taxonomy-terms', findWhere: { type: 'topic' } })
+    // More than an exact match: handed on as a where, not flattened wrongly.
+    expect(out[1]).toMatchObject({ filter: { roles: { in: ['editor', 'admin'] } } })
+    expect(out[1]).not.toHaveProperty('findWhere')
+    expect(out[2]).not.toHaveProperty('findWhere')
+    expect(out[2]).not.toHaveProperty('filter')
+  })
+
   it('leaves out read-only and hidden fields even when allow-listed', async () => {
     const out = await describeFields(writableFields(fields, ['narration', 'revisedAt']), ctx)
     expect(out).toEqual([])

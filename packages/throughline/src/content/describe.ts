@@ -30,6 +30,14 @@ export interface FieldDescription {
   relationTo?: string | string[]
   /** How to find a value for it: the `find_related` kind that searches its target. */
   findWith?: string
+  /**
+   * The exact matches the field itself requires of what it links to, ready to
+   * pass as `find_related`'s `where` — a topics field that takes only terms of
+   * type `topic`, say. From the field's own `filterOptions`.
+   */
+  findWhere?: Record<string, string | number | boolean>
+  /** The field's `filterOptions` when it is more than exact matches, as a Payload `where`. */
+  filter?: unknown
   /** A group's or array row's fields. */
   fields?: FieldDescription[]
   /** A blocks field's blocks: what may be added. */
@@ -163,6 +171,50 @@ async function blocksOf(
     })
 }
 
+/*
+A relationship's `filterOptions` is what narrows the admin's picker — a topics
+field offering only terms of type `topic`. Asked the way the picker asks it, for
+a document that holds nothing yet. `true` means no narrowing, and so does an
+answer per collection for a field that links to several, which is rare enough
+to leave to the agent and the save-time validation.
+*/
+async function relationFilter(
+  filterOptions: unknown,
+  relationTo: string | string[],
+  ctx: DescribeContext,
+): Promise<Record<string, unknown> | undefined> {
+  if (typeof relationTo !== 'string' || filterOptions === undefined) return undefined
+  const answer =
+    typeof filterOptions === 'function'
+      ? await filterOptions({
+          data: {},
+          siblingData: {},
+          blockData: undefined,
+          id: undefined,
+          relationTo,
+          req: ctx.req,
+          user: ctx.req.user,
+        })
+      : filterOptions
+  return answer && typeof answer === 'object' && Object.keys(answer).length > 0
+    ? (answer as Record<string, unknown>)
+    : undefined
+}
+
+/** `{ type: { equals: 'topic' } }` as `{ type: 'topic' }`; `undefined` for anything more. */
+function exactMatches(where: Record<string, unknown>): Record<string, string | number | boolean> | undefined {
+  const out: Record<string, string | number | boolean> = {}
+  for (const [field, condition] of Object.entries(where)) {
+    if (field === 'and' || field === 'or' || !condition || typeof condition !== 'object') return undefined
+    const keys = Object.keys(condition)
+    const value = (condition as { equals?: unknown }).equals
+    if (keys.length !== 1 || keys[0] !== 'equals') return undefined
+    if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') return undefined
+    out[field] = value
+  }
+  return out
+}
+
 /** One field, and what is inside it. */
 export async function describeField(
   field: Field,
@@ -191,6 +243,12 @@ export async function describeField(
     out.relationTo = relationTo
     const kind = typeof relationTo === 'string' ? ctx.findWith.get(relationTo) : undefined
     if (kind) out.findWith = kind
+    const where = await relationFilter(f['filterOptions'], relationTo, ctx)
+    if (where) {
+      const exact = exactMatches(where)
+      if (exact) out.findWhere = exact
+      else out.filter = where
+    }
   }
   if (field.type === 'group' || field.type === 'array') {
     const children = await describeFields(
