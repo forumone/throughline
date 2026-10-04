@@ -213,7 +213,7 @@ async function recentVersions(
   return found.docs.map((version) => {
     const v = version as unknown as Result & { version?: Result }
     return {
-      versionId: v['id'],
+      versionId: String(v['id']),
       updatedAt: v['updatedAt'],
       status: v.version?.['_status'] ?? null,
       ...(v['autosave'] ? { autosave: true } : {}),
@@ -317,7 +317,7 @@ function publishTool(deps: AuthoringDeps) {
         'For "schedule": when, as an ISO 8601 date and time with an offset, e.g. 2026-11-02T09:00:00-05:00.',
       ),
     versionId: z
-      .string()
+      .union([z.string(), z.number()])
       .optional()
       .describe('For "rollback": the version to restore, from `get` with `versions`.'),
     approval: approval.optional(),
@@ -375,7 +375,12 @@ function publishTool(deps: AuthoringDeps) {
         case 'rollback':
           if (!input.versionId)
             return { error: 'A rollback needs `versionId`. `get` with `versions` lists them.' }
-          return delegate(deps.inner, 'rollback', { ...target, versionId: input.versionId }, ctx)
+          return delegate(
+            deps.inner,
+            'rollback',
+            { ...target, versionId: String(input.versionId) },
+            ctx,
+          )
         case 'request_approval':
           if (!input.approval)
             return { error: 'A request needs `approval`: { changesSummary, approverGroups }.' }

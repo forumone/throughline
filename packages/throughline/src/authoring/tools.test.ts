@@ -71,7 +71,7 @@ function setup(
     else tools.delete(name)
   }
   const findVersions = vi.fn(async () => ({
-    docs: [{ id: 'v1', updatedAt: '2026-10-01', version: { _status: 'published' } }],
+    docs: [{ id: 7, updatedAt: '2026-10-01', version: { _status: 'published' } }],
   }))
   const authoring = createAuthoringTools({
     inner: { definition: (name) => tools.get(name) },
@@ -162,7 +162,7 @@ describe('get', () => {
     const s = setup()
     const out = await s.tool('get')({ collection: 'posts', id: 4, versions: true })
     expect(out['versions']).toEqual([
-      { versionId: 'v1', updatedAt: '2026-10-01', status: 'published' },
+      { versionId: '7', updatedAt: '2026-10-01', status: 'published' },
     ])
     expect(s.findVersions).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -287,10 +287,15 @@ describe('publish', () => {
     })
     await s.tool('publish')({ ...target, action: 'schedule', at: '2026-11-02T09:00:00-05:00' })
     await s.tool('publish')({ ...target, action: 'rollback', versionId: 'v1' })
+    // A Postgres version id is a number; the module tool takes a string. Found end to end.
+    await s.tool('publish')({ ...target, action: 'rollback', versionId: 5 })
     expect(s.called('schedule_publish')).toEqual([
       { collection: 'pages', id: '2', publishAt: '2026-11-02T09:00:00-05:00' },
     ])
-    expect(s.called('rollback')).toEqual([{ collection: 'pages', id: '2', versionId: 'v1' }])
+    expect(s.called('rollback')).toEqual([
+      { collection: 'pages', id: '2', versionId: 'v1' },
+      { collection: 'pages', id: '2', versionId: '5' },
+    ])
   })
 
   it("takes the site's own rule for who may publish", async () => {
