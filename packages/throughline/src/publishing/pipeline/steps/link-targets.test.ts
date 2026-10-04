@@ -31,6 +31,24 @@ const CardGrid: Block = {
   fields: [{ name: 'items', type: 'array', fields: [link('href')] }],
 }
 
+// As forumone-2026: the recipe's fields decide what its JSON content holds.
+const ComposedSection: Block = {
+  slug: 'ComposedSection',
+  labels: { singular: 'Composed section', plural: 'Composed sections' },
+  fields: [
+    { name: 'recipe', type: 'relationship', relationTo: 'section-recipes' },
+    { name: 'content', type: 'json' },
+  ],
+}
+
+const sectionRecipes: CollectionConfig = {
+  slug: 'section-recipes',
+  fields: [
+    { name: 'name', type: 'text' },
+    { name: 'contract', type: 'json' },
+  ],
+}
+
 const pages: CollectionConfig = {
   slug: 'pages',
   labels: { singular: 'Page', plural: 'Pages' },
@@ -40,7 +58,7 @@ const pages: CollectionConfig = {
   fields: [
     { name: 'title', type: 'text' },
     link('primary', 'Primary link'),
-    { name: 'layout', type: 'blocks', blocks: [CardGrid] },
+    { name: 'layout', type: 'blocks', blocks: [CardGrid, ComposedSection] },
     { name: 'body', type: 'richText', label: 'Body' },
   ],
 }
@@ -73,7 +91,12 @@ function stubPayload(opts: {
   live: Record<string, Row[]>
   latest?: Record<string, Row[]>
 }) {
-  const configs: Record<string, CollectionConfig> = { pages, 'case-studies': caseStudies, tags }
+  const configs: Record<string, CollectionConfig> = {
+    pages,
+    'case-studies': caseStudies,
+    tags,
+    'section-recipes': sectionRecipes,
+  }
   const find = vi.fn(
     async (args: {
       collection: string
@@ -307,6 +330,118 @@ describe('reading', () => {
     expect(result.pass).toBe(false)
     expect(result.code).toBe('link-targets')
     expect(result.reason).toContain('tell a site administrator')
+  })
+})
+
+describe('composed sections', () => {
+  const recipe = (id: number, fields: { name: string; type: string }[]) => ({
+    id,
+    name: `Recipe ${id}`,
+    contract: { name: `Recipe${id}`, content: { fields } },
+  })
+  const composed = (recipeId: number, content: Record<string, unknown>) => ({
+    blockType: 'ComposedSection',
+    recipe: recipeId,
+    content,
+  })
+  const internal = (relationTo: string, value: unknown) => ({
+    mode: 'internal',
+    reference: { relationTo, value },
+  })
+
+  function composedContext(document: Row, live: Record<string, Row[]>) {
+    const made = contextFor(document, live)
+    made.ctx.options = {
+      ...made.ctx.options,
+      recipes: { blockType: 'ComposedSection', collection: 'section-recipes' },
+    }
+    return made
+  }
+
+  it('refuses a link in a composed section to a draft, at the content field', async () => {
+    const document = {
+      id: 'p1',
+      layout: [
+        { blockType: 'Text' },
+        { blockType: 'Text' },
+        composed(1, { heading: 'Read on', cta: internal('pages', 2) }),
+      ],
+    }
+    const { ctx } = composedContext(document, {
+      'section-recipes': [
+        recipe(1, [
+          { name: 'heading', type: 'text' },
+          { name: 'cta', type: 'link' },
+        ]),
+      ],
+      pages: [{ id: 2, title: 'Annual report', _status: 'draft' }],
+    })
+    const result = await linkTargetsStep(ctx)
+    expect(result.pass).toBe(false)
+    expect(result.issues).toEqual([
+      {
+        field: 'layout[2].content',
+        where: 'Block 3 (Composed section)',
+        message:
+          'This link goes to "Annual report", which is a draft, so readers would get a page that doesn\'t exist. Publish "Annual report" first, or change the link.',
+        severity: 'error',
+        rule: 'draft',
+      },
+    ])
+  })
+
+  it('reads each recipe once, and finds rich-text links in the content too', async () => {
+    const body = {
+      root: {
+        children: [
+          {
+            type: 'link',
+            fields: { linkType: 'internal', doc: { relationTo: 'pages', value: 3 } },
+          },
+        ],
+      },
+    }
+    const document = {
+      id: 'p1',
+      layout: [
+        composed(1, { cta: internal('pages', 2) }),
+        composed(1, { cta: internal('pages', 2) }),
+        composed(2, { body }),
+      ],
+    }
+    const { ctx, find } = composedContext(document, {
+      'section-recipes': [
+        recipe(1, [{ name: 'cta', type: 'link' }]),
+        recipe(2, [{ name: 'body', type: 'richtext' }]),
+      ],
+      pages: [{ id: 2, title: 'Live', _status: 'published' }],
+    })
+    const result = await linkTargetsStep(ctx)
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'section-recipes',
+        where: { id: { in: [1, 2] } },
+        depth: 0,
+        overrideAccess: true,
+      }),
+    )
+    expect(find.mock.calls.filter(([args]) => args.collection === 'section-recipes')).toHaveLength(
+      1,
+    )
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        field: 'layout[2].content',
+        where: 'Block 3 (Composed section)',
+        rule: 'deleted',
+      }),
+    ])
+  })
+
+  it('leaves composed content alone without the recipes option', async () => {
+    const document = { id: 'p1', layout: [composed(1, { cta: internal('pages', 2) })] }
+    const { ctx, find } = contextFor(document, { pages: [] })
+    expect(await linkTargetsStep(ctx)).toEqual({ pass: true })
+    expect(find).not.toHaveBeenCalled()
   })
 })
 

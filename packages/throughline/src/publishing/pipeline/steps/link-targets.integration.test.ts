@@ -39,8 +39,28 @@ const Pages: CollectionConfig = {
       type: 'blocks',
       blocks: [
         { slug: 'Cta', labels: { singular: 'Call to Action', plural: 'CTAs' }, fields: [link] },
+        // As forumone-2026: what the JSON content holds is the recipe's to say.
+        {
+          slug: 'ComposedSection',
+          labels: { singular: 'Composed section', plural: 'Composed sections' },
+          fields: [
+            { name: 'recipe', type: 'relationship', relationTo: 'section-recipes' },
+            { name: 'content', type: 'json' },
+          ],
+        },
       ],
     },
+  ],
+}
+
+const SectionRecipes: CollectionConfig = {
+  slug: 'section-recipes',
+  admin: { useAsTitle: 'name' },
+  fields: [
+    { name: 'name', type: 'text' },
+    { name: 'status', type: 'text' },
+    { name: 'contract', type: 'json' },
+    { name: 'tree', type: 'json' },
   ],
 }
 
@@ -57,7 +77,7 @@ beforeAll(async () => {
     secret: 'test-secret-test-secret-test-secret',
     // As forumone-2026: a link in a block is an id in JSON, with no foreign key to null it.
     db: sqliteAdapter({ client: { url: ':memory:' }, blocksAsJSON: true }),
-    collections: [Pages, Tags],
+    collections: [Pages, Tags, SectionRecipes],
     logger: { options: { level: 'silent' } },
     // Outside production `getPayload` starts `payload generate:types`, which never finishes here.
     typescript: { autoGenerate: false },
@@ -94,7 +114,11 @@ async function run(id: number | string) {
       payload,
       document,
       documentId: String(id),
-      options: { collections: [{ slug: 'pages' }], inngest: {} as never },
+      options: {
+        collections: [{ slug: 'pages' }],
+        inngest: {} as never,
+        recipes: { blockType: 'ComposedSection', collection: 'section-recipes' },
+      },
     }),
   )
 }
@@ -156,5 +180,56 @@ describe('link-targets against a database', () => {
     const result = await check([cta('pages', scheduled)])
     expect(result.pass).toBe(true)
     expect(result.warnings?.[0]).toContain('"Launch", which isn\'t published yet but is scheduled')
+  })
+
+  it('refuses a link in a composed section, read through its recipe', async () => {
+    const recipe = (
+      await payload.create({
+        collection: 'section-recipes',
+        data: {
+          name: 'Promo',
+          status: 'approved',
+          contract: {
+            name: 'Promo',
+            content: {
+              fields: [
+                { name: 'heading', type: 'text', required: true },
+                { name: 'cta', type: 'link', required: false },
+              ],
+            },
+          },
+          tree: { primitive: 'Section' },
+        },
+      })
+    ).id
+    const live = await page({ title: 'Live' }, true)
+    const trashed = await page({ title: 'Old news' }, true)
+    await payload.update({
+      collection: 'pages',
+      id: trashed,
+      data: { deletedAt: new Date().toISOString() },
+    })
+    const section = (target: unknown) => ({
+      blockType: 'ComposedSection',
+      recipe,
+      content: {
+        heading: 'Read on',
+        cta: { mode: 'internal', reference: { relationTo: 'pages', value: target } },
+      },
+    })
+
+    const result = await check([section(live), section(trashed)])
+
+    expect(result.pass).toBe(false)
+    expect(result.issues).toEqual([
+      {
+        field: 'layout[1].content',
+        where: 'Block 2 (Composed section)',
+        message:
+          'This link goes to "Old news", which is in the trash. Restore it, or change the link.',
+        severity: 'error',
+        rule: 'trash',
+      },
+    ])
   })
 })

@@ -1,6 +1,12 @@
-import type { Block, CollectionConfig, Field, Payload } from 'payload'
+import type { Block, CollectionConfig, CollectionSlug, Field, Payload } from 'payload'
 import { blockRegistry } from '../../../references/find.js'
-import { linkTargetsIn, type LinkTarget } from '../../../references/links.js'
+import {
+  composedRecipeIds,
+  linkTargetsIn,
+  type ComposedContentField,
+  type ComposedSectionLinks,
+  type LinkTarget,
+} from '../../../references/links.js'
 import { resolveCollection } from '../../options.js'
 import type { PipelineContext, PipelineIssue, PipelineStep } from '../types.js'
 
@@ -29,6 +35,12 @@ it runs after the pure content checks and before the policy steps.
   deleted, and `draft: false` so `_status` is the live row's.
 - **The latest draft of unpublished targets**, only in collections that can
   carry a schedule, because a schedule lives on the latest version.
+
+- **Each recipe a composed section uses, once**, when `recipes` is configured:
+  its content is JSON whose links only the recipe's fields declare, so the
+  recipes are read in one query and the content walked by their fields. A
+  recipe that cannot be read contributes no links; the composition step
+  already refuses the section for it.
 
 All with `overrideAccess: true`: the question is what a reader will get, not
 what the person publishing may read.
@@ -127,12 +139,7 @@ function quoted(title: string | undefined): string | undefined {
  * An issue's message, which goes out beside its `where` and so starts "This
  * link"; a warning is a line on its own, and says where the link is itself.
  */
-function messageFor(
-  link: LinkTarget,
-  verdict: Verdict,
-  singular: string,
-  placed: boolean,
-): string {
+function messageFor(link: LinkTarget, verdict: Verdict, singular: string, placed: boolean): string {
   const where = placed ? 'This link' : `A link in ${placeOf(link)}`
   switch (verdict.kind) {
     case 'deleted':
@@ -236,6 +243,45 @@ async function classify(
   return verdicts
 }
 
+/**
+ * Composed sections' links, when the host has them: every recipe the document
+ * uses, read in one query, and their content fields by id.
+ */
+async function composedLinks(
+  ctx: PipelineContext,
+  fields: readonly Field[],
+  data: Record<string, unknown>,
+  blocks: ReadonlyMap<string, Block>,
+): Promise<ComposedSectionLinks | undefined> {
+  const gate = ctx.options.recipes
+  if (!gate || !configOf(ctx.payload, gate.collection)) return undefined
+  const shape = {
+    blockType: gate.blockType,
+    recipeField: gate.recipeField,
+    contentField: gate.contentField,
+  }
+  const ids = composedRecipeIds(fields, data, { blocks, composed: shape })
+  if (ids.length === 0) return undefined
+
+  const found = await ctx.payload.find({
+    collection: gate.collection as CollectionSlug,
+    where: { id: { in: ids } },
+    depth: 0,
+    overrideAccess: true,
+    limit: ids.length,
+    pagination: false,
+    select: { contract: true },
+  })
+  const byId = new Map<string, readonly ComposedContentField[]>()
+  for (const recipe of found.docs as Record<string, unknown>[]) {
+    const contract = recipe['contract'] as
+      { content?: { fields?: readonly ComposedContentField[] } } | undefined
+    const declared = contract?.content?.fields
+    if (Array.isArray(declared)) byId.set(String(recipe['id']), declared)
+  }
+  return { ...shape, fieldsOf: (id) => byId.get(String(id)) }
+}
+
 /** The document as stored, ids unpopulated; the pipeline's copy when it cannot be read. */
 async function storedDocument(ctx: PipelineContext): Promise<Record<string, unknown>> {
   const stored = await ctx.payload.findByID({
@@ -259,8 +305,11 @@ export const linkTargetsStep: PipelineStep = async (ctx) => {
   const verdicts = new Map<string, Verdict>()
   try {
     const data = await storedDocument(ctx)
+    const blocks = blockRegistry(ctx.payload)
+    const composed = await composedLinks(ctx, own.fields as Field[], data, blocks)
     links = linkTargetsIn(own.fields as Field[], data, {
-      blocks: blockRegistry(ctx.payload),
+      blocks,
+      ...(composed ? { composed } : {}),
     }).filter(
       (link) => !(link.relationTo === ctx.collection.slug && String(link.id) === ctx.documentId),
     )

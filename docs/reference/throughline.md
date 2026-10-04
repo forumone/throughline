@@ -6,27 +6,28 @@ This page is the root entry and what every subpath shares. Each plugin's own pag
 
 ## Subpaths
 
-| Subpath           | Holds                                                                                                                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| (root)            | `assertEnvironment`, `checkEnvValue`, `hardenCoreCollections`, `mcpApiKeyAccess`, `withMeta`, `auditContext`, the logger, utilities, and the plugin types                             |
-| `/publishing`     | `publishingPlugin`, the publishing service, `isDraftWrite`, the accessibility checks, and the revalidation and scheduled-publishing jobs; see [publishing](throughline/publishing.md) |
-| `/editorial`      | `editorialPlugin`: content health, the content calendar, "Your work", command palette search, and their MCP tools                                                                     |
-| `/approvals`      | `approvalsPlugin`, signed action links, `expireStaleApprovalsJob`; see [approvals](throughline/approvals.md)                                                                          |
-| `/audit`          | `auditPlugin`, `getAuditWriter`, `AUDIT_ACTIONS`, `auditQueryPlugin` and its tools, `auditEventEchoJob`; see [audit](throughline/audit.md)                                            |
-| `/components`     | `componentsPlugin`: the design-system manifest over MCP; see [components](throughline/components.md)                                                                                  |
-| `/integrations`   | `integrationsPlugin`, the registry, the webhook integration, manual sync, `healthcheckJob`; see [integrations](throughline/integrations.md)                                           |
-| `/email`          | `emailPlugin`, the Resend client, the approval notifications and their templates; see [email](throughline/email.md)                                                                   |
-| `/jobs`           | `defineJob`, the job types, the failure handlers, and `CoreEvents` for module augmentation; see [jobs](throughline/jobs.md)                                                           |
-| `/jobs/inngest`   | `inngestJobs`, `createInngestClient`, `resolveInngestEnv`, `registrableInngestFunctions`                                                                                              |
-| `/jobs/payload`   | `payloadJobs`                                                                                                                                                                         |
-| `/media`          | Blob client-upload hardening, and reference tracking: `referencesPlugin`, `findReferences`, the delete and trash guards                                                               |
-| `/fields`         | The field kit: `slugField`, `publishingFields`, `revisedAtField`, `unlistedField`, `characterCountPlugin`, `fieldsPlugin`                                                             |
-| `/content`        | `contentPlugin`: the MCP tools an agent reads with before writing a draft; see [content](throughline/content.md)                                                                     |
-| `/observability`  | `jobFailuresPlugin`, `getJobFailureWriter`, `createErrorReporter`, `reportError`, `buildRequestErrorReport`                                                                           |
-| `/testing`        | `describeAnonymousAccess`, `checkAnonymousAccess`: test helpers for a site                                                                                                            |
-| `/cache-tags`     | `createCacheTags`, which imports nothing, for front-end readers                                                                                                                       |
-| `/client`, `/rsc` | The admin's client and server components, named in Payload's import map                                                                                                               |
-| bin               | `throughline migrate-imports`, see [Upgrading from 0.x](../guides/upgrading.md); `throughline-payload`, see [below](#throughline-payload-bin)                                         |
+| Subpath           | Holds                                                                                                                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (root)            | `assertEnvironment`, `checkEnvValue`, `hardenCoreCollections`, `mcpApiKeyAccess`, `withMeta`, `auditContext`, the logger, utilities, and the plugin types                              |
+| `/publishing`     | `publishingPlugin`, the publishing service, `isDraftWrite`, the accessibility checks, and the revalidation and scheduled-publishing jobs; see [publishing](throughline/publishing.md)  |
+| `/editorial`      | `editorialPlugin`: content health, the content calendar, "Your work", command palette search, and their MCP tools                                                                      |
+| `/approvals`      | `approvalsPlugin`, signed action links, `expireStaleApprovalsJob`; see [approvals](throughline/approvals.md)                                                                           |
+| `/audit`          | `auditPlugin`, `getAuditWriter`, `AUDIT_ACTIONS`, `auditQueryPlugin` and its tools, `auditEventEchoJob`; see [audit](throughline/audit.md)                                             |
+| `/components`     | `componentsPlugin`: the design-system manifest over MCP; see [components](throughline/components.md)                                                                                   |
+| `/integrations`   | `integrationsPlugin`, the registry, the webhook integration, manual sync, `healthcheckJob`; see [integrations](throughline/integrations.md)                                            |
+| `/email`          | `emailPlugin`, the Resend client, the approval notifications and their templates; see [email](throughline/email.md)                                                                    |
+| `/jobs`           | `defineJob`, the job types, the failure handlers, and `CoreEvents` for module augmentation; see [jobs](throughline/jobs.md)                                                            |
+| `/jobs/inngest`   | `inngestJobs`, `createInngestClient`, `resolveInngestEnv`, `registrableInngestFunctions`                                                                                               |
+| `/jobs/payload`   | `payloadJobs`                                                                                                                                                                          |
+| `/media`          | Blob client-upload hardening, and reference tracking: `referencesPlugin`, `findReferences`, the delete and trash guards                                                                |
+| `/fields`         | The field kit: `slugField`, `publishingFields`, `revisedAtField`, `unlistedField`, `characterCountPlugin`, `fieldsPlugin`                                                              |
+| `/content`        | `contentPlugin`: the MCP tools an agent reads with before writing a draft; see [content](throughline/content.md)                                                                       |
+| `/observability`  | `jobFailuresPlugin`, `getJobFailureWriter`, `createErrorReporter`, `reportError`, `buildRequestErrorReport`                                                                            |
+| `/testing`        | `describeAnonymousAccess`, `checkAnonymousAccess`: test helpers for a site                                                                                                             |
+| `/cache-tags`     | `createCacheTags`, which imports nothing, for front-end readers                                                                                                                        |
+| `/links`          | `markLinkTarget`, `LINK_TARGET_KEY` and `linkTargetMarker`. This is the link-target marker. It imports nothing, so a link-field helper that a client component also imports can use it |
+| `/client`, `/rsc` | The admin's client and server components, named in Payload's import map                                                                                                                |
+| bin               | `throughline migrate-imports`, see [Upgrading from 0.x](../guides/upgrading.md); `throughline-payload`, see [below](#throughline-payload-bin)                                          |
 
 ## `throughline()`
 
@@ -75,16 +76,16 @@ The reasoning is in [`1.0-throughline-call.md`](../spec/1.0-throughline-call.md)
 
 Since 2.0 the server is shaped by what people use it for: drafting and publishing content from a client such as Claude Desktop. It serves eight authoring tools, with the operations tools behind an admin check. Before 2.0 it served every module's tools, 48 on a full install, which is more than a model chooses between well and more than some clients allow (Cursor stops at 40). forumone-2026#830.
 
-| Tool              | What it does                                                                                                                  |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `find`            | Finds content by query, in one content type, something to link (`kind`), or your own drafts and schedule (`mine`).            |
-| `get`             | Reads a document (with `versions` for a rollback), what a content type takes, or which content types there are.               |
-| `save_draft`      | Creates a draft, or changes the given fields of one. Never publishes.                                                         |
-| `edit_blocks`     | Inserts, updates, moves and removes blocks in one field, as a list checked and saved together.                                |
-| `check`           | Everything `publish` would check, with every blocker at once, and the preview link.                                           |
-| `publish`         | `action`: `now`, `schedule`, `unpublish`, `rollback` or `request_approval`.                                                   |
-| `design_guide`    | Component suggestions for an intent, one component's contract, the recipe building blocks, or the component list.             |
-| `compose_section` | Checks a composed section's recipe, or saves it as a draft for a person to approve.                                           |
+| Tool              | What it does                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `find`            | Finds content by query, in one content type, something to link (`kind`), or your own drafts and schedule (`mine`). |
+| `get`             | Reads a document (with `versions` for a rollback), what a content type takes, or which content types there are.    |
+| `save_draft`      | Creates a draft, or changes the given fields of one. Never publishes.                                              |
+| `edit_blocks`     | Inserts, updates, moves and removes blocks in one field, as a list checked and saved together.                     |
+| `check`           | Everything `publish` would check, with every blocker at once, and the preview link.                                |
+| `publish`         | `action`: `now`, `schedule`, `unpublish`, `rollback` or `request_approval`.                                        |
+| `design_guide`    | Component suggestions for an intent, one component's contract, the recipe building blocks, or the component list.  |
+| `compose_section` | Checks a composed section's recipe, or saves it as a draft for a person to approve.                                |
 
 **Each is a thin wrapper.** Every module still builds its own tools, into a collector `plugin-mcp` never sees, and the eight call their handlers with the caller's context. So access rules, the audit trail and every check are the module's own, unchanged. The module tools' factories are still exported, for a site wiring its own surface.
 
@@ -117,7 +118,7 @@ Since 2.0 the server is shaped by what people use it for: drafting and publishin
 | `editorial`    | when present | `editorialPlugin`'s options (`/editorial`): content health, the calendar, "Your work" (`work`, less `collections`) and the palette.                                                                                 |
 | `healthcheck`  | when present | `healthcheckJob`'s options: its `checks` and `schedule`. A failing run is recorded in `job-failures`.                                                                                                               |
 | `auditEcho`    |              | Extra handlers for the audit echo job. Giving it turns the job on.                                                                                                                                                  |
-| `mcp`          |              | `{ canPublish, ops }`: who may take something live with `publish` (default: an admin or an editor), and whether admins get the operations tools (default `true`).                                                |
+| `mcp`          |              | `{ canPublish, ops }`: who may take something live with `publish` (default: an admin or an editor), and whether admins get the operations tools (default `true`).                                                   |
 
 No plugin's options include `mcpTools`, `inngest`, `emit` or `logger`: `throughline()` supplies them.
 
