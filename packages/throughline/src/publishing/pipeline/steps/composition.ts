@@ -249,8 +249,19 @@ export function emptyBlock(
   if (!component || component.behavior?.fetchesData) return undefined
   const fields = component.content.fields.filter((f) => CONTENT_TYPES.has(f.type))
   if (fields.length === 0) return undefined
-  if (fields.some((f) => hasContent(block[f.name]))) return undefined
-  return fields.map((f) => f.name)
+  /*
+  Every stored field but the contract's settings: a field the site adds to the
+  block counts too. A form block's form is a relationship the site adds, not a
+  contract field, and a form block with a form chosen and no heading is not
+  empty.
+  */
+  const settings = new Set(
+    component.content.fields.filter((f) => !CONTENT_TYPES.has(f.type)).map((f) => f.name),
+  )
+  const filled = Object.entries(block).some(
+    ([key, value]) => !settings.has(key) && !BOOKKEEPING.has(key) && hasContent(value),
+  )
+  return filled ? undefined : fields.map((f) => f.name)
 }
 
 const BOOKKEEPING = new Set(['id', 'blockType', 'blockName', 'mode', 'newTab', 'relationTo', 'type', 'variant', 'version', 'format', 'indent', 'direction'])

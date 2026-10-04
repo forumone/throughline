@@ -110,6 +110,10 @@ describe('an empty block', () => {
     ).toBe(true)
   })
 
+  it("counts a field the site adds to the block, such as a form block's form", async () => {
+    expect((await run([{ blockType: 'CTA', form: 12, tone: 'dark' }])).pass).toBe(true)
+  })
+
   it('leaves alone a block with no content to fill, and one that fetches its own', async () => {
     expect((await run([{ blockType: 'Divider' }, { blockType: 'LatestPosts' }])).pass).toBe(true)
   })
