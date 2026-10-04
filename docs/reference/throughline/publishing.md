@@ -199,6 +199,29 @@ The admin shows these as a warning toast on an otherwise successful publish. Rep
 
 `rollback` and `schedule_publish` behave the same way.
 
+## Composed sections
+
+A block that holds a recipe (see [recipes](../design-system/recipes.md)) has no contract in the manifest, so the composition step would otherwise call it an unknown component. Configure `recipes`, and the step checks the recipe instead:
+
+```ts
+throughline({
+  publishing: {
+    recipes: { blockType: 'ComposedSection', collection: 'section-recipes' },
+  },
+})
+```
+
+For each such block, the step requires that:
+
+- **the recipe exists** (`recipe-missing`);
+- **it is approved** (`recipe-not-approved`). By default that means `status === 'approved'`; pass `isApproved` to decide otherwise;
+- **it still passes `lintRecipe`** against the manifest as the components plugin loads it now, not as it was when the recipe was saved (`recipe-lint`);
+- **the block's content fills the recipe's required fields** (`recipe-content`).
+
+The recipe is read past access control, so a draft recipe fails for not being approved, not for not being found. `recipeField` and `contentField` name the block's fields, and default to `recipe` and `content`.
+
+The composition step also checks **placement** for every block. A component whose contract places it only `inline` (inside another component) can't stand on a page by itself.
+
 ## Custom accessibility checks
 
 The built-in checks (`alt-text`, `heading-hierarchy`, `link-labels`) are exported from `@forumone/throughline/publishing`. Add your own via `accessibilityChecks`:

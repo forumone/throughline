@@ -53,6 +53,19 @@ export interface ApprovalResolver {
   ) => Promise<ActiveApproval | null>
 }
 
+export interface RecipeGateOptions {
+  /** The block type a composed section is stored as, e.g. `ComposedSection`. */
+  blockType: string
+  /** The collection its recipes live in, e.g. `section-recipes`. */
+  collection: string
+  /** The block's relationship to its recipe. Default: `recipe`. */
+  recipeField?: string
+  /** The block's content, one value per recipe field. Default: `content`. */
+  contentField?: string
+  /** Whether a recipe may be published. Default: its `status` is `approved`. */
+  isApproved?: (recipe: Record<string, unknown>) => boolean
+}
+
 export interface PublishingPluginOptions extends BaseCorePluginOptions {
   /** Required: collections that can be published through this server. */
   collections: PublishableCollection[]
@@ -69,6 +82,15 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
   disableAccessibilityChecks?: string[]
   /** Optional: resolver consulted when a document's policy requires approval. */
   approvalResolver?: ApprovalResolver
+  /**
+   * Optional: the block that holds a composed section, and where its recipes
+   * live (forumone-2026#801). With it, the composition step checks each such
+   * block's recipe — that it exists, is approved, still passes `lintRecipe`
+   * against the manifest as it is now, and that the block's content fills the
+   * recipe's required fields — instead of calling the block an unknown
+   * component.
+   */
+  recipes?: RecipeGateOptions
   /** Required: Inngest client used to fire publishing events. */
   inngest: Inngest
   /**

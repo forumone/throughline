@@ -31,6 +31,9 @@ const PLUGIN_VERSION = '0.1.0'
  */
 const VALIDATOR_SYMBOL = Symbol.for('@forumone/throughline/components-validator')
 
+/** Where the loaded manifest is attached, for peers that need the manifest itself. */
+export const MANIFEST_SYMBOL = Symbol.for('@forumone/throughline/components-manifest')
+
 export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
   (rawOptions) => (incomingConfig) => {
     if (rawOptions.enabled === false) return incomingConfig
@@ -115,6 +118,17 @@ function attachValidator(payload: object, loader: ManifestLoader): void {
   }
   Object.defineProperty(payload, VALIDATOR_SYMBOL, {
     value: validator,
+    enumerable: false,
+    writable: false,
+    configurable: false,
+  })
+  /*
+  The manifest itself, for the publish step's recipe check (forumone-2026#801):
+  a composed section is linted against the design system as it is at publish,
+  which is this loader's answer, not a copy taken when the recipe was saved.
+  */
+  Object.defineProperty(payload, MANIFEST_SYMBOL, {
+    value: async () => (await loader.get()).raw,
     enumerable: false,
     writable: false,
     configurable: false,
