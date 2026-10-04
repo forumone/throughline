@@ -7,8 +7,21 @@ export type {
   WalkVisitor,
 } from './walk.js'
 
-export { LINK_TARGET_KEY, linkTargetMarker, linkTargetsIn, markLinkTarget } from './links.js'
-export type { LinkTarget, LinkTargetMarker, LinkTargetsInOptions } from './links.js'
+export {
+  LINK_TARGET_KEY,
+  composedRecipeIds,
+  linkTargetMarker,
+  linkTargetsIn,
+  markLinkTarget,
+} from './links.js'
+export type {
+  ComposedContentField,
+  ComposedSectionLinks,
+  ComposedSectionShape,
+  LinkTarget,
+  LinkTargetMarker,
+  LinkTargetsInOptions,
+} from './links.js'
 
 export { blockRegistry, describeReferences, findReferencedIds, findReferences } from './find.js'
 export type { DocumentReferences, FindReferencesOptions } from './find.js'

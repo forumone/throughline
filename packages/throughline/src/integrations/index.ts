@@ -42,6 +42,18 @@ export {
 } from './sync/problems.js'
 export type { ProblemReportOptions } from './sync/problems.js'
 
+/**
+ * What `lastError` will say: the summary line an editor can read, then the
+ * integration's own detail. `statusUpdateData` is the exact write
+ * `updateStatus` makes, so a site can assert its integration's wording.
+ */
+export {
+  LAST_ERROR_SUMMARY,
+  lastErrorDetail,
+  lastErrorText,
+  statusUpdateData,
+} from './sync/status.js'
+
 export { requestManualSync, MANUAL_SYNC_EVENT } from './sync/manual-sync.js'
 export type {
   ManualSyncRefusal,

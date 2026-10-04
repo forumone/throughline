@@ -250,13 +250,13 @@ An internal link stores a relationship, and the page resolves it when it is read
 
 It reads the document's links, looks up every target (one query per collection, past access control, including the trash), and decides:
 
-| The target | Result | `rule` |
-| --- | --- | --- |
-| doesn't exist | error | `deleted` |
-| is in the trash | error | `trash` |
-| has drafts and isn't published | error | `draft` |
-| isn't published, but has a scheduled publish time | warning | — |
-| is published, or its collection has no drafts | passes | — |
+| The target                                        | Result  | `rule`    |
+| ------------------------------------------------- | ------- | --------- |
+| doesn't exist                                     | error   | `deleted` |
+| is in the trash                                   | error   | `trash`   |
+| has drafts and isn't published                    | error   | `draft`   |
+| isn't published, but has a scheduled publish time | warning | —         |
+| is published, or its collection has no drafts     | passes  | —         |
 
 A schedule only counts in a collection this plugin publishes, because that is where it knows the `scheduledPublishField`. A warning doesn't block. It reaches the publish result's `warnings`, because a page that goes live with the page it links to is fine. A link back to the document being published is skipped.
 
@@ -271,14 +271,18 @@ The step uses the same structural walk as `/media`'s reference finder, through g
 - **A relationship field marked as a link target**, with `custom: { throughlineLinkTarget: true }`. Every link the design-system generator builds marks its `reference` like this. Mark your own hand-written link fields with `markLinkTarget`:
 
   ```ts
-  import { markLinkTarget } from '@forumone/throughline/publishing'
+  import { markLinkTarget } from '@forumone/throughline/links'
 
   markLinkTarget({ name: 'reference', type: 'relationship', relationTo: ['pages', 'posts'] })
   ```
 
+  `markLinkTarget`, `LINK_TARGET_KEY` and `linkTargetMarker` come from `@forumone/throughline/links`, which imports nothing at run time, so a link-field helper that a `'use client'` admin component also imports can use them. `/publishing` still exports `markLinkTarget` and `LINK_TARGET_KEY`, but it is the server plugin and can't go into a client bundle.
+
   A marked field counts only when it is the live branch of its link. It is skipped when a sibling `mode` is set to anything other than `internal`, because a link switched to "Another site" keeps its old reference. If your link group uses a different shape, pass the rule yourself: `markLinkTarget(field, { when: (siblings) => siblings.type === 'reference' })`.
 
 - **An internal link in rich text**: a Lexical `link` or `autolink` node with `linkType: 'internal'`.
+
+- **A link in a composed section's content**, when `recipes` is configured. The content is a `json` field, so the config can't say which values are links, but the recipe can. The step reads every recipe the document's composed sections use, in one query, and walks each block's content by its recipe's `contract.content.fields`. A `link` field is `{ mode, reference: { relationTo, value }, url }`, the same as a generated link, and the same `mode` rule applies. A `richtext` field is checked for internal links, and a `group` or `array` is checked through its `of`. The issue's `field` is the content field's path, such as `layout[2].content`, because nothing inside the JSON is a field the admin can mark. Its `where` is the block (`Block 3 (Composed section)`). If a recipe can't be read, its content isn't checked here. The composition step refuses that section anyway.
 
 Other relationships, such as an author or a list of related items, are not links.
 

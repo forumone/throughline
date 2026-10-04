@@ -91,6 +91,22 @@ await ctx.updateStatus(instance.id, 'partial', '3 of 40 skipped')
 
 `partial` and `failed` require a message, and the types refuse a call without one, so the admin never shows a run that was not clean with no reason beside it. Only `success` clears `lastError`.
 
+`lastError` opens with a line any editor can read, then a blank line, then your message unchanged. To test what yours will say, use the helpers `updateStatus` uses. They're exported from `/integrations`:
+
+```ts
+import {
+  LAST_ERROR_SUMMARY,
+  lastErrorText,
+  statusUpdateData,
+} from '@forumone/throughline/integrations'
+
+statusUpdateData('failed', 'HTTP 502')
+// { lastSyncAt: '…', lastSyncStatus: 'failed', lastError: `${LAST_ERROR_SUMMARY.failed}\n\nHTTP 502` }
+lastErrorText('partial', '3 of 40 skipped') // the summary line, a blank line, the detail
+```
+
+`lastErrorDetail(text)` does the reverse and strips the summary line.
+
 A run that imports many records and skips some should collect one line per skipped record and let `statusFromProblems` choose the status:
 
 ```ts

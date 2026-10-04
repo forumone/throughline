@@ -1,7 +1,13 @@
 import type { Block, Field } from 'payload'
 import { describe, expect, it } from 'vitest'
 import { linkField } from '@forumone/throughline-design-system/generate'
-import { LINK_TARGET_KEY, linkTargetsIn, markLinkTarget } from './links.js'
+import {
+  LINK_TARGET_KEY,
+  composedRecipeIds,
+  linkTargetsIn,
+  markLinkTarget,
+  type ComposedContentField,
+} from './links.js'
 
 /*
 Where a document's links go, for the `link-targets` publish step
@@ -249,5 +255,100 @@ describe('rich text', () => {
         top: 'body',
       },
     ])
+  })
+})
+
+describe('a composed section', () => {
+  /*
+  Its content is JSON, one value per field its recipe declares, so which values
+  are links is the recipe's to say (forumone-2026#756).
+  */
+  const ComposedSection: Block = {
+    slug: 'ComposedSection',
+    labels: { singular: 'Composed section', plural: 'Composed sections' },
+    fields: [
+      { name: 'recipe', type: 'relationship', relationTo: 'section-recipes' },
+      { name: 'content', type: 'json' },
+    ],
+  }
+  const fields: Field[] = [{ name: 'layout', type: 'blocks', blocks: [ComposedSection] }]
+  const recipeFields: Record<string, ComposedContentField[]> = {
+    r1: [
+      { name: 'heading', type: 'text' },
+      { name: 'cta', type: 'link' },
+      { name: 'body', type: 'richtext' },
+      { name: 'items', type: 'array', of: [{ name: 'href', type: 'link' }] },
+    ],
+  }
+  const composed = {
+    blockType: 'ComposedSection',
+    fieldsOf: (id: number | string) => recipeFields[String(id)],
+  }
+  const internal = (relationTo: string, value: unknown) => ({
+    mode: 'internal',
+    reference: { relationTo, value },
+  })
+  const section = (recipe: unknown, content: Record<string, unknown>) => ({
+    blockType: 'ComposedSection',
+    recipe,
+    content,
+  })
+  const data = {
+    layout: [
+      { blockType: 'Other' },
+      section('r1', {
+        heading: 'pages 9 is not a link',
+        cta: internal('pages', 3),
+        body: {
+          root: {
+            children: [
+              {
+                type: 'link',
+                fields: { linkType: 'internal', doc: { relationTo: 'posts', value: 4 } },
+              },
+            ],
+          },
+        },
+        items: [{ href: internal('pages', { id: 5, title: 'populated' }) }],
+      }),
+    ],
+  }
+
+  it('lists each recipe it uses once, by id or populated', () => {
+    const twice = { layout: [...data.layout, section({ id: 'r1' }, {})] }
+    expect(composedRecipeIds(fields, twice, { composed })).toEqual(['r1'])
+  })
+
+  it('finds links, rich-text links and links in arrays, at the content field', () => {
+    const found = linkTargetsIn(fields, data, { composed })
+    expect(
+      found.map((t) => [t.relationTo, t.id, t.source, t.at.dataPath, t.at.block?.index]),
+    ).toEqual([
+      ['pages', 3, 'field', 'layout[1].content', 1],
+      ['posts', 4, 'richText', 'layout[1].content', 1],
+      ['pages', 5, 'field', 'layout[1].content', 1],
+    ])
+    expect(found[0]?.at.path).toBe('layout[1] › ComposedSection › content › cta › reference')
+    expect(found[0]?.at.block?.block.slug).toBe('ComposedSection')
+  })
+
+  it('skips an external link with a stale reference, and a recipe it could not read', () => {
+    const stale = {
+      layout: [
+        section('r1', {
+          cta: {
+            mode: 'external',
+            url: 'https://example.com',
+            reference: { relationTo: 'pages', value: 3 },
+          },
+        }),
+        section('gone', { cta: internal('pages', 3) }),
+      ],
+    }
+    expect(linkTargetsIn(fields, stale, { composed })).toEqual([])
+  })
+
+  it('finds nothing in the content without the recipes', () => {
+    expect(linkTargetsIn(fields, data)).toEqual([])
   })
 })
