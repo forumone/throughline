@@ -20,7 +20,14 @@ registered and any the site adds: the sidebar is where editors go to reach
 content, and a report above Content pushed it down.
 */
 
-export function ReportsNav({ reports = [] }: { reports?: Report[] }) {
+export function ReportsNav({
+  reports = [],
+  label = 'Reports',
+}: {
+  reports?: Report[]
+  /** The group's heading. `mcpOAuth` reuses this for its own link. */
+  label?: string
+}) {
   const pathname = usePathname()
   const {
     config: {
@@ -31,14 +38,14 @@ export function ReportsNav({ reports = [] }: { reports?: Report[] }) {
   if (reports.length === 0) return null
 
   return (
-    <NavGroup label="Reports">
-      {reports.map(({ path, label }) => {
+    <NavGroup label={label}>
+      {reports.map(({ path, label: text }) => {
         const href = `${admin}${path}`
         const active = pathname === href || pathname.startsWith(`${href}/`)
         const content = (
           <>
             {active && <div className="nav__link-indicator" />}
-            <span className="nav__link-label">{label}</span>
+            <span className="nav__link-label">{text}</span>
           </>
         )
         return pathname === href ? (

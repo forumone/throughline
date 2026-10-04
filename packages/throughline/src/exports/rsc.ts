@@ -18,3 +18,6 @@ export { HealthSummary } from '../editorial/health/HealthSummary.js'
 export { ContentCalendarView } from '../editorial/calendar/ContentCalendarView.js'
 export { ContentCalendarReport } from '../editorial/calendar/ContentCalendarReport.js'
 export { YourWorkDashboard, YourWorkReport } from '../editorial/work/YourWork.js'
+
+// MCP sign-in
+export { ConnectMcpView, McpAuthorizeView } from '../mcp-oauth/admin/views.js'

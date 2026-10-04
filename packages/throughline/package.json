@@ -66,6 +66,10 @@
       "types": "./dist/content/index.d.ts",
       "default": "./dist/content/index.js"
     },
+    "./mcp-oauth": {
+      "types": "./dist/mcp-oauth/index.d.ts",
+      "default": "./dist/mcp-oauth/index.js"
+    },
     "./observability": {
       "types": "./dist/observability/index.d.ts",
       "default": "./dist/observability/index.js"
