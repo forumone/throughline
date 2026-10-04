@@ -51,8 +51,16 @@ export function createGetPublishStatusTool(deps: GetPublishStatusToolDeps): McpT
                 reason: status.reason,
                 suggestion: status.suggestion,
                 issues: status.issues ?? [],
+                blockers: (status.blockers ?? []).map((blocker) => ({
+                  blockedAt: blocker.failedAt,
+                  code: blocker.code,
+                  reason: blocker.reason,
+                  suggestion: blocker.suggestion,
+                  issues: blocker.issues ?? [],
+                })),
               }),
         },
+        previewUrl: status.previewUrl,
       }
     },
   }

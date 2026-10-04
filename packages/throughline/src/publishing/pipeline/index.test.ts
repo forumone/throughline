@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
-import { runPreflightPipeline, runPublishPipeline } from './index.js'
+import { runPreflightPipeline, runPreflightReport, runPublishPipeline } from './index.js'
 import { attachComponentValidator, makeContext } from './_test-helpers.js'
 
 function passingDoc() {
@@ -129,5 +129,49 @@ describe('runPreflightPipeline', () => {
     // Embargo will pass. Approval (no policy) will pass. So this should pass.
     const result = await runPreflightPipeline(ctx)
     expect(result.success).toBe(true)
+  })
+})
+
+describe('runPreflightReport', () => {
+  const tooManyHeroes = async () => ({
+    valid: false,
+    issues: [
+      { severity: 'error' as const, rule: 'max-per-page', message: 'Too many heroes', blockIndex: 1 },
+    ],
+  })
+
+  it('reports every blocking step, in pipeline order, rather than the first', async () => {
+    const ctx = makeContext({ document: { ...passingDoc(), seo: { description: 'no title' } } })
+    attachComponentValidator(ctx.payload, tooManyHeroes)
+
+    const blockers = await runPreflightReport(ctx)
+
+    expect(blockers.map((b) => b.failedAt)).toEqual(['composition', 'required-fields'])
+    // The first is exactly what the stopping pipeline reports.
+    expect(blockers[0]).toEqual(await runPreflightPipeline(ctx))
+  })
+
+  it('stops at exist, since every later step reads a document there is none of', async () => {
+    const ctx = makeContext({ document: {} })
+    attachComponentValidator(ctx.payload, tooManyHeroes)
+
+    const blockers = await runPreflightReport(ctx)
+
+    expect(blockers.map((b) => b.failedAt)).toEqual(['exist'])
+  })
+
+  it('is empty when the document would publish, and writes nothing', async () => {
+    const update = vi.fn(async () => ({ id: 'p1' }))
+    const send = vi.fn(async () => ({}))
+    const ctx = makeContext({
+      payload: { update } as unknown as Payload,
+      inngest: { send } as unknown as Inngest,
+      document: passingDoc(),
+    })
+    attachComponentValidator(ctx.payload, async () => ({ valid: true, issues: [] }))
+
+    expect(await runPreflightReport(ctx)).toEqual([])
+    expect(update).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
   })
 })
