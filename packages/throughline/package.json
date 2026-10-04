@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Throughline: an editorial platform for Payload CMS. Publishing, approvals, audit, integrations, email and jobs, with every feature reachable over MCP.",
   "type": "module",
   "main": "./dist/index.js",
