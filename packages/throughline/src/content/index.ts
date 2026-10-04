@@ -1,4 +1,4 @@
-export { contentPlugin } from './plugin.js'
+export { assertContentOptions, contentPlugin } from './plugin.js'
 export type {
   ContentCollectionOptions,
   ContentPluginOptions,

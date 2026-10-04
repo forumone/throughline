@@ -312,6 +312,7 @@
     "anonymousRead": ["@forumone/throughline/testing"],
     "approvalsEnv": ["@forumone/throughline/approvals"],
     "approvalsPlugin": ["@forumone/throughline/approvals"],
+    "assertContentOptions": ["@forumone/throughline/content"],
     "assertEnvironment": ["@forumone/throughline"],
     "attachApprovalResolver": ["@forumone/throughline/approvals"],
     "auditContext": ["@forumone/throughline"],
