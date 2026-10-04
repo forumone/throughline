@@ -51,6 +51,7 @@ const fields: Field[] = [
     ],
   },
   { name: 'slug', type: 'text' },
+  { name: 'body', type: 'richText' },
   { name: 'policy', type: 'group', fields: [{ name: 'requiresApproval', type: 'checkbox' }] },
 ]
 
@@ -114,7 +115,7 @@ function setup(options: Setup = {}) {
 
   const deps: ContentWriteDeps = {
     payload,
-    collections: { pages: { fields: ['title', 'slug', 'layout', 'meta'] } },
+    collections: { pages: { fields: ['title', 'slug', 'layout', 'meta', 'body'] } },
     related: {},
     audit,
   }
@@ -218,6 +219,19 @@ describe('create_draft', () => {
       issues: [{ rule: 'max-per-page', message: 'Hero may appear once', index: 1 }],
     })
     expect(create).not.toHaveBeenCalled()
+  })
+
+  it('refuses Markdown in a rich-text field, which a draft save would store as a string', async () => {
+    const { deps, create } = setup()
+    const tool = createCreateDraftTool(deps)
+    const out = await tool.handler({ collection: 'pages', data: { title: 'X', body: '# Hello' } }, editor)
+    expect(out).toMatchObject({ error: expect.stringMatching(/body is rich text/), field: 'body' })
+    expect(create).not.toHaveBeenCalled()
+
+    const state = { root: { type: 'root', children: [{ type: 'paragraph', children: [] }] } }
+    await expect(
+      tool.handler({ collection: 'pages', data: { title: 'X', body: state } }, editor),
+    ).resolves.not.toHaveProperty('error')
   })
 
   it('refuses a key with nobody behind it before anything else', async () => {

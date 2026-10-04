@@ -107,6 +107,23 @@ async function checkWrite(
   const req = await requestAs(deps.payload, ctx)
   const registry = blockRegistry(deps.payload)
 
+  /*
+  A draft save skips validation, so a rich-text field handed a Markdown string
+  would store the string, and every renderer that expects an editor state would
+  fail on the page. Until a site gives the tools a converter, only an editor
+  state is accepted.
+  */
+  for (const field of fields) {
+    if (field.type !== 'richText' || !(field.name in data)) continue
+    const value = data[field.name]
+    if (value !== null && !isEditorState(value)) {
+      return {
+        error: `${field.name} is rich text and takes an editor state ({ root: … }), as get_document returns it. Markdown and HTML are not accepted yet.`,
+        field: field.name,
+      }
+    }
+  }
+
   for (const field of blockFields(fields, data)) {
     const rows = data[field.name] as unknown[]
     const currentRows = Array.isArray(current[field.name]) ? (current[field.name] as unknown[]) : []
@@ -128,6 +145,11 @@ async function checkWrite(
     }
   }
   return undefined
+}
+
+function isEditorState(value: unknown): boolean {
+  const root = (value as { root?: unknown } | null)?.root
+  return Boolean(root) && typeof root === 'object' && Array.isArray((root as { children?: unknown }).children)
 }
 
 /** The top-level blocks fields `data` sets, with an array as their value. */
