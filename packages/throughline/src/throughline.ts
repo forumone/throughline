@@ -35,6 +35,8 @@ import type {
   ScheduledPublishRequest,
   ScheduledPublishResult,
 } from './jobs/workflow-types.js'
+import { AUTHORING_PROMPTS, type PayloadMcpPrompt } from './authoring/prompts.js'
+import { surfacePlugin } from './authoring/surface.js'
 import { createMcpToolCollector } from './mcp/collector.js'
 import type { PayloadMcpTool } from './mcp/payload-mcp.js'
 import { jobFailuresPlugin, type JobFailuresPluginOptions } from './observability/plugin.js'
@@ -137,6 +139,16 @@ export interface ThroughlineOptions {
   healthcheck?: Omit<HealthcheckOptions, 'payload'>
   /** Extra handlers for the audit echo job, which runs whenever approvals or email are on. */
   auditEcho?: Omit<AuditEventEchoOptions, 'onTerminalFailure'>
+  /**
+   * What `/api/mcp` serves: the eight authoring tools, and the operations
+   * tools for admins. forumone-2026#830.
+   */
+  mcp?: {
+    /** Who may take something live with `publish`. Default: an admin or an editor. */
+    canPublish?: (ctx: McpToolContext) => boolean
+    /** Serve the operations tools (audit, integrations, approvals queue…) to admins. Default true. */
+    ops?: boolean
+  }
 }
 
 export interface ThroughlinePublishingOptions extends Omit<
@@ -170,6 +182,8 @@ export interface ThroughlineSuite {
   plugin: Plugin
   /** For `mcpPlugin({ mcp: { tools: suite.mcpTools } })`. Filled as the plugins load. */
   mcpTools: PayloadMcpTool[]
+  /** For `mcpPlugin({ mcp: { prompts: suite.mcpPrompts } })`: the authoring workflows. */
+  mcpPrompts: PayloadMcpPrompt[]
   /** Every job the options call for. On Inngest, serve them: `inngestJobs(inngest, …).functions(suite.jobs)`. */
   jobs: Job[]
 }
@@ -193,7 +207,14 @@ export const publishScheduledThroughPipeline: ScheduledPublish = async (
 }
 
 export function throughline(options: ThroughlineOptions): ThroughlineSuite {
+  /*
+  Two collectors. Every module builds its tools into the first, as it always
+  has; nothing serves it. The surface plugin, last, puts the authoring tools and
+  the admins' operations tools on the second, which is what `plugin-mcp` gets.
+  forumone-2026#830.
+  */
   const mcpTools = createMcpToolCollector()
+  const served = createMcpToolCollector()
   // Plugins that announce events take an Inngest-shaped sender; this one sends
   // through the adapter, whichever runner it is.
   const inngest = eventSenderFor(options.jobs)
@@ -316,6 +337,17 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
     const { work, ...rest } = options.editorial
     plugins.push(editorialPlugin({ ...rest, work: { ...work, collections }, mcpTools }))
   }
+  plugins.push(
+    surfacePlugin({
+      inner: mcpTools,
+      served,
+      contentTypes: Object.keys(options.content?.collections ?? {}),
+      kinds: Object.keys(options.content?.related ?? {}),
+      approverGroups: (options.approvals?.groups ?? []).map(({ slug, name }) => ({ slug, name })),
+      ...(options.mcp?.canPublish ? { canPublish: options.mcp.canPublish } : {}),
+      ...(options.mcp?.ops === false ? { ops: false } : {}),
+    }),
+  )
 
   const jobs = suiteJobs(options, { approvalsSlug, emailOptions })
   if (isPayloadJobs(options.jobs)) plugins.push(options.jobs.plugin(jobs))
@@ -325,7 +357,7 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
     for (const each of plugins) next = await each(next)
     return next
   }
-  return { plugin, mcpTools: mcpTools.tools, jobs }
+  return { plugin, mcpTools: served.tools, mcpPrompts: AUTHORING_PROMPTS, jobs }
 }
 
 /*

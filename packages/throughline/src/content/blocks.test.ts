@@ -5,6 +5,7 @@ import { COMPONENTS_VALIDATOR_SYMBOL } from '../publishing/pipeline/steps/compos
 import type { McpToolContext } from '../plugin-contract/index.js'
 import {
   blockFieldPaths,
+  createEditBlocksTool,
   createInsertBlockTool,
   createMoveBlockTool,
   createRemoveBlockTool,
@@ -270,5 +271,108 @@ describe('remove_block', () => {
     const { deps } = setup()
     const out = await createRemoveBlockTool(deps).handler({ ...at, field: 'layout', blockId: 'q' }, editor)
     expect(out).toEqual({ error: expect.stringMatching(/no block "q" in layout/) })
+  })
+})
+
+describe('edit_blocks', () => {
+  const tool = (deps: ContentWriteDeps) => createEditBlocksTool(deps)
+
+  it('applies the operations in order and saves once', async () => {
+    const { deps, update, audit } = setup()
+    const out = await tool(deps).handler(
+      {
+        ...at,
+        field: 'layout',
+        operations: [
+          { op: 'remove', blockId: 'b' },
+          { op: 'insert', block: { blockType: 'Cta', label: 'Replace' }, after: 'a' },
+          { op: 'update', blockId: 'c', patch: { text: 'Third' } },
+          { op: 'move', blockId: 'c', position: 'start' },
+        ],
+      },
+      editor,
+    )
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(audit).toHaveBeenCalledTimes(1)
+    const rows = savedRows(update)
+    expect(rows.map((r: Row) => r.blockType)).toEqual(['Quote', 'Quote', 'Cta'])
+    expect(rows[0]).toMatchObject({ id: 'c', text: 'Third' })
+    expect(rows[2]).toMatchObject({ blockType: 'Cta', label: 'Replace' })
+    expect(out).toMatchObject({ field: 'layout', blockIds: ['b', rows[2]!.id, 'c', 'c'] })
+  })
+
+  it('checks the composition rules against the end result only, not each step', async () => {
+    // Two Quotes side by side are forbidden; the intermediate state has them, the end state does not.
+    const validator = vi.fn(async ({ blocks }: { blocks: { type: string }[] }) => ({
+      issues: blocks.some((b, i) => i > 0 && b.type === 'Quote' && blocks[i - 1]!.type === 'Quote')
+        ? [{ severity: 'error', rule: 'forbidden-adjacent', message: 'Quote may not follow Quote', blockIndex: 1 }]
+        : [],
+    }))
+    const { deps, update } = setup({ validator })
+    await tool(deps).handler(
+      {
+        ...at,
+        field: 'layout',
+        operations: [
+          { op: 'remove', blockId: 'b' },
+          { op: 'insert', block: { blockType: 'Cta' }, after: 'a' },
+        ],
+      },
+      editor,
+    )
+    expect(validator).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledTimes(1)
+  })
+
+  it('saves nothing when one operation fails, and says which', async () => {
+    const { deps, update } = setup()
+    const out = await tool(deps).handler(
+      {
+        ...at,
+        field: 'layout',
+        operations: [
+          { op: 'insert', block: { blockType: 'Cta' } },
+          { op: 'remove', blockId: 'nope' },
+        ],
+      },
+      editor,
+    )
+    expect(out).toMatchObject({ operation: 1, error: expect.stringMatching(/^Operation 1: There is no block "nope".*Nothing was saved\.$/) })
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('validates a block that stays, and not one a later operation removed', async () => {
+    let s = setup()
+    const invalid = await tool(s.deps).handler(
+      { ...at, field: 'layout', operations: [{ op: 'insert', block: { blockType: 'Quote' } }] },
+      editor,
+    )
+    expect(invalid).toMatchObject({ problems: [{ path: 'text' }] })
+    expect(s.update).not.toHaveBeenCalled()
+
+    s = setup()
+    await tool(s.deps).handler(
+      {
+        ...at,
+        field: 'layout',
+        operations: [
+          { op: 'update', blockId: 'a', patch: { text: '' } },
+          { op: 'remove', blockId: 'a' },
+        ],
+      },
+      editor,
+    )
+    expect(s.update).toHaveBeenCalledTimes(1)
+    expect(savedRows(s.update).map((r: Row) => r.id)).toEqual(['b', 'c'])
+  })
+
+  it('refuses a field that is not a blocks field, before reading anything', async () => {
+    const { deps, update } = setup()
+    const out = await tool(deps).handler(
+      { ...at, field: 'tags', operations: [{ op: 'remove', blockId: 'a' }] },
+      editor,
+    )
+    expect(out).toMatchObject({ error: expect.stringContaining('not a blocks field') })
+    expect(update).not.toHaveBeenCalled()
   })
 })

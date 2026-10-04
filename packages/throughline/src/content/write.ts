@@ -124,8 +124,8 @@ async function checkWrite(
     if (!convert || !source) {
       return {
         error: convert
-          ? `${field.name} takes { markdown: "…" }, { html: "…" }, or an editor state ({ root: … }) as get_document returns it.`
-          : `${field.name} is rich text and takes an editor state ({ root: … }), as get_document returns it.`,
+          ? `${field.name} takes { markdown: "…" }, { html: "…" }, or an editor state ({ root: … }) as get returns it.`
+          : `${field.name} is rich text and takes an editor state ({ root: … }), as get returns it.`,
         field: field.name,
       }
     }
@@ -146,7 +146,7 @@ async function checkWrite(
     const disallowed = await disallowedBlocks(field, rows, currentRows, registry, req)
     if (disallowed.length > 0) {
       return {
-        error: `${field.name} does not accept ${disallowed.join(', ')}. describe_content_type lists the blocks it does.`,
+        error: `${field.name} does not accept ${disallowed.join(', ')}. get, with only the collection, lists the blocks it does.`,
         field: field.name,
         disallowed,
       }
@@ -332,7 +332,7 @@ export function createCreateDraftTool(
         ...(typeof doc['slug'] === 'string' ? { slug: doc['slug'] } : {}),
         adminUrl: adminUrl(deps.payload, input.collection, id),
         previewUrl: await previewUrl(deps.payload, input.collection, doc, req),
-        next: 'Run get_publish_status before offering to publish.',
+        next: 'Run `check` before offering to publish.',
       }
     },
   }

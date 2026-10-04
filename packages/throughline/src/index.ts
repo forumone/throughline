@@ -4,6 +4,11 @@
 
 // One call for the whole suite; docs/spec/1.0-throughline-call.md.
 export { publishScheduledThroughPipeline, throughline } from './throughline.js'
+export { AUTHORING_TOOLS, OPS_TOOL_NAMES } from './authoring/descriptors.js'
+export { AUTHORING_PROMPTS } from './authoring/prompts.js'
+export type { PayloadMcpPrompt } from './authoring/prompts.js'
+export { createAuthoringTools, defaultCanPublish } from './authoring/tools.js'
+export type { AuthoringDeps } from './authoring/tools.js'
 export type {
   ThroughlineOptions,
   ThroughlinePublishingOptions,

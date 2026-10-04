@@ -15,7 +15,7 @@ exactly as they are for an editor.
 /** Why each field an agent might reach for is not its to set. */
 const REASONS: Readonly<Record<string, string>> = {
   _status:
-    'Writes are always drafts. Going live is publish, schedule_publish or request_approval.',
+    'Writes are always drafts. Going live is `publish`.',
   publishedAt: 'Set when the document is published, by the publishing tools.',
   scheduledPublishAt: 'Set by schedule_publish.',
   policy: 'The approval policy is set by a person in the admin, not over MCP.',
