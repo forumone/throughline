@@ -10,6 +10,8 @@ import { COMPONENTS_TOOLS } from './descriptors.js'
 export interface ValidateCompositionDeps {
   loader: ManifestLoader
   auditWriter: AuditWriter
+  /** A block type that is a composed section (forumone-2026#801), not a component. */
+  composedBlockType?: string
 }
 
 export function createValidateCompositionTool(deps: ValidateCompositionDeps): McpToolDefinition {
@@ -29,7 +31,10 @@ export function createValidateCompositionTool(deps: ValidateCompositionDeps): Mc
     inputSchema,
     handler: async (input, ctx) => {
       const manifest = await deps.loader.get()
-      const result = validateComposition({ blocks: input.blocks }, manifest)
+      const blocks = input.blocks.map((block: { type: string; variant?: string | undefined }) =>
+        block.type === deps.composedBlockType ? { type: block.type, composed: true } : block,
+      )
+      const result = validateComposition({ blocks }, manifest)
 
       await deps.auditWriter({
         ...auditContext(ctx, input._meta),

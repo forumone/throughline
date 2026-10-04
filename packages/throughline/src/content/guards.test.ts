@@ -181,6 +181,19 @@ describe('compositionErrors', () => {
     expect(out).toEqual([{ rule: 'max-per-page', message: 'One hero only', index: 1 }])
   })
 
+  it('keeps a composed section in the order, marked, rather than calling it unknown', async () => {
+    const validator = vi.fn(async () => ({ issues: [] }))
+    const payload = { [COMPONENTS_VALIDATOR_SYMBOL]: validator } as unknown as Payload
+    await compositionErrors(
+      payload,
+      [{ blockType: 'Hero' }, { blockType: 'ComposedSection', recipe: 1 }],
+      'ComposedSection',
+    )
+    expect(validator).toHaveBeenCalledWith({
+      blocks: [{ type: 'Hero' }, { type: 'ComposedSection', composed: true }],
+    })
+  })
+
   it('says nothing either way without the components plugin', async () => {
     await expect(compositionErrors({} as Payload, [{ blockType: 'Hero' }])).resolves.toBeUndefined()
   })

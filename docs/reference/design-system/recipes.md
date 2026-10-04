@@ -54,3 +54,20 @@ Every word comes from a binding, `{ field: "<name>" }`. Every visual setting is 
 - **Component nodes** go through `coerceBlock` with the component's contract, exactly as its block would.
 
 An empty field draws nothing, rather than an empty heading. The host lints before it renders.
+
+## Turning recipes on in a site
+
+```ts
+throughline({
+  // …
+  recipes: { blockType: 'ComposedSection', collection: 'section-recipes' },
+})
+```
+
+That one setting reaches the three places that need it:
+
+- **The components plugin** adds `get_recipe_vocabulary`, `validate_recipe` and `save_recipe`. `save_recipe` writes drafts only, as the caller; a person approves a recipe in the admin. `validate_composition` also treats the block as a composed section rather than an unknown component.
+- **The publish gate** checks each composed section's recipe at publish. See [publishing → composed sections](../throughline/publishing.md#composed-sections).
+- **The content tools'** composition check keeps the block in the layout's order without checking it as a component.
+
+The site provides the collection (whatever its approval rules are), the block, and the renderer, which is `RenderRecipe` over its own primitives.

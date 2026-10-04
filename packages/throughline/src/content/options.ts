@@ -82,4 +82,11 @@ export interface ContentPluginOptions {
   mcpTools?: McpToolCollector
   /** Who may call them. Default: a user with the `admin` or `editor` role. */
   canUse?: (ctx: McpToolContext) => boolean
+  /**
+   * The block type a composed section is stored as (forumone-2026#801). The
+   * write tools' composition check keeps it in the order without checking it
+   * as a component; the publish gate checks its recipe. `throughline()` sets it
+   * from its `recipes` option.
+   */
+  composedBlockType?: string
 }

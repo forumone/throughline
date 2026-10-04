@@ -93,7 +93,14 @@ export interface ThroughlineOptions {
   fields?: { canUse?: (ctx: McpToolContext) => boolean }
 
   /** On when present: the design system's components over MCP. */
-  components?: Omit<ComponentsPluginOptions, Supplied>
+  components?: Omit<ComponentsPluginOptions, Supplied | 'recipes'>
+  /**
+   * Composed sections (forumone-2026#801): the block a recipe is stored as, and
+   * the collection recipes live in. One setting for the three places that need
+   * it — the recipe tools on `components`, the publish gate on `publishing`, and
+   * the composition check on the `content` write tools.
+   */
+  recipes?: { blockType: string; collection: string }
   /** On when present: the publish pipeline, revalidation and scheduled publishing. */
   publishing?: ThroughlinePublishingOptions
   /** On when present: approval requests, their links and their expiry. */
@@ -222,7 +229,14 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
     jobFailuresPlugin({ ...options.jobFailures, ...logger, ...adminFor(options.jobFailures), mcpTools }),
   ]
   if (options.components) {
-    plugins.push(componentsPlugin({ ...options.components, ...logger, mcpTools }))
+    plugins.push(
+      componentsPlugin({
+        ...options.components,
+        ...logger,
+        ...(options.recipes ? { recipes: options.recipes } : {}),
+        mcpTools,
+      }),
+    )
   }
   if (options.publishing) {
     const {
@@ -237,6 +251,7 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
       publishingPlugin({
         ...rest,
         ...logger,
+        ...(options.recipes ? { recipes: options.recipes } : {}),
         collections: collections.map((slug) => ({
           slug,
           ...(seoField ? { seoField } : {}),
@@ -292,6 +307,7 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
       contentPlugin({
         ...options.content,
         collections: withPublishRequirements(options.content.collections, options.publishing),
+        ...(options.recipes ? { composedBlockType: options.recipes.blockType } : {}),
         mcpTools,
       }),
     )
