@@ -7,6 +7,7 @@ import { withMeta } from '../mcp/meta.js'
 import { formatZodIssues } from '../utils/zod-issues.js'
 import { editBlocksInput } from '../content/blocks.js'
 import { AUTHORING_TOOLS } from './descriptors.js'
+import { valueShapes } from '../content/values.js'
 
 /*
 The eight authoring tools. Each picks the module tool that does what it was
@@ -28,6 +29,10 @@ export interface AuthoringDeps {
   approverGroups: readonly { slug: string; name: string }[]
   /** Who may take something live. Default: an admin or an editor. */
   canPublish?: (ctx: McpToolContext) => boolean
+  /** Where approval requests are kept, to say when one is already pending. Unset when approvals are off. */
+  approvalsCollection?: string
+  /** Whether rich text inside a block takes Markdown, for `design_guide`'s value shapes. */
+  blockRichText?: boolean
 }
 
 const PUBLISHER_ROLES = ['admin', 'editor']
@@ -269,14 +274,61 @@ function checkTool(deps: AuthoringDeps) {
   return {
     ...AUTHORING_TOOLS.check,
     inputSchema,
-    handler: (input: z.infer<typeof inputSchema>, ctx: McpToolContext) =>
-      delegate(
+    handler: async (input: z.infer<typeof inputSchema>, ctx: McpToolContext) => {
+      const status = await delegate(
         deps.inner,
         'get_publish_status',
         { collection: input.collection, id: String(input.id) },
         ctx,
-      ),
+      )
+      const blockers = ((status['wouldPublish'] as Result | undefined)?.['blockers'] ?? []) as Result[]
+      if (!blockers.some((b) => b['code'] === 'approval-required')) return status
+      const pending = await pendingApproval(deps, input.collection, input.id, ctx)
+      return pending
+        ? {
+            ...status,
+            pendingApproval: pending,
+            next: 'An approval request is already pending; it goes live once an approver grants it. Do not request another.',
+          }
+        : status
+    },
   } satisfies McpToolDefinition<typeof inputSchema>
+}
+
+/**
+ * The pending approval request for a document, as the caller may read it, or
+ * `undefined`. So `check` and `publish` say a request is waiting rather than
+ * suggesting a second one. forumone-2026#832.
+ */
+async function pendingApproval(
+  deps: AuthoringDeps,
+  collection: string,
+  id: string | number,
+  ctx: McpToolContext,
+): Promise<Result | undefined> {
+  if (!deps.approvalsCollection) return undefined
+  const found = await deps.payload.find({
+    collection: deps.approvalsCollection as CollectionSlug,
+    where: {
+      and: [
+        { targetCollection: { equals: collection } },
+        { targetId: { equals: String(id) } },
+        { status: { equals: 'pending' } },
+      ],
+    },
+    sort: '-createdAt',
+    limit: 1,
+    depth: 0,
+    overrideAccess: false,
+    ...(ctx.user ? { user: ctx.user as never } : {}),
+  })
+  const request = found.docs[0] as Result | undefined
+  if (!request) return undefined
+  return {
+    approvalId: request['id'],
+    requestedAt: request['createdAt'],
+    ...(request['expiresAt'] ? { expiresAt: request['expiresAt'] } : {}),
+  }
 }
 
 const LIVE_ACTIONS = new Set(['now', 'schedule', 'unpublish', 'rollback'])
@@ -352,6 +404,15 @@ function publishTool(deps: AuthoringDeps) {
         case 'now': {
           const outcome = await delegate(deps.inner, 'publish', target, ctx)
           if (outcome['code'] !== 'approval-required') return outcome
+          const pending = await pendingApproval(deps, input.collection, input.id, ctx)
+          if (pending) {
+            return {
+              ...outcome,
+              approvalRequired: true,
+              pendingApproval: pending,
+              next: 'An approval request is already pending. It goes live once an approver grants it, by publishing again; no second request is needed.',
+            }
+          }
           if (input.approval) {
             return {
               published: false,
@@ -418,9 +479,13 @@ function designGuideTool(deps: AuthoringDeps) {
   return {
     ...AUTHORING_TOOLS.designGuide,
     inputSchema,
-    handler: (input: z.infer<typeof inputSchema>, ctx: McpToolContext) => {
-      if (input.component)
-        return delegate(deps.inner, 'get_contract', { name: input.component }, ctx)
+    handler: async (input: z.infer<typeof inputSchema>, ctx: McpToolContext) => {
+      if (input.component) {
+        const contract = await delegate(deps.inner, 'get_contract', { name: input.component }, ctx)
+        return 'error' in contract
+          ? contract
+          : { ...contract, valueShapes: valueShapes({ blockRichText: Boolean(deps.blockRichText) }) }
+      }
       if (input.intent) {
         return delegate(
           deps.inner,

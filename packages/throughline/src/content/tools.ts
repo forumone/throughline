@@ -13,7 +13,8 @@ import { deniedEnvelope } from '../mcp/envelope.js'
 import { matchRank } from '../editorial/palette/sources.js'
 import { previewUrl } from '../utils/preview-url.js'
 import { describeFields, writableFields, type DescribeContext } from './describe.js'
-import type { ContentCollectionOptions, RelatedKindOptions } from './options.js'
+import { valueShapes } from './values.js'
+import type { ContentCollectionOptions, RelatedKindOptions, RichTextConverter } from './options.js'
 
 /*
 The read half of the content tools: what an agent needs before it writes.
@@ -56,6 +57,8 @@ export interface ContentToolDeps {
   related: Readonly<Record<string, RelatedKindOptions>>
   /** A composed section's block type (forumone-2026#801), which the composition check keeps but does not check. */
   composedBlockType?: string
+  /** See `ContentPluginOptions.blockRichText`. */
+  blockRichText?: RichTextConverter
   canUse?: (ctx: McpToolContext) => boolean
 }
 
@@ -163,6 +166,7 @@ export function createDescribeContentTypeTool(
               }
             : field,
         ),
+        valueShapes: valueShapes({ blockRichText: Boolean(deps.blockRichText) }),
         ...(options.templateDraws?.length
           ? {
               templateDraws: options.templateDraws,

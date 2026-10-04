@@ -55,6 +55,7 @@ export function contentPlugin(options: ContentPluginOptions): Plugin {
           related: options.related ?? {},
           ...(options.canUse ? { canUse: options.canUse } : {}),
           ...(options.composedBlockType ? { composedBlockType: options.composedBlockType } : {}),
+          ...(options.blockRichText ? { blockRichText: options.blockRichText } : {}),
         }
         options.mcpTools.add(
           [

@@ -1,8 +1,9 @@
 import { z } from 'zod'
-import type { Payload } from 'payload'
+import { createLocalReq, type CollectionSlug, type Payload } from 'payload'
 import { type AuditWriter } from '../../audit/writer.js'
 import { auditContext } from '../../mcp/audit-context.js'
 import { documentContentHash } from '../../utils/content-hash.js'
+import { previewUrl as collectionPreviewUrl } from '../../utils/preview-url.js'
 import { relationshipIdFor } from '../../utils/relationships.js'
 import { sendEventSafely } from '../../utils/send-event-safely.js'
 import { withMeta } from '../../mcp/meta.js'
@@ -81,7 +82,24 @@ export function createRequestApprovalTool(deps: RequestApprovalDeps): McpToolDef
         typeof document['title'] === 'string' ? document['title'] : input.id
       const slug =
         typeof document['slug'] === 'string' ? document['slug'] : input.id
-      const previewUrl = buildPreviewUrl(deps.options, input.collection, slug)
+      /*
+      The collection's own Preview link, the one the admin's button and every
+      other tool give, when it has one; the plugin's `/api/preview` form only
+      otherwise. An approver opening a different link from the one in the
+      request's chat was a trap. forumone-2026#832.
+      */
+      const hasPreview =
+        typeof deps.payload.collections?.[input.collection as CollectionSlug]?.config.admin?.preview ===
+        'function'
+      const previewUrl =
+        (hasPreview
+          ? await collectionPreviewUrl(
+              deps.payload,
+              input.collection,
+              document,
+              await createLocalReq({ user: ctx.user } as never, deps.payload),
+            )
+          : null) ?? buildPreviewUrl(deps.options, input.collection, slug)
 
       const expiresAt = new Date(
         Date.now() + (deps.options.expirationDays ?? 7) * 24 * 60 * 60 * 1000,

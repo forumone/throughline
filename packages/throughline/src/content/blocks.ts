@@ -8,6 +8,7 @@ import { writableFields } from './describe.js'
 import { compositionErrors, disallowedBlocks, mergePatch } from './guards.js'
 import { blockRegistry, defaultCanUse, refusal, requestAs, unknownCollection } from './tools.js'
 import { validateBlock } from './validate.js'
+import { checkValues, valueRefusal } from './values.js'
 import { openForWrite, saveDraft, type ContentWriteDeps } from './write.js'
 
 /*
@@ -226,6 +227,18 @@ async function operate(
   const req = await requestAs(deps.payload, ctx)
   const registry = blockRegistry(deps.payload)
   const kept = [...touched.values()].filter((row) => rows.some((r) => r['id'] === row['id']))
+  // Each new or changed block's values in the shape their fields take, converting nested rich text. #832.
+  for (const row of kept) {
+    const config = blockConfig(field, String(row['blockType']), registry)
+    if (!config) continue
+    const problems = await checkValues(
+      config.fields,
+      row,
+      { registry, ...(deps.blockRichText ? { blockRichText: deps.blockRichText } : {}) },
+      `${input.field}[${rows.findIndex((r) => r['id'] === row['id'])}]`,
+    )
+    if (problems.length > 0) return valueRefusal(problems)
+  }
   for (const row of kept) {
     const disallowed = await disallowedBlocks(field, [row], before, registry, req)
     if (disallowed.length > 0) {

@@ -344,6 +344,8 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
       contentTypes: Object.keys(options.content?.collections ?? {}),
       kinds: Object.keys(options.content?.related ?? {}),
       approverGroups: (options.approvals?.groups ?? []).map(({ slug, name }) => ({ slug, name })),
+      ...(options.approvals ? { approvalsCollection: approvalsSlug } : {}),
+      ...(options.content?.blockRichText ? { blockRichText: true } : {}),
       ...(options.mcp?.canPublish ? { canPublish: options.mcp.canPublish } : {}),
       ...(options.mcp?.ops === false ? { ops: false } : {}),
     }),

@@ -8,6 +8,7 @@ import { checkSlug, hasSlugField } from '../fields/checkSlug.js'
 import { slugify } from '../fields/slug.js'
 import { topLevelFields, writableFields } from './describe.js'
 import type { RichTextSource } from './options.js'
+import { checkValues, valueRefusal } from './values.js'
 import {
   compositionErrors,
   disallowedBlocks,
@@ -139,6 +140,13 @@ async function checkWrite(
     }
     data[field.name] = converted.state
   }
+
+  // Every value below the top level, in the shape its field takes. #832.
+  const problems = await checkValues(fields, data, {
+    registry,
+    ...(deps.blockRichText ? { blockRichText: deps.blockRichText } : {}),
+  })
+  if (problems.length > 0) return valueRefusal(problems)
 
   for (const field of blockFields(fields, data)) {
     const rows = data[field.name] as unknown[]

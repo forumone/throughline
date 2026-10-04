@@ -1,4 +1,5 @@
 import type { Block, Field, PayloadRequest } from 'payload'
+import { linkShape } from './values.js'
 
 /*
 `describe_content_type`'s answer, from the live config.
@@ -42,6 +43,8 @@ export interface FieldDescription {
   fields?: FieldDescription[]
   /** What a rich-text field may be written as. */
   accepts?: string[]
+  /** For a link: the shape its value takes. */
+  shape?: string
   /** A blocks field's blocks: what may be added. */
   blocks?: BlockDescription[]
 }
@@ -252,6 +255,8 @@ export async function describeField(
       else out.filter = where
     }
   }
+  const link = linkShape(field)
+  if (link) out.shape = link
   if (field.type === 'group' || field.type === 'array') {
     const children = await describeFields(
       topLevelFields((f['fields'] as Field[] | undefined) ?? []),

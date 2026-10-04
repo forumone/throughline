@@ -104,6 +104,25 @@ export const compositionStep: PipelineStep = async (ctx) => {
     }
   }
 
+  const manifest = (ctx.payload as unknown as Record<symbol, unknown>)[COMPONENTS_MANIFEST_SYMBOL] as
+    | (() => Promise<Manifest>)
+    | undefined
+  if (manifest) {
+    const components = (await manifest()).components
+    for (const [index, block] of typed.entries()) {
+      if (gate && block.blockType === gate.blockType) continue
+      const empty = emptyBlock(components[block.blockType], block)
+      if (empty) {
+        errors.push({
+          severity: 'error',
+          rule: 'empty-block',
+          message: `The ${block.blockType} block has nothing in it (${empty.join(', ')} are all empty), so it would publish as an empty band. Fill it or remove it.`,
+          field: `${ctx.collection.layoutField}[${index}]`,
+        })
+      }
+    }
+  }
+
   if (errors.length > 0) {
     return {
       pass: false,
@@ -204,4 +223,49 @@ async function checkComposedSection(
     }
   }
   return issues
+}
+
+/*
+A block with nothing in it. forumone-2026#832.
+
+A `CTA` with no heading, no label and no link published in every run of the
+#830 eval, and rendered as an empty accent band. Since audit 11 no component
+supplies default copy, so an empty block is an empty band, never a styled
+default — and the fields that would fill it are optional one by one, which no
+single required rule can say.
+
+So: a block whose contract has content to fill, every piece of which is
+empty. Exempt are a component with no content fields (it draws from settings
+alone) and one that fetches its own data (a listing). Settings — a select, a
+checkbox, a number — are not content, and do not count either way.
+*/
+const CONTENT_TYPES = new Set(['text', 'richtext', 'link', 'image', 'video', 'array', 'group'])
+
+/** The empty content fields, when all of them are; otherwise `undefined`. */
+export function emptyBlock(
+  component: Manifest['components'][string] | undefined,
+  block: Record<string, unknown>,
+): string[] | undefined {
+  if (!component || component.behavior?.fetchesData) return undefined
+  const fields = component.content.fields.filter((f) => CONTENT_TYPES.has(f.type))
+  if (fields.length === 0) return undefined
+  if (fields.some((f) => hasContent(block[f.name]))) return undefined
+  return fields.map((f) => f.name)
+}
+
+const BOOKKEEPING = new Set(['id', 'blockType', 'blockName', 'mode', 'newTab', 'relationTo', 'type', 'variant', 'version', 'format', 'indent', 'direction'])
+
+/** Whether a value carries anything a reader would see. */
+export function hasContent(value: unknown): boolean {
+  if (value === null || value === undefined) return false
+  if (typeof value === 'string') return value.trim() !== ''
+  if (typeof value === 'number') return true
+  if (typeof value === 'boolean') return false
+  if (Array.isArray(value)) return value.some(hasContent)
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>).some(
+      ([key, inner]) => !BOOKKEEPING.has(key) && hasContent(inner),
+    )
+  }
+  return false
 }
