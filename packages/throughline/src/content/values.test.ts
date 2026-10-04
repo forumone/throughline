@@ -33,7 +33,14 @@ const accordion: Block = {
     },
   ],
 }
-const cta: Block = { slug: 'CTA', fields: [{ name: 'heading', type: 'text' }, link] }
+// As the generator lays it out: the label and the link in an unnamed group, stored at the block's level.
+const cta: Block = {
+  slug: 'CTA',
+  fields: [
+    { name: 'heading', type: 'text' },
+    { type: 'group', fields: [{ name: 'ctaLabel', type: 'text' }, link] } as Field,
+  ],
+}
 const fields: Field[] = [
   { name: 'title', type: 'text' },
   { name: 'body', type: 'richText' },

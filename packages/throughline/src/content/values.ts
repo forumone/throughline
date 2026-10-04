@@ -116,7 +116,12 @@ export async function checkValues(
   const at = (name: string) => (path ? `${path}.${name}` : name)
 
   for (const field of fields) {
-    if (field.type === 'row' || field.type === 'collapsible') {
+    // Layout only: a row, a collapsible and an unnamed group keep their fields at this level.
+    if (
+      field.type === 'row' ||
+      field.type === 'collapsible' ||
+      (field.type === 'group' && !named(field))
+    ) {
       problems.push(...(await checkValues(subfields(field), data, ctx, path)))
       continue
     }
