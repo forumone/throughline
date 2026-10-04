@@ -1,5 +1,15 @@
 # @forumone/throughline
 
+## 1.2.0
+
+### Minor Changes
+
+- 17f8d7c: `mcpApiKeyAccess` takes an optional `holder` rule. Given one, an admin can choose who a new MCP key belongs to; nobody can change it afterwards; and a key for someone the rule refuses is not saved, with the rule's reason. Without it, nothing changes: a key belongs to whoever created it.
+
+### Patch Changes
+
+- @forumone/throughline-design-system@1.2.0
+
 ## 1.1.0
 
 ### Minor Changes
