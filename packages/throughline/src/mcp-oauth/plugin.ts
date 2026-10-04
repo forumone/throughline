@@ -1,7 +1,7 @@
 import type { Config, Plugin } from 'payload'
 import { REPORTS_NAV_PATH } from '../editorial/plugin.js'
 import { createOverrideAuth, type OverrideAuth } from './auth.js'
-import { accessGlobal, clientsCollection, grantsCollection } from './collections.js'
+import { accessGlobal, clientsCollection, deleteGrantsOf, grantsCollection } from './collections.js'
 import { oauthEndpoints, type EndpointOptions } from './endpoints.js'
 import {
   createRuntime,
@@ -69,7 +69,17 @@ export function mcpOAuth(
     return {
       ...incoming,
       collections: [
-        ...(incoming.collections ?? []),
+        ...(incoming.collections ?? []).map((collection) =>
+          collection.slug === runtime.users
+            ? {
+                ...collection,
+                hooks: {
+                  ...collection.hooks,
+                  beforeDelete: [...(collection.hooks?.beforeDelete ?? []), deleteGrantsOf('user')],
+                },
+              }
+            : collection,
+        ),
         clientsCollection(runtime, group),
         grantsCollection(runtime, group),
       ],

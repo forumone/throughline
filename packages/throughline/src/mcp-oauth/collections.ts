@@ -1,4 +1,11 @@
-import type { Access, CollectionConfig, Field, GlobalConfig, PayloadRequest } from 'payload'
+import type {
+  Access,
+  CollectionBeforeDeleteHook,
+  CollectionConfig,
+  Field,
+  GlobalConfig,
+  PayloadRequest,
+} from 'payload'
 import { isMcpApiKeyPrincipal } from '../mcp/api-key-access.js'
 import { MCP_CLIENT_KINDS, MCP_CLIENT_RULES } from './clients.js'
 import {
@@ -65,6 +72,23 @@ const kindOptions = MCP_CLIENT_KINDS.map((kind) => ({
   value: kind,
 }))
 
+/*
+A grant's person and app are required, so the database's `ON DELETE SET NULL`
+cannot apply and the delete would fail. Deleting either deletes its
+connections first, which is also what deleting them should mean: nothing is
+left that could sign in as somebody who is gone.
+*/
+export function deleteGrantsOf(field: 'user' | 'client'): CollectionBeforeDeleteHook {
+  return async ({ req, id }) => {
+    await req.payload.delete({
+      collection: MCP_OAUTH_GRANTS_SLUG as never,
+      where: { [field]: { equals: id } } as never,
+      overrideAccess: true,
+      req,
+    })
+  }
+}
+
 export function clientsCollection(runtime: McpOAuthRuntime, group: string): CollectionConfig {
   return {
     slug: MCP_OAUTH_CLIENTS_SLUG,
@@ -77,6 +101,7 @@ export function clientsCollection(runtime: McpOAuthRuntime, group: string): Coll
         'Apps that have registered to connect over MCP. Recognised by where they send people back to, not by the name they give.',
     },
     access: { read: adminOnly(runtime), create: never, update: never, delete: adminOnly(runtime) },
+    hooks: { beforeDelete: [deleteGrantsOf('client')] },
     fields: [
       {
         name: 'clientId',

@@ -537,6 +537,40 @@ describe('the whole flow', () => {
   })
 })
 
+describe('deleting', () => {
+  it('a person deletes their connections with them', async () => {
+    const redirect = 'https://claude.ai/api/mcp/auth_callback'
+    const clientId = ((await (await register([redirect])).json()) as { client_id: string })
+      .client_id
+    const user = await payload.create({
+      collection: 'users',
+      data: {
+        email: 'gone@site.example',
+        password: 'correct-horse-battery',
+        roles: ['editor'],
+      } as never,
+    })
+    cookies['gone'] =
+      (
+        await payload.login({
+          collection: 'users',
+          data: { email: 'gone@site.example', password: 'correct-horse-battery' },
+        })
+      ).token ?? ''
+    const { answer, verifier } = await connect('gone', clientId, redirect)
+    const code = new URL(answer.redirect ?? '').searchParams.get('code') ?? ''
+    expect((await exchange(clientId, redirect, code, verifier)).status).toBe(200)
+
+    await payload.delete({ collection: 'users', id: user.id })
+    const { totalDocs } = await payload.count({
+      collection: MCP_OAUTH_GRANTS_SLUG as never,
+      where: { user: { equals: user.id } } as never,
+      overrideAccess: true,
+    })
+    expect(totalDocs).toBe(0)
+  })
+})
+
 describe('Claude Code, by its metadata document', () => {
   it('connects on a loopback callback with any port, without registering', async () => {
     const before = cimdFetches
