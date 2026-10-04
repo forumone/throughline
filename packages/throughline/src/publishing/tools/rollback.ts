@@ -68,9 +68,18 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
         }
       }
 
+      /*
+      As a draft, which is what this tool promises: "the restored content lands
+      as a fresh draft". Without `draft: true` Payload restores the version's
+      own `_status`, so rolling back to a version that was published wrote
+      `_status: 'published'` straight past the pipeline — and a site that blocks
+      direct status writes, as the publishing hooks recommend, refused every
+      such rollback. Found end to end, forumone-2026#830.
+      */
       await deps.payload.restoreVersion({
         collection: collection.slug,
         id: input.versionId,
+        draft: true,
         ...enforce,
       })
 
