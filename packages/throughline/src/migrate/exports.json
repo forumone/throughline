@@ -265,6 +265,8 @@
     "RevalidateOnPublishOptions": ["@forumone/throughline/publishing"],
     "RevalidatePathsInput": ["@forumone/throughline/publishing"],
     "RevalidateTagFn": ["@forumone/throughline/publishing"],
+    "RichTextConverter": ["@forumone/throughline/content"],
+    "RichTextSource": ["@forumone/throughline/content"],
     "SanitizedSvg": ["@forumone/throughline/media"],
     "ScheduleOutcome": ["@forumone/throughline/publishing"],
     "SchedulePublishField": ["@forumone/throughline/client"],

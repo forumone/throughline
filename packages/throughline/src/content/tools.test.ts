@@ -146,6 +146,24 @@ describe('describe_content_type', () => {
     expect((out['fields'] as { name: string }[]).map((f) => f.name)).toEqual(['title', 'layout', 'slug'])
   })
 
+  it('says what a rich-text field takes: Markdown and HTML only when the site converts them', async () => {
+    const { deps } = makeDeps()
+    const config = (deps.payload.collections as unknown as Record<string, { config: { fields: Field[] } }>)['pages']!.config
+    config.fields = [...pageFields, { name: 'body', type: 'richText' }]
+    deps.collections['pages'] = { fields: ['title', 'body'] }
+    const tool = createDescribeContentTypeTool(deps)
+    const plain = (await tool.handler({ collection: 'pages' }, editor)) as { fields: { name: string; accepts?: string[] }[] }
+    expect(plain.fields.find((f) => f.name === 'body')?.accepts).toEqual(['an editor state ({ root: … })'])
+
+    deps.collections['pages'] = { fields: ['title', 'body'], richText: { body: async () => ({ state: {} }) } }
+    const converted = (await tool.handler({ collection: 'pages' }, editor)) as typeof plain
+    expect(converted.fields.find((f) => f.name === 'body')?.accepts).toEqual([
+      '{ markdown: "…" }',
+      '{ html: "…" }',
+      'an editor state ({ root: … })',
+    ])
+  })
+
   it('refuses a collection the site did not hand to the tools, and names the ones it did', async () => {
     const { deps } = makeDeps()
     const out = await createDescribeContentTypeTool(deps).handler({ collection: 'users' }, editor)

@@ -7,6 +7,7 @@ import { withMeta, type McpMeta } from '../mcp/meta.js'
 import { checkSlug, hasSlugField } from '../fields/checkSlug.js'
 import { slugify } from '../fields/slug.js'
 import { topLevelFields, writableFields } from './describe.js'
+import type { RichTextSource } from './options.js'
 import {
   compositionErrors,
   disallowedBlocks,
@@ -110,18 +111,33 @@ async function checkWrite(
   /*
   A draft save skips validation, so a rich-text field handed a Markdown string
   would store the string, and every renderer that expects an editor state would
-  fail on the page. Until a site gives the tools a converter, only an editor
-  state is accepted.
+  fail on the page. So a rich-text value is an editor state, or { markdown } or
+  { html } converted here by the site's converter — which refuses rather than
+  drops — and nothing else. Converted in place: `data` is what gets saved.
   */
   for (const field of fields) {
     if (field.type !== 'richText' || !(field.name in data)) continue
     const value = data[field.name]
-    if (value !== null && !isEditorState(value)) {
+    if (value === null || isEditorState(value)) continue
+    const convert = options.richText?.[field.name]
+    const source = richTextSource(value)
+    if (!convert || !source) {
       return {
-        error: `${field.name} is rich text and takes an editor state ({ root: … }), as get_document returns it. Markdown and HTML are not accepted yet.`,
+        error: convert
+          ? `${field.name} takes { markdown: "…" }, { html: "…" }, or an editor state ({ root: … }) as get_document returns it.`
+          : `${field.name} is rich text and takes an editor state ({ root: … }), as get_document returns it.`,
         field: field.name,
       }
     }
+    const converted = await convert(source)
+    if ('refused' in converted) {
+      return {
+        error: `${field.name} could not be converted without losing something: ${converted.refused} Nothing was saved.`,
+        field: field.name,
+        ...(converted.details !== undefined ? { details: converted.details } : {}),
+      }
+    }
+    data[field.name] = converted.state
   }
 
   for (const field of blockFields(fields, data)) {
@@ -144,6 +160,17 @@ async function checkWrite(
       }
     }
   }
+  return undefined
+}
+
+/** `{ markdown }` or `{ html }`, and nothing beside it. */
+function richTextSource(value: unknown): RichTextSource | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const keys = Object.keys(value)
+  if (keys.length !== 1) return undefined
+  const v = value as Record<string, unknown>
+  if (typeof v['markdown'] === 'string') return { markdown: v['markdown'] }
+  if (typeof v['html'] === 'string') return { html: v['html'] }
   return undefined
 }
 

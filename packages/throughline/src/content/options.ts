@@ -32,7 +32,27 @@ export interface ContentCollectionOptions {
   templateDraws?: readonly string[]
   /** What publishing this collection requires beyond its fields, in the words an agent reads. */
   publishRequires?: readonly string[]
+  /**
+   * How to turn Markdown or HTML into each rich-text field's editor state, by
+   * field name. A field with no converter takes an editor state only. The
+   * converter is the site's, because what a body may hold — which nodes the
+   * editor has, which embeds become blocks — is the site's.
+   */
+  richText?: Readonly<Record<string, RichTextConverter>>
 }
+
+/** What an agent sends a rich-text field instead of an editor state. */
+export type RichTextSource = { markdown: string } | { html: string }
+
+/**
+ * Converts one rich-text value. `refused` when the conversion would lose
+ * something — text, structure, an embed the body cannot hold — with what and
+ * where, so the agent can change its input rather than lose content silently.
+ */
+export type RichTextConverter = (
+  source: RichTextSource,
+) => Promise<{ state: unknown } | { refused: string; details?: unknown }>
+
 
 export interface RelatedKindOptions {
   /** The collection a kind searches. */
