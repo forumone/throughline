@@ -29,6 +29,9 @@ describe('rollback tool', () => {
     expect(deps.spies.payloadRestoreVersion).toHaveBeenCalledWith({
       collection: 'pages',
       id: 'v_old',
+      // As a draft: restoring a published version must not write `_status: 'published'`.
+      draft: true,
+      context: { bypassPublishingServer: true },
       user: fakeContext.user,
       overrideAccess: false,
     })

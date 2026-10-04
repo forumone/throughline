@@ -6,13 +6,7 @@ import type { McpToolDescriptor } from '../mcp/collector.js'
 import { withMeta, type McpMeta } from '../mcp/meta.js'
 import { writableFields } from './describe.js'
 import { compositionErrors, disallowedBlocks, mergePatch } from './guards.js'
-import {
-  blockRegistry,
-  defaultCanUse,
-  refusal,
-  requestAs,
-  unknownCollection,
-} from './tools.js'
+import { blockRegistry, defaultCanUse, refusal, requestAs, unknownCollection } from './tools.js'
 import { validateBlock } from './validate.js'
 import { openForWrite, saveDraft, type ContentWriteDeps } from './write.js'
 
@@ -33,12 +27,12 @@ export const CONTENT_BLOCK_TOOLS = {
   insertBlock: {
     name: 'insert_block',
     description:
-      'Adds one block to a blocks field of a draft — `layout`, or a field inside a group such as `approach.blocks` — at the end, at the start, or after a given block. The block is { blockType, ...its fields } as get_contract describes it, and is checked against the blocks the field offers, its own validation and the composition rules before anything is saved. Returns the new block\'s id.',
+      "Adds one block to a blocks field of a draft — `layout`, or a field inside a group such as `approach.blocks` — at the end, at the start, or after a given block. The block is { blockType, ...its fields } as get_contract describes it, and is checked against the blocks the field offers, its own validation and the composition rules before anything is saved. Returns the new block's id.",
   },
   updateBlock: {
     name: 'update_block',
     description:
-      'Changes fields of one block in a draft, by the block\'s id from get_document. A group inside the block is merged; an array is replaced. The block type cannot change: remove it and insert another.',
+      "Changes fields of one block in a draft, by the block's id from get_document. A group inside the block is merged; an array is replaced. The block type cannot change: remove it and insert another.",
   },
   moveBlock: {
     name: 'move_block',
@@ -48,7 +42,12 @@ export const CONTENT_BLOCK_TOOLS = {
   removeBlock: {
     name: 'remove_block',
     description:
-      'Removes one block from a draft\'s blocks field, by its id. Checked against the composition rules, since a block may be another\'s required sibling.',
+      "Removes one block from a draft's blocks field, by its id. Checked against the composition rules, since a block may be another's required sibling.",
+  },
+  editBlocks: {
+    name: 'edit_blocks',
+    description:
+      'Changes the blocks in one blocks field of a draft (`layout`, or e.g. `approach.blocks`): insert, update, move and remove, as a list applied in order and saved together. Each new or changed block is checked against what the field accepts and its own validation, and the result against the composition rules, before anything is saved. Block ids come from get. To replace the whole field, use save_draft.',
   },
 } as const satisfies Record<string, McpToolDescriptor>
 
@@ -118,7 +117,10 @@ const target = {
 }
 const placement = {
   after: z.string().optional().describe('The id of the block to put it after.'),
-  position: z.enum(['start', 'end']).optional().describe('Where, when not after a block. Default: end.'),
+  position: z
+    .enum(['start', 'end'])
+    .optional()
+    .describe('Where, when not after a block. Default: end.'),
 }
 
 const insertInput = withMeta({
@@ -131,17 +133,17 @@ const insertInput = withMeta({
 })
 const updateInput = withMeta({
   ...target,
-  blockId: z.string().describe('The block\'s id, from get_document.'),
+  blockId: z.string().describe("The block's id, from get_document."),
   patch: z.record(z.string(), z.unknown()).describe('The block fields to change.'),
 })
 const moveInput = withMeta({
   ...target,
-  blockId: z.string().describe('The block\'s id, from get_document.'),
+  blockId: z.string().describe("The block's id, from get_document."),
   ...placement,
 })
 const removeInput = withMeta({
   ...target,
-  blockId: z.string().describe('The block\'s id, from get_document.'),
+  blockId: z.string().describe("The block's id, from get_document."),
 })
 
 interface Operation {
@@ -151,22 +153,35 @@ interface Operation {
   _meta?: McpMeta
 }
 
+type Rows = Record<string, unknown>[]
+type Placement = { after?: string | undefined; position?: 'start' | 'end' | undefined }
+
+/** One change to a blocks field's rows: the new rows, and what it added or changed. */
+type Change = (
+  rows: Rows,
+  field: BlocksField,
+) => Promise<
+  | { rows: Rows; added?: Record<string, unknown>; summary: string; blockId: string }
+  | { error: string; [key: string]: unknown }
+>
+
 /**
- * What every block tool does around its one change: who may, which field,
+ * What every block operation does around its changes: who may, which field,
  * read the draft, check the result, save it.
+ *
+ * The changes apply in order, each to the rows the one before left, and the
+ * result is checked and saved once. So `edit_blocks` can remove a block and
+ * insert its replacement without the field being saved, or checked against
+ * the composition rules, halfway. A single-block tool is the same thing with
+ * one change. A block a later change removes is not validated, because it is
+ * not in what gets saved.
  */
 async function operate(
   deps: ContentWriteDeps,
   ctx: McpToolContext,
   input: Operation,
   tool: string,
-  change: (
-    rows: Record<string, unknown>[],
-    field: BlocksField,
-  ) => Promise<
-    | { rows: Record<string, unknown>[]; added?: Record<string, unknown>; summary: string; blockId: string }
-    | { error: string; [key: string]: unknown }
-  >,
+  changes: readonly Change[],
 ): Promise<Record<string, unknown>> {
   const refused = refusal(ctx, deps.canUse ?? defaultCanUse)
   if (refused) return refused
@@ -187,23 +202,42 @@ async function operate(
   const { current } = opened
   const before = rowsAt(current, input.field)
 
-  const changed = await change(before, field)
-  if ('error' in changed) return changed
+  let rows = before
+  const touched = new Map<string, Record<string, unknown>>()
+  const summaries: string[] = []
+  const blockIds: string[] = []
+  for (const [index, change] of changes.entries()) {
+    const changed = await change(rows, field)
+    if ('error' in changed) {
+      return changes.length === 1
+        ? changed
+        : {
+            ...changed,
+            operation: index,
+            error: `Operation ${index}: ${changed.error} Nothing was saved.`,
+          }
+    }
+    rows = changed.rows
+    if (changed.added) touched.set(String(changed.added['id']), changed.added)
+    summaries.push(changed.summary)
+    blockIds.push(changed.blockId)
+  }
 
   const req = await requestAs(deps.payload, ctx)
   const registry = blockRegistry(deps.payload)
-  if (changed.added) {
-    const disallowed = await disallowedBlocks(field, [changed.added], before, registry, req)
+  const kept = [...touched.values()].filter((row) => rows.some((r) => r['id'] === row['id']))
+  for (const row of kept) {
+    const disallowed = await disallowedBlocks(field, [row], before, registry, req)
     if (disallowed.length > 0) {
       return {
-        error: `${input.field} does not accept ${disallowed.join(', ')}. describe_content_type lists the blocks it does.`,
+        error: `${input.field} does not accept ${disallowed.join(', ')}. get, with only the collection, lists the blocks it does.`,
         disallowed,
       }
     }
-    const config = blockConfig(field, String(changed.added['blockType']), registry)
+    const config = blockConfig(field, String(row['blockType']), registry)
     const problems = config
-      ? await validateBlock(config.fields, changed.added, {
-          data: { ...current, ...dataFor(current, input.field, changed.rows) },
+      ? await validateBlock(config.fields, row, {
+          data: { ...current, ...dataFor(current, input.field, rows) },
           req,
           collection: input.collection,
           id: input.id,
@@ -211,12 +245,12 @@ async function operate(
       : []
     if (problems.length > 0) {
       return {
-        error: `The ${String(changed.added['blockType'])} block is not valid. Nothing was saved.`,
+        error: `The ${String(row['blockType'])} block is not valid. Nothing was saved.`,
         problems,
       }
     }
   }
-  const issues = await compositionErrors(deps.payload, changed.rows, deps.composedBlockType)
+  const issues = await compositionErrors(deps.payload, rows, deps.composedBlockType)
   if (issues && issues.length > 0) {
     return {
       error: `${input.field} would break ${issues.length} composition rule${issues.length === 1 ? '' : 's'}. Nothing was saved.`,
@@ -227,27 +261,29 @@ async function operate(
   const saved = await saveDraft(deps, ctx, {
     collection: input.collection,
     id: input.id,
-    data: dataFor(current, input.field, changed.rows),
+    data: dataFor(current, input.field, rows),
     tool,
     changed: [input.field],
-    meta: input._meta ?? { changesSummary: changed.summary },
+    meta: input._meta ?? { changesSummary: summaries.join(' ') },
   })
-  return 'error' in saved ? saved : { ...saved, field: input.field, blockId: changed.blockId }
+  if ('error' in saved) return saved
+  return changes.length === 1
+    ? { ...saved, field: input.field, blockId: blockIds[0] }
+    : { ...saved, field: input.field, blockIds }
 }
 
-function indexOf(rows: Record<string, unknown>[], blockId: string): number {
+function indexOf(rows: Rows, blockId: string): number {
   return rows.findIndex((row) => row['id'] === blockId)
 }
 
 function notFound(field: string, blockId: string) {
-  return { error: `There is no block "${blockId}" in ${field}. get_document lists the blocks and their ids.` }
+  return {
+    error: `There is no block "${blockId}" in ${field}. get lists the blocks and their ids.`,
+  }
 }
 
 /** Where a block goes: after another, or at an end. `-1` when `after` names no block. */
-function placeAt(
-  rows: Record<string, unknown>[],
-  placement: { after?: string | undefined; position?: 'start' | 'end' | undefined },
-): number {
+function placeAt(rows: Rows, placement: Placement): number {
   if (placement.after !== undefined) {
     const at = indexOf(rows, placement.after)
     return at === -1 ? -1 : at + 1
@@ -255,55 +291,104 @@ function placeAt(
   return placement.position === 'start' ? 0 : rows.length
 }
 
+function insertChange(fieldPath: string, op: { block: { blockType: string } } & Placement): Change {
+  return async (rows) => {
+    const at = placeAt(rows, op)
+    if (at === -1) return notFound(fieldPath, op.after!)
+    const { id: _ignored, ...fields } = op.block as Record<string, unknown>
+    const added = { ...fields, id: newBlockId() }
+    return {
+      rows: [...rows.slice(0, at), added, ...rows.slice(at)],
+      added,
+      blockId: added.id,
+      summary: `Inserted a ${op.block.blockType} block into ${fieldPath}.`,
+    }
+  }
+}
+
+function updateChange(
+  deps: ContentWriteDeps,
+  fieldPath: string,
+  op: { blockId: string; patch: Record<string, unknown> },
+): Change {
+  return async (rows, field) => {
+    const at = indexOf(rows, op.blockId)
+    if (at === -1) return notFound(fieldPath, op.blockId)
+    const row = rows[at]!
+    if ('blockType' in op.patch && op.patch['blockType'] !== row['blockType']) {
+      return { error: "A block's type cannot change. Remove it and insert another." }
+    }
+    if ('id' in op.patch && op.patch['id'] !== row['id']) {
+      return { error: "A block's id cannot change." }
+    }
+    const config = blockConfig(field, String(row['blockType']), blockRegistry(deps.payload))
+    const updated = { ...row, ...mergePatch(row, op.patch, config?.fields ?? []) }
+    return {
+      rows: rows.map((r, i) => (i === at ? updated : r)),
+      // Checked whole, like a new one: a change can make it invalid.
+      added: updated,
+      blockId: op.blockId,
+      summary: `Changed ${Object.keys(op.patch).join(', ')} on a ${String(row['blockType'])} block in ${fieldPath}.`,
+    }
+  }
+}
+
+function moveChange(fieldPath: string, op: { blockId: string } & Placement): Change {
+  return async (rows) => {
+    const from = indexOf(rows, op.blockId)
+    if (from === -1) return notFound(fieldPath, op.blockId)
+    if (op.after === op.blockId) return { error: 'A block cannot go after itself.' }
+    const moving = rows[from]!
+    const rest = rows.filter((_, i) => i !== from)
+    const at = placeAt(rest, op)
+    if (at === -1) return notFound(fieldPath, op.after!)
+    return {
+      rows: [...rest.slice(0, at), moving, ...rest.slice(at)],
+      blockId: op.blockId,
+      summary: `Moved a ${String(moving['blockType'])} block in ${fieldPath}.`,
+    }
+  }
+}
+
+function removeChange(fieldPath: string, op: { blockId: string }): Change {
+  return async (rows) => {
+    const at = indexOf(rows, op.blockId)
+    if (at === -1) return notFound(fieldPath, op.blockId)
+    return {
+      rows: rows.filter((_, i) => i !== at),
+      blockId: op.blockId,
+      summary: `Removed a ${String(rows[at]!['blockType'])} block from ${fieldPath}.`,
+    }
+  }
+}
+
 /* ------------------------------------------------------------------------ */
 
-export function createInsertBlockTool(deps: ContentWriteDeps): McpToolDefinition<typeof insertInput> {
+export function createInsertBlockTool(
+  deps: ContentWriteDeps,
+): McpToolDefinition<typeof insertInput> {
   return {
     ...CONTENT_BLOCK_TOOLS.insertBlock,
     inputSchema: insertInput,
     requiredScope: 'content.write',
     handler: (input, ctx) =>
-      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.insertBlock.name, async (rows) => {
-        const at = placeAt(rows, input)
-        if (at === -1) return notFound(input.field, input.after!)
-        const { id: _ignored, ...fields } = input.block as Record<string, unknown>
-        const added = { ...fields, id: newBlockId() }
-        return {
-          rows: [...rows.slice(0, at), added, ...rows.slice(at)],
-          added,
-          blockId: added.id,
-          summary: `Inserted a ${input.block.blockType} block into ${input.field}.`,
-        }
-      }),
+      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.insertBlock.name, [
+        insertChange(input.field, input),
+      ]),
   }
 }
 
-export function createUpdateBlockTool(deps: ContentWriteDeps): McpToolDefinition<typeof updateInput> {
+export function createUpdateBlockTool(
+  deps: ContentWriteDeps,
+): McpToolDefinition<typeof updateInput> {
   return {
     ...CONTENT_BLOCK_TOOLS.updateBlock,
     inputSchema: updateInput,
     requiredScope: 'content.write',
     handler: (input, ctx) =>
-      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.updateBlock.name, async (rows, field) => {
-        const at = indexOf(rows, input.blockId)
-        if (at === -1) return notFound(input.field, input.blockId)
-        const row = rows[at]!
-        if ('blockType' in input.patch && input.patch['blockType'] !== row['blockType']) {
-          return { error: 'A block\'s type cannot change. Remove it and insert another.' }
-        }
-        if ('id' in input.patch && input.patch['id'] !== row['id']) {
-          return { error: 'A block\'s id cannot change.' }
-        }
-        const config = blockConfig(field, String(row['blockType']), blockRegistry(deps.payload))
-        const updated = { ...row, ...mergePatch(row, input.patch, config?.fields ?? []) }
-        return {
-          rows: rows.map((r, i) => (i === at ? updated : r)),
-          // Checked whole, like a new one: a change can make it invalid.
-          added: updated,
-          blockId: input.blockId,
-          summary: `Changed ${Object.keys(input.patch).join(', ')} on a ${String(row['blockType'])} block in ${input.field}.`,
-        }
-      }),
+      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.updateBlock.name, [
+        updateChange(deps, input.field, input),
+      ]),
   }
 }
 
@@ -313,38 +398,94 @@ export function createMoveBlockTool(deps: ContentWriteDeps): McpToolDefinition<t
     inputSchema: moveInput,
     requiredScope: 'content.write',
     handler: (input, ctx) =>
-      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.moveBlock.name, async (rows) => {
-        const from = indexOf(rows, input.blockId)
-        if (from === -1) return notFound(input.field, input.blockId)
-        if (input.after === input.blockId) return { error: 'A block cannot go after itself.' }
-        const moving = rows[from]!
-        const rest = rows.filter((_, i) => i !== from)
-        const at = placeAt(rest, input)
-        if (at === -1) return notFound(input.field, input.after!)
-        return {
-          rows: [...rest.slice(0, at), moving, ...rest.slice(at)],
-          blockId: input.blockId,
-          summary: `Moved a ${String(moving['blockType'])} block in ${input.field}.`,
-        }
-      }),
+      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.moveBlock.name, [
+        moveChange(input.field, input),
+      ]),
   }
 }
 
-export function createRemoveBlockTool(deps: ContentWriteDeps): McpToolDefinition<typeof removeInput> {
+export function createRemoveBlockTool(
+  deps: ContentWriteDeps,
+): McpToolDefinition<typeof removeInput> {
   return {
     ...CONTENT_BLOCK_TOOLS.removeBlock,
     inputSchema: removeInput,
     requiredScope: 'content.write',
     handler: (input, ctx) =>
-      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.removeBlock.name, async (rows) => {
-        const at = indexOf(rows, input.blockId)
-        if (at === -1) return notFound(input.field, input.blockId)
-        return {
-          rows: rows.filter((_, i) => i !== at),
-          blockId: input.blockId,
-          summary: `Removed a ${String(rows[at]!['blockType'])} block from ${input.field}.`,
-        }
-      }),
+      operate(deps, ctx, input, CONTENT_BLOCK_TOOLS.removeBlock.name, [
+        removeChange(input.field, input),
+      ]),
+  }
+}
+
+const blockOperation = z.discriminatedUnion('op', [
+  z.object({
+    op: z.literal('insert'),
+    block: z
+      .object({ blockType: z.string() })
+      .passthrough()
+      .describe("The block: { blockType, ...fields }, as the component's contract describes it."),
+    ...placement,
+  }),
+  z.object({
+    op: z.literal('update'),
+    blockId: z.string().describe("The block's id, as the document lists it."),
+    patch: z
+      .record(z.string(), z.unknown())
+      .describe('The block fields to change. A group is merged; an array is replaced.'),
+  }),
+  z.object({
+    op: z.literal('move'),
+    blockId: z.string().describe("The block's id, as the document lists it."),
+    ...placement,
+  }),
+  z.object({
+    op: z.literal('remove'),
+    blockId: z.string().describe("The block's id, as the document lists it."),
+  }),
+])
+
+export const editBlocksInput = withMeta({
+  ...target,
+  operations: z
+    .array(blockOperation)
+    .min(1)
+    .max(50)
+    .describe(
+      'Applied in order, each to the result of the one before, then checked and saved once. If any fails, nothing is saved.',
+    ),
+})
+
+/**
+ * Several block operations on one field, checked and saved as one: the four
+ * single-block tools, as a list. forumone-2026#830.
+ */
+export function createEditBlocksTool(
+  deps: ContentWriteDeps,
+): McpToolDefinition<typeof editBlocksInput> {
+  return {
+    ...CONTENT_BLOCK_TOOLS.editBlocks,
+    inputSchema: editBlocksInput,
+    requiredScope: 'content.write',
+    handler: (input, ctx) =>
+      operate(
+        deps,
+        ctx,
+        input,
+        CONTENT_BLOCK_TOOLS.editBlocks.name,
+        input.operations.map((op): Change => {
+          switch (op.op) {
+            case 'insert':
+              return insertChange(input.field, op)
+            case 'update':
+              return updateChange(deps, input.field, op)
+            case 'move':
+              return moveChange(input.field, op)
+            case 'remove':
+              return removeChange(input.field, op)
+          }
+        }),
+      ),
   }
 }
 
@@ -354,5 +495,6 @@ export function createContentBlockTools(deps: ContentWriteDeps): McpToolDefiniti
     createUpdateBlockTool(deps),
     createMoveBlockTool(deps),
     createRemoveBlockTool(deps),
+    createEditBlocksTool(deps),
   ] as unknown as McpToolDefinition[]
 }

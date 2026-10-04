@@ -173,7 +173,7 @@ export function createDescribeContentTypeTool(
         publishing: {
           requires: options.publishRequires ?? [],
           howTo:
-            'Writes are drafts. Run get_publish_status for the full preflight before offering to publish; going live is publish, schedule_publish or request_approval.',
+            'Writes are drafts. Run `check` for the full preflight before offering to publish; going live is `publish`.',
         },
       }
     },

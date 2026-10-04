@@ -156,7 +156,7 @@ describe('create_draft', () => {
       slug: 'our-work',
       adminUrl: '/admin/collections/pages/12',
       previewUrl: 'https://site.test/preview/our-work',
-      next: expect.stringMatching(/get_publish_status/),
+      next: expect.stringMatching(/Run `check`/),
     })
   })
 

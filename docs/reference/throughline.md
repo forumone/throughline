@@ -50,7 +50,7 @@ export default buildConfig({
   plugins: [
     suite.plugin,
     mcpPlugin({
-      mcp: { tools: suite.mcpTools },
+      mcp: { tools: suite.mcpTools, prompts: suite.mcpPrompts },
       overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
     }),
   ],
@@ -64,16 +64,39 @@ export const { GET, POST, PUT } = serve({ client: inngest, functions: jobs.funct
 ```
 
 - **It registers every plugin in the order they need.** Audit, job failures and `check_slug` are always on. Every other plugin is on when its key is present.
-- **It gives every plugin the one MCP collector.** `suite.mcpTools` is what `mcpPlugin` serves.
+- **It decides what `/api/mcp` serves.** Eight authoring tools, and the operations tools for admins. `suite.mcpTools` and `suite.mcpPrompts` are what `mcpPlugin` takes. See [What `/api/mcp` serves](#what-apimcp-serves).
 - **Shared values are given once.** `approvals.collectionSlug` reaches the approvals collection, the emails and the expiry job. `collections` reaches publishing, "Your work" and scheduled publishing. `admin` is every added collection's sidebar group, unless a plugin's own says otherwise.
 - **`suite.jobs` is every job the options call for:** revalidation (given `publishing.urls`), scheduled publishing and its backstop, approval expiry, the audit echo, the healthcheck, the three approval emails, and each integration's jobs. Function ids are the ones the 0.x factories registered.
 - **Its defaults are what every site wrote by hand.** Scheduled publishes go through the publishing pipeline. Approval links are signed with `APPROVAL_TOKEN_SECRET` against `NEXT_PUBLIC_SERVER_URL`. A failing healthcheck is recorded in `job-failures`.
 
 The reasoning is in [`1.0-throughline-call.md`](../spec/1.0-throughline-call.md). Each plugin is still exported from its subpath for a site that wires them by hand.
 
+## What `/api/mcp` serves
+
+Since 2.0 the server is shaped by what people use it for: drafting and publishing content from a client such as Claude Desktop. It serves eight authoring tools, with the operations tools behind an admin check. Before 2.0 it served every module's tools, 48 on a full install, which is more than a model chooses between well and more than some clients allow (Cursor stops at 40). forumone-2026#830.
+
+| Tool              | What it does                                                                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `find`            | Finds content by query, in one content type, something to link (`kind`), or your own drafts and schedule (`mine`).            |
+| `get`             | Reads a document (with `versions` for a rollback), what a content type takes, or which content types there are.               |
+| `save_draft`      | Creates a draft, or changes the given fields of one. Never publishes.                                                         |
+| `edit_blocks`     | Inserts, updates, moves and removes blocks in one field, as a list checked and saved together.                                |
+| `check`           | Everything `publish` would check, with every blocker at once, and the preview link.                                           |
+| `publish`         | `action`: `now`, `schedule`, `unpublish`, `rollback` or `request_approval`.                                                   |
+| `design_guide`    | Component suggestions for an intent, one component's contract, the recipe building blocks, or the component list.             |
+| `compose_section` | Checks a composed section's recipe, or saves it as a draft for a person to approve.                                           |
+
+**Each is a thin wrapper.** Every module still builds its own tools, into a collector `plugin-mcp` never sees, and the eight call their handlers with the caller's context. So access rules, the audit trail and every check are the module's own, unchanged. The module tools' factories are still exported, for a site wiring its own surface.
+
+**Who may publish is the person's role, not a checkbox.** `publish`'s `now`, `schedule`, `unpublish` and `rollback` need an admin or an editor, or what `mcp.canPublish` says. `request_approval` needs only a signed-in person. A document whose policy requires approval still cannot go live until it is granted. `now` says so and names the approver groups, and files the request itself when given `approval`. Every tool still runs as the key's person with `overrideAccess: false`, so a key never does more than its person.
+
+**The operations tools are for admins.** These are the audit queries, integrations, job failures, the approvals queue, the content calendar and health, and the reference checks. They are served under their own names and descriptions, and refused to anyone who is not an admin. `mcp: { ops: false }` leaves them off. `plugin-mcp` lists only the tools ticked on the calling key, so an author's key that has only the eight ticked is offered eight.
+
+**Prompts carry the workflows.** `suite.mcpPrompts` holds three: `draft_post`, `build_landing_page` and `get_ready_to_publish`. A client lists them as commands the person picks. They cost nothing until used, so the step-by-step guidance lives in them rather than in tool descriptions sent with every request. `plugin-mcp` makes a per-key checkbox for each, ticked by default.
+
 ## `throughline()` options
 
-`throughline(options)` returns `{ plugin, mcpTools, jobs }`. The types are `ThroughlineOptions`, `ThroughlinePublishingOptions` and `ThroughlineSuite`, exported from the root.
+`throughline(options)` returns `{ plugin, mcpTools, mcpPrompts, jobs }`. The types are `ThroughlineOptions`, `ThroughlinePublishingOptions` and `ThroughlineSuite`, exported from the root.
 
 | Option         | On           | What it takes                                                                                                                                                                                                       |
 | -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -94,6 +117,7 @@ The reasoning is in [`1.0-throughline-call.md`](../spec/1.0-throughline-call.md)
 | `editorial`    | when present | `editorialPlugin`'s options (`/editorial`): content health, the calendar, "Your work" (`work`, less `collections`) and the palette.                                                                                 |
 | `healthcheck`  | when present | `healthcheckJob`'s options: its `checks` and `schedule`. A failing run is recorded in `job-failures`.                                                                                                               |
 | `auditEcho`    |              | Extra handlers for the audit echo job. Giving it turns the job on.                                                                                                                                                  |
+| `mcp`          |              | `{ canPublish, ops }`: who may take something live with `publish` (default: an admin or an editor), and whether admins get the operations tools (default `true`).                                                |
 
 No plugin's options include `mcpTools`, `inngest`, `emit` or `logger`: `throughline()` supplies them.
 
@@ -273,7 +297,7 @@ const isAdmin: Access = ({ req: { user } }) =>
   user?.collection === 'users' && Array.isArray(user.roles) && user.roles.includes('admin')
 
 mcpPlugin({
-  mcp: { tools: suite.mcpTools },
+  mcp: { tools: suite.mcpTools, prompts: suite.mcpPrompts },
   overrideApiKeyCollection: mcpApiKeyAccess(isAdmin),
 })
 ```
@@ -349,6 +373,8 @@ The consequential tools in this suite and the scopes they require:
 | `integrations.trigger` | `trigger_sync`, `test_integration`                     |
 
 Everything else — the component tools, the audit queries, the read side of publishing and approvals — needs only a valid key.
+
+Since 2.0 none of these is served directly: `publish` covers the first two rows and checks the person's role, and the operations tools need an admin. See [What `/api/mcp` serves](#what-apimcp-serves).
 
 ## Events
 

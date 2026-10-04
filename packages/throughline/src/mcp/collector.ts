@@ -71,6 +71,15 @@ export interface McpToolCollector {
    * run; anything left is a server that declared a tool it does not build.
    */
   readonly unbound: string[]
+  /** Every tool declared so far, in order, with the server that declared it. */
+  readonly declared: readonly (McpToolDescriptor & { serverName: string })[]
+  /**
+   * A bound tool as its server built it, before it was wrapped for
+   * `plugin-mcp`: its zod input schema and a handler that takes parsed input
+   * and a context. `undefined` until its server's `onInit` has run, or if no
+   * server declared it. This is how one tool calls another's handler.
+   */
+  definition(name: string): McpToolDefinition | undefined
 }
 
 export interface DeclareToolsOptions {
@@ -103,10 +112,14 @@ export function createMcpToolCollector(
   const declaredBy = new Map<string, string>()
   const slots = new Map<string, PayloadMcpTool>()
   const bound = new Set<string>()
+  const declared: (McpToolDescriptor & { serverName: string })[] = []
+  const definitions = new Map<string, McpToolDefinition>()
 
   return {
     tools,
     servers,
+    declared,
+    definition: (name) => definitions.get(name),
     get unbound() {
       return [...declaredBy.keys()].filter(name => !bound.has(name))
     },
@@ -124,6 +137,7 @@ export function createMcpToolCollector(
           )
         }
         declaredBy.set(descriptor.name, serverName)
+        declared.push({ name: descriptor.name, description: descriptor.description, serverName })
 
         /*
         A slot, not a tool. `name` and `description` are everything the plugin
@@ -167,6 +181,8 @@ export function createMcpToolCollector(
       if (toolOptions.audit && !auditServer) {
         throw new Error(mcpServerRefusal(serverName))
       }
+
+      for (const definition of incoming) definitions.set(definition.name, definition)
 
       for (const tool of toPayloadMcpTools(incoming, {
         ...options,

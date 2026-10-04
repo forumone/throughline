@@ -46,6 +46,8 @@ const AUDIT_SERVER_BY_COLLECTOR_NAME: Readonly<Record<string, AuditMcpServer>> =
   fields: 'fields',
   observability: 'observability',
   content: 'content',
+  // The authoring surface: its tools call content, publishing and components, and log as content.
+  authoring: 'content',
 }
 
 /**

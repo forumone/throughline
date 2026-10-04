@@ -1,4 +1,5 @@
 import type { CollectionConfig, Config } from 'payload'
+import { OPS_TOOL_NAMES } from './authoring/descriptors.js'
 import { describe, expect, it } from 'vitest'
 import type { Integration } from './integrations/types.js'
 import { inngestJobs } from './jobs/inngest/adapter.js'
@@ -96,21 +97,41 @@ describe('throughline()', () => {
     expect(group('job-failures')).toBe('Workflow')
   })
 
-  it("declares every enabled plugin's tools into suite.mcpTools as the config is built", async () => {
+  it('serves the eight authoring tools, then the operations tools, and none of the module tools they replace', async () => {
     const { suite } = await built(everything())
     const names = suite.mcpTools.map((tool) => tool.name)
-    for (const tool of [
-      'list_job_failures',
+    expect(names.slice(0, 8)).toEqual([
+      'find',
+      'get',
+      'save_draft',
+      'edit_blocks',
+      'check',
       'publish',
-      'request_approval',
-      'query_audit',
-      'list_integrations',
-      'find_references',
-      'check_slug',
-      'list_my_work',
-    ]) {
-      expect(names, tool).toContain(tool)
+      'design_guide',
+      'compose_section',
+    ])
+    for (const ops of ['list_job_failures', 'query_audit', 'list_integrations', 'find_references', 'list_pending_approvals']) {
+      expect(names, ops).toContain(ops)
     }
+    // Every served tool beyond the eight is an operations tool.
+    expect(names.slice(8).every((name) => OPS_TOOL_NAMES.includes(name))).toBe(true)
+    for (const replaced of ['request_approval', 'check_slug', 'list_my_work', 'create_draft', 'get_publish_status', 'insert_block']) {
+      expect(names, replaced).not.toContain(replaced)
+    }
+  })
+
+  it('offers the authoring workflows as prompts', () => {
+    const suite = throughline(everything())
+    expect(suite.mcpPrompts.map((prompt) => prompt.name)).toEqual([
+      'draft_post',
+      'build_landing_page',
+      'get_ready_to_publish',
+    ])
+  })
+
+  it('serves only the eight when the operations tools are off', async () => {
+    const { suite } = await built({ ...everything(), mcp: { ops: false } })
+    expect(suite.mcpTools).toHaveLength(8)
   })
 
   it('calls for every platform job the options imply, under the function ids they have always had', () => {

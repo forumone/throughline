@@ -17,7 +17,7 @@ describe('refusedFields', () => {
       ['title'],
     )
     expect(out.map((r) => r.field)).toEqual(['_status', 'publishedAt', 'narration', 'policy'])
-    expect(out[0]!.reason).toMatch(/always drafts.*publish, schedule_publish or request_approval/)
+    expect(out[0]!.reason).toMatch(/always drafts. Going live is `publish`/)
     expect(out[3]!.reason).toMatch(/approval policy is set by a person/)
   })
 
