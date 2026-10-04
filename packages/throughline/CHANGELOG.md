@@ -1,5 +1,18 @@
 # @forumone/throughline
 
+## 1.8.0
+
+### Minor Changes
+
+- 204009a: The publish gate for composed sections. The new `publishing.recipes` option names the block that holds a recipe and the collection recipes live in. With it, the composition step checks that each such block's recipe exists, is approved, still passes `lintRecipe` against the current manifest, and has its required content filled, instead of calling the block an unknown component. The components plugin now also attaches its loaded manifest for this. The composition validator also checks placement: a component placed only `inline` can't be a block on a page by itself.
+- 5b5ee85: Adds the recipe MCP tools to the components plugin (`get_recipe_vocabulary`, `validate_recipe`, and `save_recipe`, which writes drafts only), turned on with the new `throughline({ recipes: { blockType, collection } })`. The same setting configures the publish gate and lets `validate_composition` and the content write tools treat that block as a composed section instead of an unknown component.
+
+  **Upgrading: a migration.** The key collection gains three checkbox columns. Run `migrate:create` and apply it before deploying.
+
+### Patch Changes
+
+- @forumone/throughline-design-system@1.8.0
+
 ## 1.7.0
 
 ### Patch Changes
