@@ -156,6 +156,19 @@ describe('toPayloadMcpTool', () => {
     expect((handler.mock.calls[0]?.[1] as unknown as McpToolContext).apiKeyName).toBe('mcp-api-key')
   })
 
+  it('names the app when the person signed in to it over OAuth', async () => {
+    const { tool, handler } = publishTool()
+    await toPayloadMcpTool(tool).handler(
+      {},
+      { ...mcpRequest, user: { ...mcpRequest.user, _mcpClient: 'Claude' } },
+      undefined,
+    )
+
+    expect((handler.mock.calls[0]?.[1] as unknown as McpToolContext).apiKeyName).toBe(
+      'Claude (OAuth)',
+    )
+  })
+
   it('prefers a key name the host supplies', async () => {
     const { tool, handler } = publishTool()
     await toPayloadMcpTool(tool, { apiKeyName: 'Scheduled publishing' }).handler(

@@ -31,6 +31,8 @@ export const AUDIT_ACTIONS = [
   'integration.failed',
   'system.error',
   'system.healthcheck',
+  'mcp.connected',
+  'mcp.disconnected',
 ] as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]

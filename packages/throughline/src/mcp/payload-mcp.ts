@@ -48,7 +48,15 @@ export interface PayloadMcpTool {
  * installed.
  */
 export interface PayloadMcpRequest {
-  user?: { id?: unknown; email?: unknown; name?: unknown; roles?: unknown; groups?: unknown } | null
+  user?: {
+    id?: unknown
+    email?: unknown
+    name?: unknown
+    roles?: unknown
+    groups?: unknown
+    /** The app a signed-in connection belongs to, set by `mcp-oauth`'s `overrideAuth`. */
+    _mcpClient?: unknown
+  } | null
   payloadAPI?: string
   payload?: { logger?: Logger }
 }
@@ -234,7 +242,7 @@ export function toPayloadMcpTools(
   tools: McpToolDefinition[],
   options: ToPayloadMcpToolOptions = {},
 ): PayloadMcpTool[] {
-  return tools.map(tool => toPayloadMcpTool(tool, options))
+  return tools.map((tool) => toPayloadMcpTool(tool, options))
 }
 
 function shapeOf(tool: McpToolDefinition): z.ZodRawShape {
@@ -263,9 +271,16 @@ function contextFrom(req: PayloadMcpRequest, options: ToPayloadMcpToolOptions): 
     The strategy name is the honest fallback. `plugin-mcp` resolves a key to its
     linked user and does not carry the key document forward, so "which key" is
     not a question the request can answer — and an audit row saying
-    `mcp-api-key` is better than one asserting a name nothing checked.
+    `mcp-api-key` is better than one asserting a name nothing checked. A
+    signed-in connection does know: `mcp-oauth` puts its app on the user.
     */
-    apiKeyName: options.apiKeyName ?? (req.payloadAPI === 'MCP' ? 'mcp-api-key' : ''),
+    apiKeyName:
+      options.apiKeyName ??
+      (typeof req.user?._mcpClient === 'string' && req.user._mcpClient
+        ? `${req.user._mcpClient} (OAuth)`
+        : req.payloadAPI === 'MCP'
+          ? 'mcp-api-key'
+          : ''),
     logger: options.logger ?? req.payload?.logger ?? defaultLogger,
   }
 }

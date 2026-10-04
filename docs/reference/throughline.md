@@ -22,6 +22,7 @@ This page is the root entry and what every subpath shares. Each plugin's own pag
 | `/media`          | Blob client-upload hardening, and reference tracking: `referencesPlugin`, `findReferences`, the delete and trash guards                                                                |
 | `/fields`         | The field kit: `slugField`, `publishingFields`, `revisedAtField`, `unlistedField`, `characterCountPlugin`, `fieldsPlugin`                                                              |
 | `/content`        | `contentPlugin`: the MCP tools an agent reads with before writing a draft; see [content](throughline/content.md)                                                                       |
+| `/mcp-oauth`      | `mcpOAuth`: sign-in for `/api/mcp` (OAuth), the Connect MCP page and the MCP access policy; see [mcp-oauth](throughline/mcp-oauth.md)                                                  |
 | `/observability`  | `jobFailuresPlugin`, `getJobFailureWriter`, `createErrorReporter`, `reportError`, `buildRequestErrorReport`                                                                            |
 | `/testing`        | `describeAnonymousAccess`, `checkAnonymousAccess`: test helpers for a site                                                                                                             |
 | `/cache-tags`     | `createCacheTags`, which imports nothing, for front-end readers                                                                                                                        |
