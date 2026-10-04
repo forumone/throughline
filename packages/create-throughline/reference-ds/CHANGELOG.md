@@ -1,5 +1,11 @@
 # @forumone/throughline-reference-ds
 
+## 0.3.14
+
+### Patch Changes
+
+- @forumone/throughline-design-system@1.5.0
+
 ## 0.3.13
 
 ### Patch Changes
