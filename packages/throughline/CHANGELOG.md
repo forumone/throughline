@@ -1,5 +1,12 @@
 # @forumone/throughline
 
+## 1.7.0
+
+### Patch Changes
+
+- Updated dependencies [e473c47]
+  - @forumone/throughline-design-system@1.7.0
+
 ## 1.6.0
 
 ### Patch Changes
