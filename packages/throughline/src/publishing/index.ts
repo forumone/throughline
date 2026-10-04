@@ -100,3 +100,12 @@ export type {
   ScheduledPublishRequest,
   ScheduledPublishResult,
 } from '../jobs/workflow-types.js'
+
+/**
+ * Links, for the `link-targets` step: a host marks its own hand-written link
+ * fields with `markLinkTarget` so a link to a draft, trashed or deleted page
+ * is refused at publish. The fields the design-system generator builds are
+ * marked already.
+ */
+export { LINK_TARGET_KEY, linkTargetsIn, markLinkTarget } from '../references/links.js'
+export type { LinkTarget, LinkTargetMarker, LinkTargetsInOptions } from '../references/links.js'

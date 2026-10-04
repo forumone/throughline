@@ -80,6 +80,17 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
    * plugin ships a fix. Switch one off here and supply your own.
    */
   disableAccessibilityChecks?: string[]
+  /**
+   * Optional: the `link-targets` step, which refuses a publish whose internal
+   * links go to a draft, a document in the trash, or one that has been
+   * deleted. On by default; `{ enabled: false }` switches it off.
+   *
+   * A link is a relationship field marked with `markLinkTarget` (every link
+   * the design-system generator builds already is) or an internal link in
+   * rich text. A target that is not published but has a scheduled publish
+   * time is a warning rather than a block.
+   */
+  linkTargets?: { enabled?: boolean }
   /** Optional: resolver consulted when a document's policy requires approval. */
   approvalResolver?: ApprovalResolver
   /**

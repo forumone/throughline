@@ -41,6 +41,14 @@ here, because the block config is the thing being walked.
   `inlineBlock` nodes, whose fields are walked as the block they name. The
   site's version found only uploads, so an image inside a block in an article
   body was invisible to it.
+
+## One walk, several questions
+
+The nesting above is `walkDocument`, which calls a visitor at every field and
+every rich-text node. `referencesIn` asks it about one collection;
+`linkTargetsIn` (`./links.ts`) asks it where a document's links go, for the
+publish pipeline's `link-targets` step. Each says what it is looking for, and
+neither restates how the shapes nest.
 */
 
 /** One reference, and enough to say where it is. */
@@ -68,7 +76,7 @@ export interface ReferencesInOptions {
   blocks?: readonly Block[] | ReadonlyMap<string, Block>
 }
 
-type NamedField = Field & { name: string }
+export type NamedField = Field & { name: string }
 
 function isNamed(field: Field): field is NamedField {
   return 'name' in field && typeof (field as { name?: unknown }).name === 'string'
@@ -83,7 +91,7 @@ function childrenOf(field: Field): Field[] {
  * above it. `String({ id: 3 })` is `[object Object]`, which matches nothing and
  * fails open, so the object case is handled rather than coerced.
  */
-function idOf(value: unknown): number | string | undefined {
+export function idOf(value: unknown): number | string | undefined {
   if (typeof value === 'number' || typeof value === 'string') return value
   if (value && typeof value === 'object' && 'id' in value) {
     const { id } = value
@@ -117,10 +125,54 @@ function idsIn(value: unknown, collection: CollectionSlug): (number | string)[] 
   return ids
 }
 
-interface WalkContext {
-  collection: CollectionSlug
+/** Where the walk is, as a visitor sees it. */
+export interface WalkLocation {
+  /** A human-readable path: `layout[3] › ImageHero › image`. */
+  path: string
+  /**
+   * The data path in the form the publish checks report: `layout[3].image`.
+   * Inside rich text it stays the rich-text field's own path, because nothing
+   * inside the editor state is a field the admin can mark.
+   */
+  dataPath: string
+  /** Whether the walk is inside a block, and so past any foreign key. */
+  viaBlock: boolean
+  /** The outermost `blocks` row the walk is inside: its index and its config. */
+  block?: { index: number; block: Block } | undefined
+  /** The top-level field, or named tab, the walk is under. */
+  top?: { name: string; label?: unknown } | undefined
+  /** Whether the walk is inside rich text. */
+  inRichText: boolean
+}
+
+/**
+ * What a walk does at each stop. Both are optional; a visitor that implements
+ * neither walks the document and learns nothing.
+ */
+export interface WalkVisitor {
+  /**
+   * Every named field that holds a value, with the data object it sits in.
+   * Return `true` to keep the walk out of the value — a relationship that has
+   * been read should not be walked as though it were a group.
+   */
+  field?: (
+    field: NamedField,
+    value: unknown,
+    siblings: Record<string, unknown>,
+    at: WalkLocation,
+  ) => boolean | void
+  /** Every Lexical node, at the location of the rich-text field it is in. */
+  richTextNode?: (node: Record<string, unknown>, at: WalkLocation) => void
+}
+
+export interface WalkDocumentOptions {
+  /** As `ReferencesInOptions.blocks`. */
+  blocks?: readonly Block[] | ReadonlyMap<string, Block>
+}
+
+interface Walk {
   registry: ReadonlyMap<string, Block>
-  out: Reference[]
+  visitor: WalkVisitor
 }
 
 /** The blocks a `blocks` field can hold, by slug. */
@@ -142,49 +194,56 @@ function blocksOf(field: Field, registry: ReadonlyMap<string, Block>): Map<strin
   return own
 }
 
+/** `here` one step down into `name`, in both path forms. */
+function into(at: WalkLocation, name: string): WalkLocation {
+  return {
+    ...at,
+    path: at.path ? `${at.path} › ${name}` : name,
+    dataPath: at.inRichText ? at.dataPath : at.dataPath ? `${at.dataPath}.${name}` : name,
+  }
+}
+
 /**
- * Rich text: `upload` nodes, and `block` / `inlineBlock` nodes walked as the
- * block they name. Shape-matched rather than typed against Lexical's node
- * union, because the column was written by whatever editor version was current.
+ * Rich text: every node goes to the visitor, and `block` / `inlineBlock` nodes
+ * are walked as the block they name. Shape-matched rather than typed against
+ * Lexical's node union, because the column was written by whatever editor
+ * version was current.
  */
-function walkRichText(value: unknown, path: string, viaBlock: boolean, ctx: WalkContext): void {
+function walkRichText(value: unknown, at: WalkLocation, walk: Walk): void {
   if (!value || typeof value !== 'object') return
   if (Array.isArray(value)) {
-    for (const entry of value) walkRichText(entry, path, viaBlock, ctx)
+    for (const entry of value) walkRichText(entry, at, walk)
     return
   }
 
   const node = value as Record<string, unknown>
-  const embedded =
-    node['type'] === 'upload'
-      ? 'embedded upload'
-      : node['type'] === 'relationship'
-        ? 'embedded link'
-        : undefined
-  if (embedded && node['relationTo'] === ctx.collection) {
-    const id = idOf(node['value'])
-    if (id !== undefined) ctx.out.push({ id, path: `${path} › ${embedded}`, viaBlock })
-  }
+  walk.visitor.richTextNode?.(node, at)
 
   if (node['type'] === 'block' || node['type'] === 'inlineBlock') {
     const fields = node['fields'] as Record<string, unknown> | undefined
     const slug = typeof fields?.['blockType'] === 'string' ? fields['blockType'] : undefined
-    const block = slug ? ctx.registry.get(slug) : undefined
+    const block = slug ? walk.registry.get(slug) : undefined
     // An unknown block is skipped rather than guessed at, as in a `blocks` field.
-    if (block && fields) walkFields(block.fields, fields, `${path} › ${block.slug}`, true, ctx)
+    if (block && fields) {
+      walkFields(
+        block.fields,
+        fields,
+        { ...at, path: `${at.path} › ${block.slug}`, viaBlock: true, inRichText: true },
+        walk,
+      )
+    }
   }
 
   for (const key of ['root', 'children']) {
-    if (key in node) walkRichText(node[key], path, viaBlock, ctx)
+    if (key in node) walkRichText(node[key], at, walk)
   }
 }
 
 function walkFields(
   fields: readonly Field[],
   data: Record<string, unknown> | undefined,
-  path: string,
-  viaBlock: boolean,
-  ctx: WalkContext,
+  at: WalkLocation,
+  walk: Walk,
 ): void {
   if (!data) return
 
@@ -194,32 +253,40 @@ function walkFields(
       if (field.type === 'tabs' && 'tabs' in field && Array.isArray(field.tabs)) {
         for (const tab of field.tabs) {
           const named = 'name' in tab && typeof tab.name === 'string' ? tab.name : undefined
-          const nested = named ? (data[named] as Record<string, unknown> | undefined) : data
-          const here = named ? `${path}${path ? ' › ' : ''}${named}` : path
-          walkFields(tab.fields, nested, here, viaBlock, ctx)
+          if (!named) {
+            walkFields(tab.fields, data, at, walk)
+            continue
+          }
+          const here = into(at, named)
+          walkFields(
+            tab.fields,
+            data[named] as Record<string, unknown> | undefined,
+            { ...here, top: at.top ?? { name: named, label: tab.label } },
+            walk,
+          )
         }
         continue
       }
-      walkFields(childrenOf(field), data, path, viaBlock, ctx)
+      walkFields(childrenOf(field), data, at, walk)
       continue
     }
 
     const value = data[field.name]
     if (value === undefined || value === null) continue
-    const here = path ? `${path} › ${field.name}` : field.name
-
-    if (pointsAt(field, ctx.collection)) {
-      for (const id of idsIn(value, ctx.collection)) ctx.out.push({ id, path: here, viaBlock })
-      continue
+    const here: WalkLocation = {
+      ...into(at, field.name),
+      top: at.top ?? { name: field.name, label: (field as { label?: unknown }).label },
     }
+
+    if (walk.visitor.field?.(field, value, data, here) === true) continue
 
     switch (field.type) {
       case 'richText':
-        walkRichText(value, here, viaBlock, ctx)
+        walkRichText(value, here, walk)
         break
 
       case 'group':
-        walkFields(childrenOf(field), value as Record<string, unknown>, here, viaBlock, ctx)
+        walkFields(childrenOf(field), value as Record<string, unknown>, here, walk)
         break
 
       case 'array':
@@ -228,9 +295,12 @@ function walkFields(
             walkFields(
               childrenOf(field),
               row as Record<string, unknown>,
-              `${here}[${index}]`,
-              viaBlock,
-              ctx,
+              {
+                ...here,
+                path: `${here.path}[${index}]`,
+                dataPath: here.inRichText ? here.dataPath : `${here.dataPath}[${index}]`,
+              },
+              walk,
             )
           })
         }
@@ -238,18 +308,29 @@ function walkFields(
 
       case 'blocks': {
         if (!Array.isArray(value)) break
-        const own = blocksOf(field, ctx.registry)
+        const own = blocksOf(field, walk.registry)
         value.forEach((row, index) => {
           const entry = row as Record<string, unknown>
           const slug = typeof entry['blockType'] === 'string' ? entry['blockType'] : undefined
-          const block = slug ? (own.get(slug) ?? ctx.registry.get(slug)) : undefined
+          const block = slug ? (own.get(slug) ?? walk.registry.get(slug)) : undefined
           /*
           A row whose `blockType` names no known block is skipped rather than
           guessed at: the config and the data disagree, and inventing a field
           list for it would be the string-search failure by another route.
           */
           if (!block) return
-          walkFields(block.fields, entry, `${here}[${index}] › ${block.slug}`, true, ctx)
+          walkFields(
+            block.fields,
+            entry,
+            {
+              ...here,
+              path: `${here.path}[${index}] › ${block.slug}`,
+              dataPath: here.inRichText ? here.dataPath : `${here.dataPath}[${index}]`,
+              viaBlock: true,
+              block: here.block ?? { index, block },
+            },
+            walk,
+          )
         })
         break
       }
@@ -260,10 +341,30 @@ function walkFields(
   }
 }
 
-function registryOf(blocks: ReferencesInOptions['blocks']): ReadonlyMap<string, Block> {
+function registryOf(blocks: WalkDocumentOptions['blocks']): ReadonlyMap<string, Block> {
   if (!blocks) return new Map()
   if (blocks instanceof Map) return blocks
   return new Map((blocks as readonly Block[]).map((block) => [block.slug, block]))
+}
+
+/**
+ * Walks one document's data alongside its field config, calling the visitor at
+ * every field and every rich-text node. The structure `referencesIn` and
+ * `linkTargetsIn` share: each says what it is looking for, and neither restates
+ * how groups, tabs, arrays, blocks and rich text nest.
+ */
+export function walkDocument(
+  fields: readonly Field[],
+  data: Record<string, unknown> | undefined,
+  visitor: WalkVisitor,
+  options: WalkDocumentOptions = {},
+): void {
+  walkFields(
+    fields,
+    data,
+    { path: '', dataPath: '', viaBlock: false, inRichText: false },
+    { registry: registryOf(options.blocks), visitor },
+  )
 }
 
 /**
@@ -277,11 +378,34 @@ export function referencesIn(
   options: ReferencesInOptions,
 ): Reference[] {
   const out: Reference[] = []
-  walkFields(fields, data, '', false, {
-    collection: options.collection,
-    registry: registryOf(options.blocks),
-    out,
-  })
+  const { collection } = options
+  walkDocument(
+    fields,
+    data,
+    {
+      field(field, value, _siblings, at) {
+        if (!pointsAt(field, collection)) return false
+        for (const id of idsIn(value, collection)) {
+          out.push({ id, path: at.path, viaBlock: at.viaBlock })
+        }
+        return true
+      },
+      richTextNode(node, at) {
+        const embedded =
+          node['type'] === 'upload'
+            ? 'embedded upload'
+            : node['type'] === 'relationship'
+              ? 'embedded link'
+              : undefined
+        if (!embedded || node['relationTo'] !== collection) return
+        const id = idOf(node['value'])
+        if (id !== undefined) {
+          out.push({ id, path: `${at.path} › ${embedded}`, viaBlock: at.viaBlock })
+        }
+      },
+    },
+    options,
+  )
   return out
 }
 
