@@ -1,11 +1,18 @@
 import { z } from 'zod'
 
 /**
- * The current version of the contract schema. Bump this when making a
- * backwards-incompatible change to the shape. Manifests declare the
- * version they satisfy so the loader can reject mismatches loudly.
+ * The current version of the contract schema. Manifests declare the version
+ * they satisfy so the loader can reject one it does not understand loudly.
+ *
+ * 1.1.0 added `primitives` (forumone-2026#801), an optional section, so a 1.0.0
+ * manifest is still a valid 1.1.0 one with none. A minor bump stays readable:
+ * {@link SUPPORTED_CONTRACT_VERSIONS} lists every version the loader accepts,
+ * and a breaking change starts a new major that drops the old ones.
  */
-export const CONTRACT_VERSION = '1.0.0'
+export const CONTRACT_VERSION = '1.1.0'
+
+/** Every contract version a manifest may declare and still load. */
+export const SUPPORTED_CONTRACT_VERSIONS = ['1.0.0', '1.1.0'] as const
 
 const FieldTypeSchema = z.enum([
   'text',

@@ -142,15 +142,21 @@ if (issues.some((i) => i.severity === 'error')) {
 - Every `requiredSiblings` and `forbiddenAdjacent` entry references a real component in the manifest.
 - Every token in `tokens.consumes` exists in the manifest's token table (or in `availableTokens` if you pass one).
 - Every example's `storyId` exists in `availableStoryIds` (skipped when the option is omitted).
+- Every token a primitive's prop allows exists, and belongs to the token group the prop draws from.
+- No primitive shares a name with a component.
 - Warnings: components with no anti-examples; intent statements shorter than 50 characters.
 
 `assertManifestClean(manifest, options)` is the CI-friendly form: throws on any error, silent on warnings-only.
 
+## Primitives
+
+Since 1.1.0 a manifest may carry `primitives` beside `components`. These are building blocks that a composed section can be made of, but that are never a block on their own. A layout primitive (a section band, a grid, a stack) arranges other nodes in its `slots`. A content primitive (a heading, a run of text, an image) shows one content field of a given `type`. Each `props` entry is a closed set: `token` (named tokens from one `tokenGroup`), `enum`, or `boolean`. There is no free-form string, class name or style. `generateBlocks` never reads `primitives`, so none of them can become a CMS block.
+
+A design system writes one `PrimitiveContract` per primitive and puts them under `primitives` when it builds its manifest. A manifest without any reads as `primitives: {}`.
+
 ## Versioning
 
-The current contract version is `1.0.0`, exported as `CONTRACT_VERSION`. Manifests declare it via the `contractVersion` field; the loader rejects mismatches so Claude never recommends a component from a schema it does not understand.
-
-When the contract evolves, this package ships a new major version with migration guidance in the changelog.
+The current contract version is `1.1.0`, exported as `CONTRACT_VERSION`. Manifests declare their version in the `contractVersion` field, and the loader accepts any version in `SUPPORTED_CONTRACT_VERSIONS` (`1.0.0` and `1.1.0`) and rejects anything else, so Claude never recommends a component from a schema it does not understand. A minor version only adds optional sections, so older manifests still load. A breaking change would be a new major version that drops the old ones, with migration guidance in the changelog.
 
 ## Relationship to Storybook AI manifests
 
