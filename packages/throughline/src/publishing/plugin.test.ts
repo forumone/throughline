@@ -128,6 +128,32 @@ describe('publishingPlugin admin controls', () => {
 
   it('installs nothing when adminComponents is false', () => {
     expect(editComponents(build({ adminComponents: false }), 'pages')).toBeUndefined()
+    expect(build({ adminComponents: false }).admin?.components?.providers).toBeUndefined()
+  })
+})
+
+// forumone-2026#805: after a failed save, the first invalid field.
+describe('publishingPlugin go-to-first-error provider', () => {
+  const provider = { path: '@forumone/throughline/client', exportName: 'FirstErrorProvider' }
+
+  it('registers it admin-wide, after the host’s own providers, keeping the rest of admin', () => {
+    const incoming = {
+      collections: [Pages, Users],
+      admin: { user: 'users', components: { providers: ['/host#Provider'] } },
+    } as unknown as Config
+    const config = publishingPlugin({ collections: [{ slug: 'pages' }], inngest })(incoming) as Config
+    expect(config.admin?.components?.providers).toEqual(['/host#Provider', provider])
+    expect(config.admin?.user).toBe('users')
+  })
+
+  it('registers it once, however many times the config passes through', () => {
+    const plugin = publishingPlugin({ collections: [{ slug: 'pages' }], inngest })
+    const twice = plugin(plugin({ collections: [Pages, Users] } as unknown as Config) as Config) as Config
+    expect(twice.admin?.components?.providers).toEqual([provider])
+  })
+
+  it('can be turned off on its own', () => {
+    expect(build({ goToFirstError: false }).admin?.components?.providers).toBeUndefined()
   })
 })
 

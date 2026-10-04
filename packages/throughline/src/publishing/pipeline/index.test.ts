@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
 import { runPreflightPipeline, runPreflightReport, runPublishPipeline } from './index.js'
+import { EVENT_NOT_SENT } from '../events.js'
 import { attachComponentValidator, makeContext } from './_test-helpers.js'
 
 function passingDoc() {
@@ -48,7 +49,7 @@ describe('runPublishPipeline', () => {
 
     expect(result.success).toBe(true)
     expect(result.publishedAt).toEqual(expect.any(String))
-    expect(result.warnings?.[0]).toContain('content/page.published')
+    expect(result.warnings).toEqual([EVENT_NOT_SENT])
   })
 
   it('omits warnings entirely when every step is clean', async () => {

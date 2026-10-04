@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Inngest } from 'inngest'
 import type { Payload } from 'payload'
 import { executeStep } from './execute.js'
+import { EVENT_NOT_SENT } from '../../events.js'
 import { makeContext } from '../_test-helpers.js'
 
 describe('executeStep', () => {
@@ -150,7 +151,7 @@ describe('executeStep', () => {
 
     expect(result.pass).toBe(true)
     expect(result.warnings).toHaveLength(1)
-    expect(result.warnings?.[0]).toContain('content/page.published')
+    expect(result.warnings).toEqual([EVENT_NOT_SENT])
     // The document was still published.
     expect(update).toHaveBeenCalledTimes(1)
   })
@@ -210,7 +211,9 @@ describe('executeStep', () => {
     expect(result.code).toBe('document-locked')
     // It resolves itself, and the suggestion has to say so — otherwise this
     // reads as a failure to investigate.
-    expect(result.suggestion).toMatch(/expires/)
+    expect(result.suggestion).toMatch(/frees up on its own/)
+    // Nobody's name to give: the lock row could not be read.
+    expect(result.reason).toBe('Someone else is editing this right now.')
     expect(send).not.toHaveBeenCalled()
   })
 
@@ -270,7 +273,7 @@ describe('executeStep', () => {
       documentId: 'p1',
     })
 
-    expect((await executeStep(ctx)).reason).toBe('1 field the collection will not accept')
+    expect((await executeStep(ctx)).reason).toBe('1 field needs fixing before this can be published.')
   })
 
   /*

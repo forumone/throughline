@@ -36,6 +36,28 @@ describe('when the scan fails', () => {
     )
   })
 
+  /*
+  forumone-2026#805. Payload's `routeError` shows the editor "Something went
+  wrong." in place of any error `isErrorPublic` rejects, and the refusal above
+  was a non-public 500, so nobody ever read it. `isErrorPublic` is not exported;
+  this is its rule (payload/dist/utilities/isErrorPublic.js) with `debug` off.
+  */
+  it('is an error Payload shows the editor, not one it replaces with "Something went wrong."', async () => {
+    const isErrorPublic = (error: { isPublic?: boolean; status?: number }) =>
+      error.isPublic === true ||
+      (error.isPublic !== false && Boolean(error.status) && error.status !== 500)
+
+    const { req } = failingReq()
+    const error = await refuseDeleteWhileReferenced('media', { noun: 'file' })({
+      req,
+      id: 5,
+    } as never).catch((e: unknown) => e as { isPublic?: boolean; status?: number; message: string })
+
+    expect(isErrorPublic(error!)).toBe(true)
+    expect(error).toMatchObject({ status: 503, isPublic: true })
+    expect(error!.message).toMatch(/tell a site administrator\.$/)
+  })
+
   it('refuses the trash the same way', async () => {
     const { req } = failingReq()
     const hook = refuseTrashWhileReferenced('media')

@@ -73,13 +73,10 @@ export const UsedOnPanel: UIFieldServerComponent = async ({
               <li key={`${entry.collection}:${String(entry.id)}`} style={{ marginBottom: '.5rem' }}>
                 <a href={adminHref(entry, adminRoute)}>{entry.label}</a>
                 <div style={{ opacity: 0.7, fontSize: '.8em' }}>
-                  {entry.collection}
-                  {/* The path says which block to open: a document can hold several. */}
+                  {entry.collectionLabel ?? entry.collection}
+                  {/* The place says which block to open: a document can hold several. */}
                   {entry.references.map((reference) => (
-                    <div key={reference.path}>
-                      {reference.path}
-                      {reference.viaBlock ? '' : ' (field)'}
-                    </div>
+                    <div key={reference.path}>{reference.where ?? reference.path}</div>
                   ))}
                 </div>
               </li>

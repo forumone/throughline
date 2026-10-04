@@ -446,6 +446,7 @@ function relaxRequired(fields: Field[]): Field[] {
  */
 function allOrNothing(children: ContentField[]) {
   const names = children.filter(child => child.required).map(child => child.name)
+  const labels = new Map(children.map(child => [child.name, labelFor(child)]))
 
   /*
   Booleans this group defaults to ticked.
@@ -476,9 +477,12 @@ function allOrNothing(children: ContentField[]) {
     const missing = names.filter(name => isEmpty((value as Record<string, unknown>)[name]))
     if (missing.length === 0) return true
 
-    return missing.length === 1
-      ? `${missing[0]} is needed once anything else here is filled in. Clear the rest to leave this out entirely.`
-      : `${missing.join(' and ')} are needed once anything else here is filled in. Clear the rest to leave this out entirely.`
+    // By the label the editor sees over the field, not its name: "Video URL",
+    // not `src`.
+    const named = missing.map(name => labels.get(name) ?? name)
+    return named.length === 1
+      ? `${named[0]} is needed once anything else here is filled in. Clear the rest to leave this out.`
+      : `${named.join(' and ')} are needed once anything else here is filled in. Clear the rest to leave this out.`
   }
 }
 

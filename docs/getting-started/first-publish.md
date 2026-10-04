@@ -51,14 +51,25 @@ Claude calls `publish`. It fails:
   "published": false,
   "failedAt": "required-fields",
   "code": "required-fields-missing",
-  "reason": "2 required fields missing",
+  "reason": "2 required fields are empty.",
   "issues": [
-    { "field": "seo.title", "message": "SEO title is required", "severity": "error" },
-    { "field": "seo.description", "message": "SEO description is required", "severity": "error" }
-  ],
-  "suggestion": "Fill in the missing fields and try again."
+    {
+      "field": "seo.title",
+      "where": "SEO › Title",
+      "message": "Add an SEO title. It's the title shown in search results and on the browser tab.",
+      "severity": "error"
+    },
+    {
+      "field": "seo.description",
+      "where": "SEO › Description",
+      "message": "Add an SEO description. Search engines show it under the title.",
+      "severity": "error"
+    }
+  ]
 }
 ```
+
+`reason`, `suggestion` and each issue's `message` are written for whoever is publishing, in their terms; `where` is the issue's `field` as the edit view labels it. `code` and `field` are for software. A block nobody but a developer can fix — a plugin not registered — says to tell a site administrator, and carries the setup instruction in `detail`.
 
 This is the **required-fields step** refusing. The publishing pipeline runs seven steps in order:
 
@@ -70,7 +81,7 @@ This is the **required-fields step** refusing. The publishing pipeline runs seve
 6. **Approval** — if `policy.requiresApproval`, a granted approval exists for the document's current content
 7. **Execute** — the actual write to `_status: 'published'`
 
-The first step that fails returns a structured result that Claude can read and act on. `get_publish_status` runs steps 1–6 without publishing, if you want to ask "would this go live?" first. Outside the pipeline, an update that puts a draft live or takes a live page down is refused — through `updatePages`, the REST API or the admin alike — with `Direct writes to _status are not allowed`.
+The first step that fails returns a structured result that Claude can read and act on. `get_publish_status` runs steps 1–6 without publishing, if you want to ask "would this go live?" first. Outside the pipeline, an update that puts a draft live or takes a live page down is refused — through `updatePages`, the REST API or the admin alike — with "This can't be published or unpublished from here. Open the document and use its Publish or Unpublish button, so the pre-publish checks run."
 
 One kind of write is not refused: a non-draft edit of a page that is already live with no draft pending. It changes the live page directly, without running the pipeline. Draft saves never touch the live page, so once a page is published, ask Claude for draft saves.
 

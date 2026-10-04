@@ -11,7 +11,7 @@ import {
   useModal,
   useTranslation,
 } from '@payloadcms/ui'
-import { callPublishingEndpoint } from './publishing-client.js'
+import { blockToastId, callPublishingEndpoint } from './publishing-client.js'
 
 export interface ThroughlineUnpublishButtonProps {
   /** Route prefix the plugin is mounted under. Injected via `clientProps`. */
@@ -68,15 +68,21 @@ export function UnpublishButton(
         id,
       })
 
+      // Errors stay until closed, one per document (forumone-2026#805).
+      const toastId = blockToastId('unpublish', collectionSlug, id)
       if (!result.ok) {
-        toast.error(result.message)
+        toast.error(result.message, { id: toastId, duration: Infinity })
         return
       }
 
       if (!result.body.unpublished) {
-        toast.error(result.body.reason ?? t('error:unPublishingDocument'))
+        toast.error(result.body.reason ?? t('error:unPublishingDocument'), {
+          id: toastId,
+          duration: Infinity,
+        })
         return
       }
+      toast.dismiss(toastId)
 
       await reset({ ...(data ?? {}), _status: 'draft' })
       incrementVersionCount()

@@ -9,6 +9,7 @@ import {
   unpublishDocument,
 } from './service.js'
 import { makeDeps } from './tools/_test-helpers.js'
+import { EVENT_NOT_SENT } from './events.js'
 
 const editor = {
   id: 'u-42',
@@ -170,7 +171,7 @@ describe('createPublishingService', () => {
 
     expect(result.published).toBe(true)
     expect(result.publishedAt).toEqual(expect.any(String))
-    expect(result.warnings?.[0]).toContain('content/page.published')
+    expect(result.warnings).toEqual([EVENT_NOT_SENT])
     // The write happened, and the audit trail records it.
     expect(deps.spies.payloadUpdate).toHaveBeenCalledTimes(1)
     expect(deps.auditMock).toHaveBeenCalledWith(
@@ -178,14 +179,16 @@ describe('createPublishingService', () => {
     )
   })
 
-  it('logs the warning rather than staying silent about it', async () => {
+  it('logs the warning, and its cause, rather than staying silent about it', async () => {
     const warn = vi.fn()
+    const payloadWarn = vi.fn()
     const deps = makeDeps({
       document: publishableDoc,
       inngestSend: vi.fn(async () => {
         throw new Error('Event key not found')
       }),
     })
+    Object.assign(deps.payload, { logger: { warn: payloadWarn, error: vi.fn() } })
     const service = createPublishingService({
       ...deps,
       logger: { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() },
@@ -199,7 +202,11 @@ describe('createPublishingService', () => {
 
     expect(warn).toHaveBeenCalledWith(
       'Publish completed with warnings',
-      expect.objectContaining({ warnings: [expect.stringContaining('Event key not found')] }),
+      expect.objectContaining({ warnings: [EVENT_NOT_SENT] }),
+    )
+    // Which event, and why, is for whoever reads the log.
+    expect(payloadWarn).toHaveBeenCalledWith(
+      expect.stringMatching(/content\/page\.published.*Event key not found/),
     )
   })
 
@@ -219,7 +226,7 @@ describe('createPublishingService', () => {
     })
 
     expect(result.unpublished).toBe(true)
-    expect(result.warnings?.[0]).toContain('content/page.unpublished')
+    expect(result.warnings).toEqual([EVENT_NOT_SENT])
     expect(deps.auditMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'publishing.unpublish', success: true }),
     )
@@ -293,7 +300,11 @@ describe('createPublishingService', () => {
       actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
     })
 
-    expect(result).toEqual({ unpublished: false, reason: 'Document not found' })
+    expect(result).toEqual({
+      unpublished: false,
+      code: 'not-found',
+      reason: "This document couldn't be found. It may have been deleted or moved to the trash.",
+    })
     expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
   })
 
@@ -345,7 +356,11 @@ describe('createPublishingService', () => {
       id: '1',
       actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
     })
-    expect(result).toEqual({ unpublished: false, reason: 'Document is not currently published' })
+    expect(result).toEqual({
+      unpublished: false,
+      code: 'not-published',
+      reason: "This isn't live, so there's nothing to unpublish.",
+    })
   })
 
   it('clears the schedule when it unpublishes, so the page cannot put itself back up', async () => {
@@ -401,7 +416,11 @@ describe('createPublishingService', () => {
       id: '1',
       actor: { user: null, apiKeyName: 'k', channel: 'mcp' },
     })
-    expect(result).toEqual({ unscheduled: false, reason: 'Nothing is scheduled' })
+    expect(result).toEqual({
+      unscheduled: false,
+      code: 'not-scheduled',
+      reason: 'There was nothing scheduled.',
+    })
     expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
   })
 

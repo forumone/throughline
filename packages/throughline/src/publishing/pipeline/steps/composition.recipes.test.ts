@@ -96,7 +96,7 @@ describe('a composed section at publish', () => {
     await expect(compositionStep(ctx)).resolves.toEqual({ pass: true })
     // The block keeps its place in the order, marked, so the validator neither
     // calls it unknown nor counts it.
-    expect(validator.mock.calls[0]![0]).toEqual({
+    expect(validator.mock.calls[0]![0]).toMatchObject({
       blocks: [{ type: 'TextHero' }, { type: 'ComposedSection', composed: true }],
     })
     expect(findByID).toHaveBeenCalledWith(
@@ -113,7 +113,7 @@ describe('a composed section at publish', () => {
         {
           rule: 'recipe-not-approved',
           field: 'layout[1]',
-          message: expect.stringMatching(/"ProofBand", which has not been approved/),
+          message: expect.stringMatching(/"ProofBand", which hasn.t been approved/),
         },
       ],
     })
@@ -126,7 +126,7 @@ describe('a composed section at publish', () => {
     expect(result.issues).toEqual([
       expect.objectContaining({
         rule: 'recipe-lint',
-        message: expect.stringMatching(/no longer passes.*"dark" is not one of Section\.variant's values/),
+        message: expect.stringMatching(/no longer matches the design system.*"dark" is not one of Section\.variant.s values/),
       }),
     ])
   })
@@ -135,7 +135,7 @@ describe('a composed section at publish', () => {
     const { ctx } = setup({ content: { heading: '' } })
     const result = await compositionStep(ctx)
     expect(result.issues).toEqual([
-      expect.objectContaining({ rule: 'recipe-content', message: expect.stringMatching(/"heading" is required/) }),
+      expect.objectContaining({ rule: 'recipe-content', message: expect.stringMatching(/"heading" is empty, and the recipe/) }),
     ])
   })
 
@@ -148,7 +148,7 @@ describe('a composed section at publish', () => {
   it('is an unknown component, as before, on a site that has not configured recipes', async () => {
     const { ctx, validator } = setup({ gate: false })
     await compositionStep(ctx)
-    expect(validator.mock.calls[0]![0]).toEqual({
+    expect(validator.mock.calls[0]![0]).toMatchObject({
       blocks: [{ type: 'TextHero' }, { type: 'ComposedSection' }],
     })
   })

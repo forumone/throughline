@@ -90,6 +90,52 @@ describe('createActionEndpoint', () => {
     expect(response.status).toBe(401)
   })
 
+  // forumone-2026#805: an approver reads these, not a developer.
+  describe('what an approver reads', () => {
+    it('says a broken link is not valid, and what to use instead, without saying why', async () => {
+      const deps = makeArgs()
+      const body = await (
+        await callEndpoint(deps, 'https://example.com/api/approvals/action?token=garbage')
+      ).text()
+      expect(body).toContain("<h1>We couldn't record that</h1>")
+      expect(body).toContain(
+        "This approval link isn't valid. Use the link in the most recent email about this request, or ask the person who sent it to send it again.",
+      )
+      expect(body).not.toMatch(/token|signature|decode/i)
+      expect(deps.payload.logger.warn).toHaveBeenCalled()
+    })
+
+    it('says an expired link has expired, and who to ask', async () => {
+      const token = await generateActionToken(
+        { ...baseToken, issuedAt: Date.now() - 30 * 24 * 60 * 60 * 1000 },
+        SECRET,
+      )
+      const body = await (
+        await callEndpoint(
+          makeArgs(),
+          `https://example.com/api/approvals/action?token=${encodeURIComponent(token)}`,
+        )
+      ).text()
+      expect(body).toContain(
+        'This approval link has expired. Ask the person who requested approval to send a new one.',
+      )
+    })
+
+    it('says a request that is gone may have been withdrawn', async () => {
+      const token = await generateActionToken({ ...baseToken, issuedAt: Date.now() }, SECRET)
+      const deps = makeArgs()
+      deps.spies.payloadFindByID.mockResolvedValueOnce(null)
+      const response = await callEndpoint(
+        deps,
+        `https://example.com/api/approvals/action?token=${encodeURIComponent(token)}`,
+      )
+      expect(response.status).toBe(404)
+      expect(await response.text()).toContain(
+        'This approval request no longer exists. It may have been withdrawn.',
+      )
+    })
+  })
+
   it('renders a confirmation page on first valid hit (no confirm=true)', async () => {
     const token = await generateActionToken(
       { ...baseToken, issuedAt: Date.now() },
@@ -167,7 +213,7 @@ describe('createActionEndpoint', () => {
     )
     expect(response.status).toBe(200)
     const body = await response.text()
-    expect(body).toContain('already declined')
+    expect(body).toContain('This request has already been declined.')
     expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
   })
 

@@ -1,4 +1,4 @@
-import type { Access, CollectionConfig, Endpoint, FieldAccess } from 'payload'
+import { APIError, type Access, type CollectionConfig, type Endpoint, type FieldAccess } from 'payload'
 import { type PluginAdminOptions, resolveAdminGroup } from '../plugin-contract/admin.js'
 import type { IntegrationRegistry } from './registry.js'
 import { DEFAULT_INTEGRATIONS_SLUG } from './options.js'
@@ -193,21 +193,31 @@ export function createIntegrationsCollection(
           const integrationType = incoming['integrationType']
           if (typeof integrationType !== 'string') return data
 
+          /*
+          `APIError` with 400, not `Error`. Payload's `routeError` shows the
+          admin "Something went wrong." in place of any error that is not
+          public, and a plain `Error` is a non-public 500 — so the reason below
+          never reached the person who could act on it (forumone-2026#805).
+          */
           const integration = registry.get(integrationType)
           if (!integration) {
-            throw new Error(
-              `Unknown integration type "${integrationType}". Known types: ${registry
-                .list()
-                .map((i) => i.id)
-                .join(', ') || '(none registered)'}.`,
+            throw new APIError(
+              `"${integrationType}" isn't an integration this site has. Nothing was saved. Choose one of: ${
+                registry
+                  .list()
+                  .map((i) => i.name)
+                  .join(', ') || 'none are installed'
+              }.`,
+              400,
             )
           }
 
           const config = (incoming['config'] ?? {}) as Record<string, unknown>
           const validation = await integration.validateConfig(config)
           if (!validation.ok) {
-            throw new Error(
-              `Invalid config for ${integration.name}: ${validation.reason ?? 'no reason given'}`,
+            throw new APIError(
+              `The settings for ${integration.name} aren't valid, so nothing was saved: ${validation.reason ?? 'no reason given'}`,
+              400,
             )
           }
           return data

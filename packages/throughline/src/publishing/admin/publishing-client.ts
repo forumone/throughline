@@ -3,11 +3,21 @@
  * No JSX here so the message formatting can be unit tested directly.
  */
 
+import { goToFirstError } from './first-error.js'
+import {
+  type HumanDateOptions,
+  type MessageDate,
+  TRY_AGAIN,
+  localiseMessage,
+} from '../messages.js'
+
 export interface PublishingIssue {
   field?: string
   message: string
   severity?: 'error' | 'warning'
   rule?: string
+  /** Where `field` is, in the editor's words: `Block 3 (Image Hero) › Image`. */
+  where?: string
 }
 
 export interface PublishingResponse {
@@ -22,9 +32,20 @@ export interface PublishingResponse {
   code?: string
   issues?: PublishingIssue[]
   suggestion?: string
+  /** The date `reason` names, for saying it in the editor's own zone. */
+  when?: MessageDate
+  /** Setup detail for a developer. Never shown to the editor. */
+  detail?: string
   /** Non-fatal problems on an action that otherwise succeeded. */
   warnings?: string[]
   error?: string
+}
+
+const VERB: Record<CallPublishingEndpointArgs['action'], string> = {
+  publish: 'publish',
+  unpublish: 'unpublish',
+  schedule: 'schedule',
+  unschedule: 'cancel the schedule',
 }
 
 export interface CallPublishingEndpointArgs {
@@ -65,21 +86,22 @@ export async function callPublishingEndpoint(
       }),
     })
   } catch {
-    return { ok: false, message: 'Could not reach the publishing server.' }
+    return {
+      ok: false,
+      message: `Couldn't connect to ${VERB[args.action]}. Check your internet connection and try again. Nothing was changed.`,
+    }
   }
 
+  const unexpected = `Publishing didn't respond as expected (error ${response.status}). ${TRY_AGAIN}`
   let body: PublishingResponse
   try {
     body = (await response.json()) as PublishingResponse
   } catch {
-    return { ok: false, message: `Publishing server returned ${response.status}.` }
+    return { ok: false, message: unexpected }
   }
 
   if (!response.ok) {
-    return {
-      ok: false,
-      message: body.error ?? `Publishing server returned ${response.status}.`,
-    }
+    return { ok: false, message: body.error ?? unexpected }
   }
 
   return { ok: true, body }
@@ -145,10 +167,15 @@ export function fieldErrorsFromBlock(
 
   for (const issue of body.issues ?? []) {
     if (!issue.field) continue
-    const resolved = resolveFieldPath(toFormPath(issue.field), paths)
+    const exact = toFormPath(issue.field)
+    const resolved = resolveFieldPath(exact, paths)
     if (!resolved) continue
+    // On the field itself the field is the location. On an ancestor — three
+    // blocks' problems all on `layout` — each needs saying which it is.
+    const message =
+      resolved !== exact && issue.where ? `${issue.where}: ${issue.message}` : issue.message
     const messages = byPath.get(resolved) ?? []
-    if (!messages.includes(issue.message)) messages.push(issue.message)
+    if (!messages.includes(message)) messages.push(message)
     byPath.set(resolved, messages)
   }
 
@@ -169,43 +196,71 @@ function resolveFieldPath(path: string, formPaths: Set<string>): string | undefi
 const MAX_LISTED_ISSUES = 5
 
 /**
- * Turns a pipeline block into something an editor can act on: which step
- * said no, what it objected to, and what to do about it. This is the
- * information the pipeline already returns — it just never had a way to
- * reach the screen.
+ * Turns a pipeline block into something an editor can act on: what is wrong,
+ * where, and what to do about it. forumone-2026#805.
+ *
+ * Which step refused is software's business — it stays in `failedAt` and
+ * `code` — and an issue's location is said the way the edit view says it,
+ * `Block 3 (Image Hero) › Image`, from the `where` the pipeline attached.
+ * An issue the pipeline could not place is listed by its message alone, never
+ * by its raw path. A date the server wrote in its own zone is rewritten into
+ * the editor's.
  */
 export function describeBlock(
   body: PublishingResponse,
-  options: { markedFields?: number } = {},
+  options: { markedFields?: number; date?: HumanDateOptions } = {},
 ): {
   title: string
   description: string
 } {
-  const title = body.reason ?? `Publish blocked at the ${body.failedAt ?? 'policy'} check.`
+  const local = (text: string) => localiseMessage(text, body.when, options.date)
+  const title = body.reason ? local(body.reason) : "This can't be published yet."
 
   const lines: string[] = []
-  if (body.failedAt && body.reason) {
-    lines.push(`Blocked at: ${body.failedAt}`)
-  }
 
   const issues = body.issues ?? []
   for (const issue of issues.slice(0, MAX_LISTED_ISSUES)) {
-    lines.push(`• ${issue.field ? `${issue.field}: ` : ''}${issue.message}`)
+    lines.push(`• ${issue.where ? `${issue.where}: ` : ''}${issue.message}`)
   }
   if (issues.length > MAX_LISTED_ISSUES) {
     lines.push(`• …and ${issues.length - MAX_LISTED_ISSUES} more`)
   }
 
   if (body.suggestion) {
-    lines.push(`Suggestion: ${body.suggestion}`)
+    lines.push(local(body.suggestion))
   }
 
   // Said only when it is true. An editor who has read a toast listing five
-  // paths still has to find them, and the answer — they are marked on the
+  // problems still has to find them, and the answer — they are marked on the
   // fields — is not something the toast otherwise reveals.
   if ((options.markedFields ?? 0) > 0) {
-    lines.push('Fields with a problem are highlighted in the form.')
+    lines.push('The fields with a problem are highlighted.')
   }
 
   return { title, description: lines.join('\n') }
+}
+
+/**
+ * The "Show me" action on an error toast whose problems are marked on fields:
+ * takes the editor to the first of them again, for one who has scrolled away.
+ * The toast stays open, since it is still the list of what to fix.
+ */
+export const SHOW_ME = {
+  label: 'Show me',
+  onClick: (event: { preventDefault: () => void }) => {
+    event.preventDefault()
+    void goToFirstError()
+  },
+}
+
+/**
+ * The toast id for a refusal of `action` on one document, so a second click
+ * replaces the first toast rather than stacking a copy on it.
+ */
+export function blockToastId(
+  action: CallPublishingEndpointArgs['action'],
+  collection: string,
+  id: number | string,
+): string {
+  return `throughline:${action}-blocked:${collection}:${id}`
 }

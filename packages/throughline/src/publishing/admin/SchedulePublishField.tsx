@@ -12,8 +12,15 @@ import {
   useForm,
   useFormModified,
 } from '@payloadcms/ui'
-import { callPublishingEndpoint, describeBlock, fieldErrorsFromBlock } from './publishing-client.js'
-import { formatScheduledTime, scheduleState } from './schedule-state.js'
+import { disarmFirstError, goToFirstError } from './first-error.js'
+import {
+  SHOW_ME,
+  blockToastId,
+  callPublishingEndpoint,
+  describeBlock,
+  fieldErrorsFromBlock,
+} from './publishing-client.js'
+import { formatScheduledTime, scheduleState, unscheduleOutcome } from './schedule-state.js'
 
 export interface ThroughlineSchedulePublishFieldProps {
   /** The field's form path. Supplied by Payload. */
@@ -79,8 +86,11 @@ export function SchedulePublishField(props: ThroughlineSchedulePublishFieldProps
         publishAt: chosen.toISOString(),
       })
 
+      // Errors stay until closed, one per document (forumone-2026#805).
+      const toastId = blockToastId('schedule', collectionSlug, id)
+
       if (!result.ok) {
-        toast.error(result.message)
+        toast.error(result.message, { id: toastId, duration: Infinity })
         return
       }
 
@@ -92,17 +102,22 @@ export function SchedulePublishField(props: ThroughlineSchedulePublishFieldProps
           dispatchFields({ type: 'ADD_SERVER_ERRORS', errors: fieldErrors })
           setIsValid(false)
           setSubmitted(true)
+          disarmFirstError()
+          void goToFirstError()
         }
         const { title, description } = describeBlock(result.body, {
           markedFields: fieldErrors.length,
         })
         toast.error(`Not scheduled. ${title}`, {
+          id: toastId,
           ...(description ? { description } : {}),
-          duration: 10_000,
+          duration: Infinity,
+          ...(fieldErrors.length > 0 ? { action: SHOW_ME } : {}),
         })
         return
       }
 
+      toast.dismiss(toastId)
       setValue(result.body.scheduledFor, true)
       setChosen(null)
       incrementVersionCount()
@@ -147,14 +162,17 @@ export function SchedulePublishField(props: ThroughlineSchedulePublishFieldProps
         collection: collectionSlug,
         id,
       })
+      const toastId = blockToastId('unschedule', collectionSlug, id)
       if (!result.ok) {
-        toast.error(result.message)
+        toast.error(result.message, { id: toastId, duration: Infinity })
         return
       }
-      // "Nothing is scheduled" is still the state the editor asked for.
-      setValue(null, true)
+      const outcome = unscheduleOutcome(result.body)
+      if (outcome.clear) setValue(null, true)
       if (result.body.unscheduled) incrementVersionCount()
-      toast.success('Schedule cancelled')
+      if (outcome.kind === 'error') toast.error(outcome.message, { id: toastId, duration: Infinity })
+      else if (outcome.kind === 'info') toast.info(outcome.message, { id: toastId })
+      else toast.success(outcome.message, { id: toastId })
     } finally {
       setBusy(false)
     }
@@ -195,7 +213,7 @@ function Body(props: {
         <p style={{ margin: '0 0 0.5rem' }}>
           {state.kind === 'upcoming'
             ? `Publishes automatically ${state.label}.`
-            : `Was due to publish ${state.label} and has not: a check refused it, or it is waiting for a retry. Publish now to see what is blocking it.`}
+            : `This was due to publish ${state.label} but hasn't. Click Publish to see what's stopping it.`}
         </p>
         {props.canSchedule ? (
           <Button
@@ -216,7 +234,7 @@ function Body(props: {
   }
 
   if (!props.canSchedule) {
-    return <p style={{ margin: 0 }}>Not scheduled.</p>
+    return <p style={{ margin: 0 }}>You don&apos;t have permission to schedule publishing.</p>
   }
 
   return (

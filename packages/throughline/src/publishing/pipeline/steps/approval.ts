@@ -1,4 +1,5 @@
 import { documentContentHash } from '../../../utils/content-hash.js'
+import { PUBLISHING_UNAVAILABLE } from '../../messages.js'
 import type { ApprovalResolver } from '../../options.js'
 import type { PipelineStep } from '../types.js'
 import { APPROVALS_RESOLVER_SYMBOL } from '../../../approvals/symbol.js'
@@ -26,9 +27,9 @@ export const approvalStep: PipelineStep = async (ctx) => {
     return {
       pass: false,
       code: 'approval-resolver-missing',
-      reason: 'Document requires approval but no approval resolver is configured',
-      suggestion:
-        'Register approvalsPlugin in your Payload config (it attaches the resolver automatically) or pass an explicit `approvalResolver` to publishingPlugin.',
+      reason: PUBLISHING_UNAVAILABLE,
+      detail:
+        'The document requires approval but no approval resolver is configured. Register approvalsPlugin in your Payload config (it attaches the resolver automatically) or pass an explicit `approvalResolver` to publishingPlugin.',
     }
   }
 
@@ -54,10 +55,10 @@ export const approvalStep: PipelineStep = async (ctx) => {
     return {
       pass: false,
       code: 'approval-required',
-      reason:
-        'This document requires approval and no granted approval exists for the current version',
+      reason: 'This needs approval before it can be published.',
+      // An MCP caller's `publish` adds how to request one, in its own terms.
       suggestion:
-        'Call publish with action "request_approval" to ask for one. Once it is granted, publishing will succeed.',
+        'Ask an approver to review this version. Any edit after approval needs a fresh approval.',
     }
   }
 

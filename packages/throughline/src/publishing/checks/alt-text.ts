@@ -23,7 +23,9 @@ export const altTextCheck: AccessibilityCheck = {
       if (typeof alt !== 'string' || alt.trim() === '') {
         issues.push({
           field: path,
-          message: `Image at "${path}" is missing alt text`,
+          // Where the image is reaches the editor as the issue's `where`, so
+          // the message says only what is wrong and what to do.
+          message: "This image has no alt text. Describe what it shows, for someone who can't see it.",
           severity: 'error',
         })
       }

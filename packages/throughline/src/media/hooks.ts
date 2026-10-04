@@ -41,11 +41,15 @@ export function refuseMimeTypesOutside(
   message: (mimeType: string) => string = (mimeType) =>
     `${mimeType} is not a type this site accepts.`,
 ): CollectionBeforeChangeHook {
-  return ({ data, operation }) => {
+  return ({ data, operation, req }) => {
     if (operation !== 'create') return data
     const mimeType = typeof data?.['mimeType'] === 'string' ? data['mimeType'] : ''
     if (mimeType && !allowed.includes(mimeType)) {
-      throw new ValidationError({ errors: [{ path: 'mimeType', message: message(mimeType) }] })
+      // `t`, so a host's translation of Payload's "invalid field" prefix applies.
+      throw new ValidationError(
+        { errors: [{ path: 'mimeType', message: message(mimeType) }] },
+        req?.t,
+      )
     }
     return data
   }
@@ -87,20 +91,27 @@ export function refuseStorageKeyMismatch(collectionPrefix = ''): CollectionBefor
     if (!written || !recorded || written === recorded) return data
 
     const sameFolder = written.replace(/[^/]+$/, '') === recorded.replace(/[^/]+$/, '')
-    throw new ValidationError({
-      errors: [
-        {
-          path: 'filename',
-          message: sameFolder
-            ? `A file called ${file.name} is already in the library. This upload was stored under ` +
-              `that same name but would have been recorded as ${String(data?.['filename'])}, so its ` +
-              `link would not resolve. Rename your file and upload it again.`
-            : `This upload was stored at ${written} but the document would have recorded ${recorded}, ` +
-              `so its link would not resolve. Nothing is wrong with the file: this is a fault in the ` +
-              `upload path itself, and it will affect every upload until it is fixed. Please report it.`,
-        },
-      ],
-    })
+    /*
+    The two paths are for whoever fixes it, so they go to the log; the editor
+    reads what happened and whether it is theirs to fix (forumone-2026#805).
+    */
+    req.payload?.logger?.warn?.(
+      { event: 'media.storage-key-mismatch', written, recorded, sameFolder },
+      `[media] refused an upload: stored at ${written}, would have been recorded as ${recorded}`,
+    )
+    throw new ValidationError(
+      {
+        errors: [
+          {
+            path: 'filename',
+            message: sameFolder
+              ? `There's already a file called ${file.name} in the Media library. Rename your file and upload it again.`
+              : "This file couldn't be added because of a problem with uploads. It isn't your file; every upload will fail until it's fixed. Please tell a site administrator.",
+          },
+        ],
+      },
+      req.t,
+    )
   }
 }
 

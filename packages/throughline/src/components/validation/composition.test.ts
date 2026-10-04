@@ -89,6 +89,43 @@ describe('validateComposition (against reference DS)', () => {
     )
     expect(result.valid).toBe(true)
   })
+
+  // forumone-2026#805: what an editor reads, in the names they picked the blocks by.
+  describe('messages', () => {
+    const messages = (input: Parameters<typeof validateComposition>[0]) =>
+      validateComposition(input, manifest).issues.map((issue) => issue.message)
+
+    it('names components the way the block picker does by default', () => {
+      expect(messages({ blocks: [{ type: 'Hero' }, { type: 'SectionIntro' }] })).toContain(
+        "Hero can't come directly before Section Intro. Move one of them, or put another block between them.",
+      )
+      expect(messages({ blocks: [{ type: 'Hero' }, { type: 'Hero' }] })).toContain(
+        'A page can have only 1 Hero block, and this one has 2. Remove 1.',
+      )
+      expect(messages({ blocks: [{ type: 'CardGrid' }] })[0]).toMatch(/^Card Grid works best with a /)
+    })
+
+    it('uses the labels it is given, which is how a block renamed in the CMS is named', () => {
+      const label = (type: string) => (type === 'SectionIntro' ? 'Intro' : `The ${type}`)
+      expect(
+        messages({ blocks: [{ type: 'Hero' }, { type: 'SectionIntro' }], label }),
+      ).toContain(
+        "The Hero can't come directly before Intro. Move one of them, or put another block between them.",
+      )
+    })
+
+    it('says what to do with a block of a type the site no longer has', () => {
+      expect(messages({ blocks: [{ type: 'Ghost' }] })).toEqual([
+        'This block is a type this site no longer has ("Ghost"). Remove it, or tell a site administrator.',
+      ])
+    })
+
+    it('calls a variant a style', () => {
+      expect(messages({ blocks: [{ type: 'Hero', variant: 'mega' }] })).toContain(
+        'The "mega" style isn\'t available for Hero any more. Choose another style in the block.',
+      )
+    })
+  })
 })
 
 describe('findAntiPatterns (against reference DS)', () => {

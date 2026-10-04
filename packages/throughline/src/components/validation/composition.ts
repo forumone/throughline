@@ -1,4 +1,7 @@
-import type { LoadedManifest } from '@forumone/throughline-design-system/contract'
+import {
+  componentDisplayName,
+  type LoadedManifest,
+} from '@forumone/throughline-design-system/contract'
 
 export interface CompositionBlock {
   type: string
@@ -13,6 +16,14 @@ export interface CompositionBlock {
 
 export interface CompositionInput {
   blocks: CompositionBlock[]
+  /**
+   * What to call a component in a message. The publish step passes each
+   * block's own label — what the editor picked it by, `Image Hero` — and an
+   * MCP caller, who speaks in contract names, may pass the name itself.
+   * Defaults to the name as the generated blocks label it, `ImageHero` →
+   * `Image Hero`. forumone-2026#805.
+   */
+  label?: ((type: string) => string) | undefined
 }
 
 export interface CompositionIssue {
@@ -45,6 +56,7 @@ export function validateComposition(
 ): CompositionResult {
   const issues: CompositionIssue[] = []
   const counts = new Map<string, number>()
+  const label = input.label ?? componentDisplayName
 
   for (let i = 0; i < input.blocks.length; i++) {
     const block = input.blocks[i]
@@ -56,7 +68,7 @@ export function validateComposition(
       issues.push({
         severity: 'error',
         rule: 'unknown-component',
-        message: `Unknown component "${block.type}". Not present in the design system.`,
+        message: `This block is a type this site no longer has ("${block.type}"). Remove it, or tell a site administrator.`,
         blockIndex: i,
       })
       continue
@@ -72,7 +84,7 @@ export function validateComposition(
       issues.push({
         severity: 'error',
         rule: 'placement',
-        message: `"${block.type}" is placed inside other components, not on a page by itself`,
+        message: `${label(block.type)} belongs inside another block, not on the page by itself. Remove it, or add it inside a block that holds it.`,
         blockIndex: i,
       })
     }
@@ -83,7 +95,7 @@ export function validateComposition(
         issues.push({
           severity: 'error',
           rule: 'unknown-variant',
-          message: `Component "${block.type}" does not have variant "${block.variant}"`,
+          message: `The "${block.variant}" style isn't available for ${label(block.type)} any more. Choose another style in the block.`,
           blockIndex: i,
         })
       }
@@ -96,7 +108,7 @@ export function validateComposition(
         issues.push({
           severity: 'error',
           rule: 'forbidden-adjacent',
-          message: `"${block.type}" cannot appear directly after "${forbidden}"`,
+          message: `${label(block.type)} can't come directly after ${label(forbidden)}. Move one of them, or put another block between them.`,
           blockIndex: i,
         })
       }
@@ -104,7 +116,7 @@ export function validateComposition(
         issues.push({
           severity: 'error',
           rule: 'forbidden-adjacent',
-          message: `"${block.type}" cannot appear directly before "${forbidden}"`,
+          message: `${label(block.type)} can't come directly before ${label(forbidden)}. Move one of them, or put another block between them.`,
           blockIndex: i,
         })
       }
@@ -120,7 +132,7 @@ export function validateComposition(
       issues.push({
         severity: 'error',
         rule: 'max-per-page',
-        message: `Component "${type}" appears ${count} times but the maximum allowed is ${max}`,
+        message: `A page can have only ${max} ${label(type)} block${max === 1 ? '' : 's'}, and this one has ${count}. Remove ${count - max}.`,
       })
     }
 
@@ -129,7 +141,7 @@ export function validateComposition(
         issues.push({
           severity: 'warning',
           rule: 'required-sibling-missing',
-          message: `Component "${type}" expects a sibling "${required}" but none is present`,
+          message: `${label(type)} works best with a ${label(required)} block on the same page, and this page has none.`,
         })
       }
     }

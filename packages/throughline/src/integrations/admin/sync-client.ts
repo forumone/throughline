@@ -4,6 +4,8 @@
  * form, a document or a browser.
  */
 
+import { lastErrorDetail } from '../sync/status.js'
+
 export type SyncStatusValue = 'never-run' | 'success' | 'partial' | 'failed'
 
 export interface TriggerSyncBody {
@@ -133,7 +135,8 @@ export interface SyncOutcome {
  */
 export function describeSyncOutcome(status: SyncStatus, instanceName?: string): SyncOutcome {
   const subject = instanceName ? `"${instanceName}"` : 'The integration'
-  const description = status.lastError ?? undefined
+  // The title already says what the stored summary line says.
+  const description = status.lastError ? lastErrorDetail(status.lastError) : undefined
 
   switch (status.lastSyncStatus) {
     case 'success':
@@ -155,6 +158,11 @@ export function describeSyncOutcome(status: SyncStatus, instanceName?: string): 
       // to celebrate and nothing to blame; say what is known.
       return { severity: 'warning', title: `${subject} ran, but reported no status.` }
   }
+}
+
+/** One toast per instance: a second sync's notices replace the first's. */
+export function syncToastId(collectionSlug: string, id: number | string): string {
+  return `throughline:sync:${collectionSlug}:${id}`
 }
 
 /** `2026-08-29T14:03:00.000Z` as something an operator reads at a glance. */

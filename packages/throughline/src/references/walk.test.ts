@@ -18,14 +18,14 @@ const upload = (name: string): Field => ({ name, type: 'upload', relationTo: 'me
 describe('the shapes a reference can hide in', () => {
   it('finds a plain upload field', () => {
     expect(referencesIn([upload('heroImage')], { heroImage: 4 }, opts())).toEqual([
-      { id: 4, path: 'heroImage', viaBlock: false },
+      { id: 4, path: 'heroImage', viaBlock: false, dataPath: expect.any(String) },
     ])
   })
 
   it('finds one inside a group', () => {
     const fields: Field[] = [{ name: 'seo', type: 'group', fields: [upload('image')] }]
     expect(referencesIn(fields, { seo: { image: 9 } }, opts())).toEqual([
-      { id: 9, path: 'seo › image', viaBlock: false },
+      { id: 9, path: 'seo › image', viaBlock: false, dataPath: expect.any(String) },
     ])
   })
 
@@ -46,7 +46,7 @@ describe('the shapes a reference can hide in', () => {
       { type: 'tabs', tabs: [{ name: 'content', fields: [upload('image')] }] },
     ]
     expect(referencesIn(named, { content: { image: 3 } }, opts())).toEqual([
-      { id: 3, path: 'content › image', viaBlock: false },
+      { id: 3, path: 'content › image', viaBlock: false, dataPath: expect.any(String) },
     ])
     const unnamed: Field[] = [
       { type: 'tabs', tabs: [{ label: 'Content', fields: [upload('image')] }] },
@@ -57,7 +57,7 @@ describe('the shapes a reference can hide in', () => {
   it('reads a populated relationship as well as a bare id', () => {
     // Coercing the object would give `[object Object]`, match nothing, and fail open.
     expect(referencesIn([upload('image')], { image: { id: 5, url: '/x.png' } }, opts())).toEqual([
-      { id: 5, path: 'image', viaBlock: false },
+      { id: 5, path: 'image', viaBlock: false, dataPath: expect.any(String) },
     ])
   })
 
@@ -91,7 +91,7 @@ describe('rich text', () => {
       },
     }
     expect(referencesIn(fields, { body }, opts())).toEqual([
-      { id: 12, path: 'body › embedded upload', viaBlock: false },
+      { id: 12, path: 'body › embedded upload', viaBlock: false, dataPath: expect.any(String) },
     ])
   })
 
@@ -100,7 +100,7 @@ describe('rich text', () => {
       root: { children: [{ type: 'relationship', relationTo: 'people', value: { id: 4 } }] },
     }
     expect(referencesIn(fields, { body }, { collection: 'people' })).toEqual([
-      { id: 4, path: 'body › embedded link', viaBlock: false },
+      { id: 4, path: 'body › embedded link', viaBlock: false, dataPath: expect.any(String) },
     ])
   })
 
@@ -122,8 +122,8 @@ describe('rich text', () => {
       },
     }
     expect(referencesIn(fields, { body }, opts(registry))).toEqual([
-      { id: 8, path: 'body › Figure › image', viaBlock: true },
-      { id: 9, path: 'body › Figure › image', viaBlock: true },
+      { id: 8, path: 'body › Figure › image', viaBlock: true, dataPath: expect.any(String) },
+      { id: 9, path: 'body › Figure › image', viaBlock: true, dataPath: expect.any(String) },
     ])
   })
 
@@ -177,7 +177,7 @@ describe('blocks, which are the references with no foreign key', () => {
     const fields: Field[] = [{ name: 'layout', type: 'blocks', blocks: [ImageHero] }]
     expect(
       referencesIn(fields, { layout: [{ blockType: 'ImageHero', image: 8 }] }, opts()),
-    ).toEqual([{ id: 8, path: 'layout[0] › ImageHero › image', viaBlock: true }])
+    ).toEqual([{ id: 8, path: 'layout[0] › ImageHero › image', viaBlock: true, dataPath: expect.any(String) }])
   })
 
   it('resolves blockReferences through the registry', () => {
@@ -227,7 +227,7 @@ describe('referencesTo', () => {
   it('filters to one id, comparing as strings', () => {
     const fields: Field[] = [upload('a'), upload('b')]
     expect(referencesTo(fields, { a: 3, b: 4 }, { ...opts(), id: '3' })).toEqual([
-      { id: 3, path: 'a', viaBlock: false },
+      { id: 3, path: 'a', viaBlock: false, dataPath: expect.any(String) },
     ])
     expect(referencesTo([upload('a')], { a: 3 }, { ...opts(), id: 99 })).toEqual([])
   })

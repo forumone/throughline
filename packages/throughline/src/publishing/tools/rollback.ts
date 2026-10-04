@@ -92,15 +92,19 @@ export function createRollbackTool(deps: RollbackToolDeps): McpToolDefinition {
 
       // The version is already restored; a failed emission must not undo
       // that or lose the audit record below.
-      const warning = await sendEventSafely(deps.options.inngest, {
-        name: 'content/page.rolled_back',
-        data: {
-          collection: collection.slug,
-          id: input.id,
-          rolledBackBy: ctx.user?.id ?? 'system',
-          toVersionId: input.versionId,
+      const warning = await sendEventSafely(
+        deps.options.inngest,
+        {
+          name: 'content/page.rolled_back',
+          data: {
+            collection: collection.slug,
+            id: input.id,
+            rolledBackBy: ctx.user?.id ?? 'system',
+            toVersionId: input.versionId,
+          },
         },
-      })
+        deps.payload.logger,
+      )
 
       await deps.auditWriter({
         actor: {

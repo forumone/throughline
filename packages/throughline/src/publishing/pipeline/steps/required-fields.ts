@@ -1,3 +1,4 @@
+import { plural } from '../../messages.js'
 import type { PipelineIssue, PipelineStep } from '../types.js'
 
 /**
@@ -13,14 +14,14 @@ export const requiredFieldsStep: PipelineStep = async (ctx) => {
   if (!nonEmptyString(seo?.['title'])) {
     issues.push({
       field: `${ctx.collection.seoField}.title`,
-      message: 'SEO title is required',
+      message: "Add an SEO title. It's the title shown in search results and on the browser tab.",
       severity: 'error',
     })
   }
   if (!nonEmptyString(seo?.['description'])) {
     issues.push({
       field: `${ctx.collection.seoField}.description`,
-      message: 'SEO description is required',
+      message: 'Add an SEO description. Search engines show it under the title.',
       severity: 'error',
     })
   }
@@ -28,7 +29,7 @@ export const requiredFieldsStep: PipelineStep = async (ctx) => {
   if (!nonEmptyString(ctx.document[ctx.collection.slugField])) {
     issues.push({
       field: ctx.collection.slugField,
-      message: 'Slug is required',
+      message: "Add a slug, the last part of this page's web address.",
       severity: 'error',
     })
   }
@@ -48,9 +49,10 @@ export const requiredFieldsStep: PipelineStep = async (ctx) => {
     return {
       pass: false,
       code: 'required-fields-missing',
-      reason: `${issues.length} required field${issues.length === 1 ? '' : 's'} missing`,
+      reason: `${plural(issues.length, 'required field')} ${issues.length === 1 ? 'is' : 'are'} empty.`,
+      // No suggestion: each issue says what to add, and the admin marks the
+      // fields themselves and says so.
       issues,
-      suggestion: 'Fill in the missing fields and try again.',
     }
   }
 

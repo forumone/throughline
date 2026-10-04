@@ -191,8 +191,10 @@ describe('the guards, through Payload', () => {
       },
     })
 
+    // forumone-2026#805: the collection's label and the place as the edit view
+    // names it, not `pages › Uses it in a block (layout[0] › Gallery › …)`.
     await expect(payload.delete({ collection: 'assets', id })).rejects.toThrow(
-      /This file is still used by 1 document\. Remove it there first, then delete it\.[\s\S]*pages › Uses it in a block[\s\S]*inside a block/,
+      /This file is still used by 1 document\. Remove it there first, then delete it\.\n\n• Page › Uses it in a block \(Layout › Block 1 \(Gallery\) › Item 1 › Image\)\n[\s\S]*inside a block/,
     )
     expect(await payload.findByID({ collection: 'assets', id })).toMatchObject({ id })
   })

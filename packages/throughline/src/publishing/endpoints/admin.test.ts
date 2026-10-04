@@ -64,6 +64,9 @@ describe('createAdminEndpoints', () => {
       makeRequest({ user: null, body: { collection: 'pages', id: '1' } }),
     )
     expect(res.status).toBe(401)
+    await expect(res.json()).resolves.toMatchObject({
+      error: 'Your sign-in has ended. Sign in again, then publish.',
+    })
   })
 
   it('rejects a body without collection and id', async () => {
@@ -76,8 +79,11 @@ describe('createAdminEndpoints', () => {
       makeRequest({ body: { collection: 'posts', id: '1' } }),
     )
     expect(res.status).toBe(400)
-    await expect(res.json()).resolves.toMatchObject({
-      error: expect.stringContaining('not registered as publishable'),
+    // The editor is told who can fix it; the setup instruction is `detail`.
+    await expect(res.json()).resolves.toEqual({
+      error: "Publishing isn't set up for this kind of content. Please tell a site administrator.",
+      code: 'not-publishable',
+      detail: expect.stringContaining('not registered as publishable'),
     })
   })
 
@@ -86,6 +92,22 @@ describe('createAdminEndpoints', () => {
       makeRequest({ body: { collection: 'pages', id: '1' }, attachService: false }),
     )
     expect(res.status).toBe(503)
+    await expect(res.json()).resolves.toMatchObject({
+      error: expect.stringMatching(/^Publishing isn't available right now\. Try again in a minute/),
+    })
+  })
+
+  // Only a bug in the caller sends these. The editor reads the same words as any
+  // other unexpected problem; the specifics are `detail`.
+  it('answers a malformed request with the generic message, keeping the specifics in detail', async () => {
+    const res = await publish().handler(makeRequest({ body: { collection: 'pages' } }))
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error:
+        "This couldn't be published because of an unexpected problem. Nothing was changed. Try again; if it keeps happening, tell a site administrator.",
+      code: 'bad-request',
+      detail: 'Expected a JSON body with `collection` and `id`.',
+    })
   })
 
   it('publishes as the logged-in user, never with an API key', async () => {
@@ -183,6 +205,7 @@ describe('createAdminEndpoints', () => {
     expect(res.status).toBe(500)
     const body = (await res.json()) as { error: string }
     expect(body.error).not.toMatch(/ECONNREFUSED/)
+    expect(body.error).toMatch(/^This couldn't be published because of an unexpected problem\./)
   })
 
   it('unpublishes through the same guard rails', async () => {

@@ -3,9 +3,16 @@ import type { AuditActor, AuditWriter } from '../audit/writer.js'
 import type { AuthenticatedUser } from '../plugin-contract/mcp.js'
 import type { Logger } from '../plugin-contract/index.js'
 import { sendEventSafely } from './events.js'
+import { messageDate } from './messages.js'
 import { type PublishingPluginOptions, resolveCollection } from './options.js'
 import { runPreflightPipeline, runPreflightReport, runPublishPipeline } from './pipeline/index.js'
-import type { PipelineIssue, PipelineMeta, PipelineResult } from './pipeline/types.js'
+import { NOT_FOUND } from './pipeline/steps/exist.js'
+import type {
+  PipelineDate,
+  PipelineIssue,
+  PipelineMeta,
+  PipelineResult,
+} from './pipeline/types.js'
 import { previewUrl } from '../utils/preview-url.js'
 import { documentContentHash } from '../utils/content-hash.js'
 
@@ -40,23 +47,37 @@ export interface PublishRequest {
   meta?: PipelineMeta | undefined
 }
 
-export interface PublishOutcome {
-  published: boolean
-  publishedAt?: string
+/**
+ * What a refusal carries, on every outcome that can be one. `reason` and
+ * `suggestion` are for the person who asked; `code` is for software.
+ */
+export interface BlockFields {
   failedAt?: string
   reason?: string
   code?: string
   issues?: PipelineIssue[]
   suggestion?: string
+  /** The date `reason` names, for the admin to say in the editor's zone. */
+  when?: PipelineDate
+  /** Setup detail behind a block no editor can fix; never shown in the admin. */
+  detail?: string
+}
+
+export interface PublishOutcome extends BlockFields {
+  published: boolean
+  publishedAt?: string
   /**
    * Non-fatal problems. The publish happened; something downstream of it
-   * did not. Present on a successful result.
+   * did not, or a check advised without blocking. Present on a successful
+   * result.
    */
   warnings?: string[]
 }
 
 export interface UnpublishOutcome {
   unpublished: boolean
+  /** `not-found` or `not-published` when nothing was done. */
+  code?: string
   reason?: string
   warnings?: string[]
 }
@@ -66,15 +87,10 @@ export interface ScheduleRequest extends PublishRequest {
   publishAt: string
 }
 
-export interface ScheduleOutcome {
+export interface ScheduleOutcome extends BlockFields {
   scheduled: boolean
   /** The stored time, normalised to UTC ISO 8601. */
   scheduledFor?: string
-  failedAt?: string
-  reason?: string
-  code?: string
-  issues?: PipelineIssue[]
-  suggestion?: string
   /**
    * A check that could not pass *yet* but may by the scheduled time — an
    * approval not granted, an embargo that ends first. The schedule stands; the
@@ -85,19 +101,20 @@ export interface ScheduleOutcome {
 
 export interface UnscheduleOutcome {
   unscheduled: boolean
+  /**
+   * `not-scheduled` when there was nothing to cancel — which is not a
+   * cancellation, and the admin no longer says it is. `not-found` when the
+   * document is not there.
+   */
+  code?: string
   reason?: string
 }
 
-export interface PublishStatusOutcome {
+export interface PublishStatusOutcome extends BlockFields {
   /** The document's current `_status`. */
   status: string
   /** Whether every preflight check passes right now. */
   publishable: boolean
-  failedAt?: string
-  reason?: string
-  code?: string
-  issues?: PipelineIssue[]
-  suggestion?: string
   /**
    * Every preflight block, in pipeline order, when there is more than none.
    * The fields above are the first of them, as they always were.
@@ -245,11 +262,7 @@ export function createPublishingService(
 
       return {
         published: false,
-        ...(result.failedAt ? { failedAt: result.failedAt } : {}),
-        ...(result.reason ? { reason: result.reason } : {}),
-        ...(result.code ? { code: result.code } : {}),
-        ...(result.issues ? { issues: result.issues } : {}),
-        ...(result.suggestion ? { suggestion: result.suggestion } : {}),
+        ...blockFields(result),
         ...warnings,
       }
     },
@@ -261,11 +274,15 @@ export function createPublishingService(
       // A document that is not there and one that is there and already a draft
       // are different answers, and only one of them means "nothing to do".
       if (Object.keys(document).length === 0) {
-        return { unpublished: false, reason: 'Document not found' }
+        return { unpublished: false, code: 'not-found', reason: NOT_FOUND }
       }
 
       if ((await liveStatus(collection.slug, request.id, document, request.actor)) !== 'published') {
-        return { unpublished: false, reason: 'Document is not currently published' }
+        return {
+          unpublished: false,
+          code: 'not-published',
+          reason: "This isn't live, so there's nothing to unpublish.",
+        }
       }
 
       // `overrideLock: false` for the same reason as the publish write: taking a
@@ -293,15 +310,19 @@ export function createPublishingService(
       // Same rule as publish: the write has landed, so a failed emission is
       // a warning, not a failure.
       const slug = document[collection.slugField]
-      const warning = await sendEventSafely(options.inngest, {
-        name: 'content/page.unpublished',
-        data: {
-          collection: collection.slug,
-          id: request.id,
-          slug: typeof slug === 'string' ? slug : request.id,
-          unpublishedBy: request.actor.user?.id ?? 'system',
+      const warning = await sendEventSafely(
+        options.inngest,
+        {
+          name: 'content/page.unpublished',
+          data: {
+            collection: collection.slug,
+            id: request.id,
+            slug: typeof slug === 'string' ? slug : request.id,
+            unpublishedBy: request.actor.user?.id ?? 'system',
+          },
         },
-      })
+        logger ?? payload.logger,
+      )
 
       if (warning) {
         logger?.warn('Unpublish completed with warnings', {
@@ -332,16 +353,16 @@ export function createPublishingService(
       const collection = resolveCollection(options, request.collection)
       const publishAtMs = Date.parse(request.publishAt)
       if (Number.isNaN(publishAtMs)) {
-        return { scheduled: false, reason: 'The scheduled time is not a date' }
+        return { scheduled: false, code: 'invalid-time', reason: 'Choose a date and time to publish.' }
       }
       if (publishAtMs <= Date.now()) {
-        return { scheduled: false, reason: 'The scheduled time must be in the future' }
+        return { scheduled: false, code: 'time-in-past', reason: 'Choose a time in the future.' }
       }
       const publishAt = new Date(publishAtMs).toISOString()
 
       const document = await loadDocument(collection.slug, request.id, request.actor)
       if (Object.keys(document).length === 0) {
-        return { scheduled: false, reason: 'Document not found' }
+        return { scheduled: false, code: 'not-found', reason: NOT_FOUND }
       }
 
       // Everything a publish would check, now, so an editor hears about a
@@ -366,6 +387,7 @@ export function createPublishingService(
             document,
             collection.policyField,
             publishAtMs,
+            options.timeZone,
           )
 
       const audit = (success: boolean, errorMessage?: string) =>
@@ -387,14 +409,7 @@ export function createPublishingService(
       if (!deferred.ok) {
         const block = deferred.block
         await audit(false, block.reason)
-        return {
-          scheduled: false,
-          ...(block.failedAt ? { failedAt: block.failedAt } : {}),
-          ...(block.reason ? { reason: block.reason } : {}),
-          ...(block.code ? { code: block.code } : {}),
-          ...(block.issues ? { issues: block.issues } : {}),
-          ...(block.suggestion ? { suggestion: block.suggestion } : {}),
-        }
+        return { scheduled: false, ...blockFields(block) }
       }
 
       /*
@@ -433,11 +448,15 @@ export function createPublishingService(
       const collection = resolveCollection(options, request.collection)
       const document = await loadDocument(collection.slug, request.id, request.actor)
       if (Object.keys(document).length === 0) {
-        return { unscheduled: false, reason: 'Document not found' }
+        return { unscheduled: false, code: 'not-found', reason: NOT_FOUND }
       }
       const previous = document[collection.scheduledPublishField]
       if (previous == null) {
-        return { unscheduled: false, reason: 'Nothing is scheduled' }
+        return {
+          unscheduled: false,
+          code: 'not-scheduled',
+          reason: 'There was nothing scheduled.',
+        }
       }
 
       // No event. The run sleeping on this schedule re-reads the document when
@@ -535,11 +554,7 @@ export function createPublishingService(
       return {
         status: stringField(document, '_status') ?? 'draft',
         publishable: result.success,
-        ...(result.failedAt ? { failedAt: result.failedAt } : {}),
-        ...(result.reason ? { reason: result.reason } : {}),
-        ...(result.code ? { code: result.code } : {}),
-        ...(result.issues ? { issues: result.issues } : {}),
-        ...(result.suggestion ? { suggestion: result.suggestion } : {}),
+        ...blockFields(result),
         ...(blockers.length > 0 ? { blockers } : {}),
         previewUrl: preview,
         publishedAt: publishedAt ?? null,
@@ -556,6 +571,21 @@ type PreflightFailure = {
   code?: string | undefined
   issues?: PipelineIssue[] | undefined
   suggestion?: string | undefined
+  when?: PipelineDate | undefined
+  detail?: string | undefined
+}
+
+/** The refusal fields of a pipeline result, each only when it is set. */
+function blockFields(result: Omit<PreflightFailure, 'success'>): BlockFields {
+  return {
+    ...(result.failedAt ? { failedAt: result.failedAt } : {}),
+    ...(result.reason ? { reason: result.reason } : {}),
+    ...(result.code ? { code: result.code } : {}),
+    ...(result.issues ? { issues: result.issues } : {}),
+    ...(result.suggestion ? { suggestion: result.suggestion } : {}),
+    ...(result.when ? { when: result.when } : {}),
+    ...(result.detail ? { detail: result.detail } : {}),
+  }
 }
 
 /**
@@ -577,12 +607,13 @@ function deferUntilScheduledTime(
   document: Record<string, unknown>,
   policyField: string,
   publishAtMs: number,
+  timeZone: string | undefined,
 ): { ok: true; warning?: string } | { ok: false; block: PreflightFailure } {
   if (preflight.code === 'approval-required') {
     return {
       ok: true,
       warning:
-        'This document needs an approval that has not been granted yet. If it is not granted by the scheduled time, the publish will be refused.',
+        "This still needs approval. If it isn't approved by the time you chose, it won't be published.",
     }
   }
 
@@ -593,15 +624,19 @@ function deferUntilScheduledTime(
       return {
         ok: true,
         warning:
-          'The embargo ends before the scheduled time. Approval, if this document needs it, is checked when the schedule fires.',
+          "The embargo ends before the time you chose. If this needs approval, that's checked when it's due to publish.",
       }
     }
+    const when = Number.isNaN(until) ? preflight.when : messageDate(until, timeZone)
     return {
       ok: false,
       block: {
         ...preflight,
-        reason: `${preflight.reason ?? 'Embargoed'}, which is after the scheduled time`,
-        suggestion: 'Schedule it for after the embargo ends, or change the embargo.',
+        reason: when
+          ? `The embargo lasts until ${when.text}, after the time you chose.`
+          : 'The embargo lasts past the time you chose.',
+        suggestion: 'Schedule it for later, or change the embargo date.',
+        ...(when ? { when } : {}),
       },
     }
   }

@@ -67,7 +67,13 @@ export interface VerifyOptions {
 
 export type VerifyResult =
   | { ok: true; token: ActionToken }
-  | { ok: false; error: string }
+  | {
+      ok: false
+      /** For a log. What a person reads is `expired`'s, in the action endpoint. */
+      error: string
+      /** True when the token was sound and is only too old: the one failure worth telling apart. */
+      expired?: boolean
+    }
 
 /**
  * Verifies a base64url-encoded action token with constant-time signature
@@ -119,7 +125,7 @@ export async function verifyActionToken(
   const maxAge = options.maxAgeMs ?? DEFAULT_MAX_AGE_MS
   const now = options.now ?? Date.now()
   if (now - issuedAt > maxAge) {
-    return { ok: false, error: 'Token has expired' }
+    return { ok: false, error: 'Token has expired', expired: true }
   }
 
   return {

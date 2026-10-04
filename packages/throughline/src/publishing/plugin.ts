@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Config } from 'payload'
 import type { CorePlugin } from '../plugin-contract/index.js'
 import { getPluginRegistry } from '../plugin-contract/registry.js'
 import { createNamedLogger, defaultLogger } from '../logger/index.js'
@@ -93,6 +93,9 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
 
     return {
       ...incomingConfig,
+      ...(adminComponents && options.goToFirstError !== false
+        ? { admin: withFirstErrorProvider(incomingConfig.admin) }
+        : {}),
       collections: modifiedCollections,
       endpoints: [
         ...(incomingConfig.endpoints ?? []),
@@ -149,6 +152,28 @@ export const publishingPlugin: CorePlugin<PublishingPluginOptions> =
       },
     }
   }
+
+/**
+ * Adds the provider that takes an editor to the first invalid field after a
+ * failed save, publish or schedule (forumone-2026#805). Admin-wide, because a
+ * save fails the same way on every collection, publishable or not. Added once,
+ * however the config was assembled.
+ */
+function withFirstErrorProvider(admin: Config['admin']): NonNullable<Config['admin']> {
+  const providers = admin?.components?.providers ?? []
+  const already = providers.some(
+    (p) => typeof p === 'object' && p !== null && 'exportName' in p && p.exportName === 'FirstErrorProvider',
+  )
+  return {
+    ...(admin ?? {}),
+    components: {
+      ...(admin?.components ?? {}),
+      providers: already
+        ? providers
+        : [...providers, { path: CLIENT_ENTRY, exportName: 'FirstErrorProvider' }],
+    },
+  }
+}
 
 /**
  * Points the collection's Publish / Unpublish slots at the plugin's own

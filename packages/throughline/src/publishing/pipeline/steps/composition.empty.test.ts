@@ -78,7 +78,7 @@ async function run(layout: Record<string, unknown>[]) {
 }
 
 describe('an empty block', () => {
-  it('does not publish, and says which and what to fill', async () => {
+  it('does not publish, and says which block and what to do', async () => {
     const out = await run([
       { blockType: 'CTA', heading: 'Talk to us' },
       { blockType: 'CTA', tone: 'dark', ctaHref: { mode: 'internal' } },
@@ -88,7 +88,7 @@ describe('an empty block', () => {
       expect.objectContaining({
         rule: 'empty-block',
         field: 'layout[1]',
-        message: expect.stringContaining('heading, ctaLabel, ctaHref'),
+        message: 'This CTA block is empty, so it would show as a blank band on the page. Fill it in or remove it.',
       }),
     ])
   })

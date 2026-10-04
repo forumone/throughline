@@ -107,9 +107,15 @@ export function refuseSlugHeldInTrash(collection: CollectionSlug): CollectionBef
     const holder = docs[0] as Record<string, unknown> | undefined
     if (!holder) return data
 
-    throw new ValidationError({
-      collection,
-      errors: [{ path: 'slug', label: 'Slug', message: heldInTrash(slug, titleOf(holder)) }],
-    })
+    // `t`, or Payload writes its "The following field is invalid:" prefix in
+    // hard-coded English and a host's translation of it never applies.
+    throw new ValidationError(
+      {
+        collection,
+        errors: [{ path: 'slug', label: 'Slug', message: heldInTrash(slug, titleOf(holder)) }],
+        req,
+      },
+      req.t,
+    )
   }
 }

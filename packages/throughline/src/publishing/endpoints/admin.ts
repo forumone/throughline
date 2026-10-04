@@ -1,5 +1,6 @@
 import { APIError, type Endpoint, type PayloadRequest } from 'payload'
 import { z } from 'zod'
+import { TELL_AN_ADMINISTRATOR, UNEXPECTED_PROBLEM } from '../messages.js'
 import { getPublishingService, toAuthenticatedUser } from '../service.js'
 
 const BodySchema = z.object({
@@ -59,32 +60,46 @@ async function handle(
   action: Action,
 ): Promise<Response> {
   if (!req.user) {
-    return json({ error: 'You must be logged in to publish.' }, 401)
+    return json(
+      {
+        error: `Your sign-in has ended. Sign in again, then ${action === 'unschedule' ? 'cancel the schedule' : action}.`,
+        code: 'signed-out',
+      },
+      401,
+    )
   }
 
+  /*
+  The three below happen only through a bug in whatever called this — the
+  admin's own controls always send a well-formed body — never through anything
+  an editor did. So the editor reads the generic "unexpected problem", and the
+  specifics go in `detail` for whoever is debugging the request.
+  */
   let raw: unknown
   try {
     raw = await req.json?.()
   } catch {
-    return json({ error: 'Invalid JSON body.' }, 400)
+    return badRequest(action, 'Invalid JSON body.')
   }
 
   const parsed = BodySchema.safeParse(raw)
   if (!parsed.success) {
-    return json({ error: 'Expected a JSON body with `collection` and `id`.' }, 400)
+    return badRequest(action, 'Expected a JSON body with `collection` and `id`.')
   }
 
   const { collection, publishAt } = parsed.data
   const id = String(parsed.data.id)
 
   if (action === 'schedule' && !publishAt) {
-    return json({ error: 'Expected `publishAt`, an ISO 8601 time, to schedule.' }, 400)
+    return badRequest(action, 'Expected `publishAt`, an ISO 8601 time, to schedule.')
   }
 
   if (!deps.publishableSlugs.has(collection)) {
     return json(
       {
-        error: `Collection "${collection}" is not registered as publishable. Add it to publishingPlugin's collections option.`,
+        error: `Publishing isn't set up for this kind of content. Please ${TELL_AN_ADMINISTRATOR}.`,
+        code: 'not-publishable',
+        detail: `Collection "${collection}" is not registered as publishable. Add it to publishingPlugin's collections option.`,
       },
       400,
     )
@@ -94,7 +109,14 @@ async function handle(
   try {
     service = getPublishingService(req.payload)
   } catch {
-    return json({ error: 'Publishing server not initialized.' }, 503)
+    return json(
+      {
+        error: `Publishing isn't available right now. Try again in a minute; if it keeps happening, ${TELL_AN_ADMINISTRATOR}.`,
+        code: 'not-initialized',
+        detail: 'The publishing service is not attached to this Payload instance yet.',
+      },
+      503,
+    )
   }
 
   const request = {
@@ -128,8 +150,12 @@ async function handle(
       { err: error },
       `[publishing] admin ${action} failed for ${collection}/${id}`,
     )
-    return json({ error: `Could not ${action} this document.` }, 500)
+    return json({ error: UNEXPECTED_PROBLEM(action), code: 'unexpected' }, 500)
   }
+}
+
+function badRequest(action: Action, detail: string): Response {
+  return json({ error: UNEXPECTED_PROBLEM(action), code: 'bad-request', detail }, 400)
 }
 
 function json(body: unknown, status: number): Response {

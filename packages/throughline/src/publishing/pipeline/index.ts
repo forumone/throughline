@@ -6,6 +6,7 @@ import { linkTargetsStep } from './steps/link-targets.js'
 import { embargoStep } from './steps/embargo.js'
 import { approvalStep } from './steps/approval.js'
 import { executeStep } from './steps/execute.js'
+import { finishStep } from './finish.js'
 import type { PipelineContext, PipelineResult, PipelineStep } from './types.js'
 
 interface OrderedStep {
@@ -53,7 +54,7 @@ async function runSteps(
   const warnings: string[] = []
 
   for (const { name, step } of steps) {
-    const result = await step(context)
+    const result = finishStep(context, name, await step(context))
     if (result.warnings) warnings.push(...result.warnings)
     if (result.pass) continue
 
@@ -65,6 +66,8 @@ async function runSteps(
         ...(result.code ? { code: result.code } : {}),
         ...(result.issues ? { issues: result.issues } : {}),
         ...(result.suggestion ? { suggestion: result.suggestion } : {}),
+        ...(result.when ? { when: result.when } : {}),
+        ...(result.detail ? { detail: result.detail } : {}),
       },
       warnings,
     }

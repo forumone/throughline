@@ -34,7 +34,10 @@ export function createValidateCompositionTool(deps: ValidateCompositionDeps): Mc
       const blocks = input.blocks.map((block: { type: string; variant?: string | undefined }) =>
         block.type === deps.composedBlockType ? { type: block.type, composed: true } : block,
       )
-      const result = validateComposition({ blocks }, manifest)
+      // Contract names, not display labels: the caller named the blocks by
+      // their types, and a message naming them differently is a second
+      // vocabulary to map back.
+      const result = validateComposition({ blocks, label: (type) => type }, manifest)
 
       await deps.auditWriter({
         ...auditContext(ctx, input._meta),

@@ -96,20 +96,24 @@ When a publish fails here, the result says where and why:
   "published": false,
   "failedAt": "accessibility",
   "code": "accessibility-errors",
-  "reason": "1 accessibility issue",
+  "reason": "1 thing to fix so everyone can use this page.",
   "issues": [
     {
       "field": "seo.description",
+      "where": "SEO › Description",
       "message": "The SEO description is empty. Set a one- or two-sentence summary; it appears in search results.",
       "severity": "error",
       "rule": "seo-description"
     }
-  ],
-  "suggestion": "…"
+  ]
 }
 ```
 
-`rule` is the check's `name`. Claude reads `issues` and fixes them before retrying, so write `message` as the fix, not only the fault.
+`rule` is the check's `name`. Claude reads `issues` and fixes them before retrying, and an editor reads them in the admin's notification, so write `message` as the fix, not only the fault, in the editor's terms.
+
+Report `field` as a path into the document, and leave the place out of `message`: the pipeline adds `where`, the path as the edit view labels it (`Block 3 (Image Hero) › Image`), from the collection's own config, and the admin prints it before the message. A check that names its own place says it twice.
+
+A check also receives a third argument, `context`, with the design system's components by name when the components plugin is registered — so it can ask what a block is (`context.components?.[blockType]?.category`) rather than guess from its type. The built-in `heading-hierarchy` check counts heroes that way.
 
 ## Warnings
 

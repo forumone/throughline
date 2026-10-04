@@ -326,6 +326,9 @@ importers:
       inngest:
         specifier: ^4.2.0
         version: 4.21.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(express@5.2.1)(hono@4.13.5)(next@16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(react@19.3.0)(typescript@5.9.3)(zod@3.25.76)
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1
       next:
         specifier: ^16.2.4
         version: 16.3.8(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4)

@@ -10,7 +10,14 @@ import {
   useFormModified,
   useTranslation,
 } from '@payloadcms/ui'
-import { callPublishingEndpoint, describeBlock, fieldErrorsFromBlock } from './publishing-client.js'
+import { disarmFirstError, goToFirstError } from './first-error.js'
+import {
+  SHOW_ME,
+  blockToastId,
+  callPublishingEndpoint,
+  describeBlock,
+  fieldErrorsFromBlock,
+} from './publishing-client.js'
 
 export interface ThroughlinePublishButtonProps {
   /** Route prefix the plugin is mounted under. Injected via `clientProps`. */
@@ -97,8 +104,16 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
         id,
       })
 
+      /*
+      Every error this raises stays until it is closed, and has one id per
+      document, so a second click replaces the toast rather than stacking a
+      copy (forumone-2026#805). A notification three lines long is not read in
+      the default four seconds.
+      */
+      const toastId = blockToastId('publish', collectionSlug, id)
+
       if (!result.ok) {
-        toast.error(result.message)
+        toast.error(result.message, { id: toastId, duration: Infinity })
         return
       }
 
@@ -123,17 +138,25 @@ export function PublishButton(props: ThroughlinePublishButtonProps = {}): React.
           dispatchFields({ type: 'ADD_SERVER_ERRORS', errors: fieldErrors })
           setIsValid(false)
           setSubmitted(true)
+          // Straight to the first of them. The provider would do it too on
+          // this toast; this is the one place that knows it should.
+          disarmFirstError()
+          void goToFirstError()
         }
 
         const { title, description } = describeBlock(result.body, {
           markedFields: fieldErrors.length,
         })
         toast.error(title, {
+          id: toastId,
           ...(description ? { description } : {}),
-          duration: 10_000,
+          duration: Infinity,
+          ...(fieldErrors.length > 0 ? { action: SHOW_ME } : {}),
         })
         return
       }
+
+      toast.dismiss(toastId)
 
       // Deliberately not resetting the form here. The draft save above
       // already merged the server's response into form state, so the fields
