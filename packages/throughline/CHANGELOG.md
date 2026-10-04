@@ -1,5 +1,21 @@
 # @forumone/throughline
 
+## 1.4.0
+
+### Minor Changes
+
+- a7a9a8c: Adds `insert_block`, `update_block`, `move_block` and `remove_block` to the content tools. They change one block of a draft's blocks field, either `layout` or a field inside a group such as a case study's `approach.blocks`, without resending the layout. A new or changed block is checked against the blocks the field offers and against its own field validation, which a draft save would otherwise skip. The field is then checked against the composition rules before saving, with the same lock check and audit record as `update_draft`.
+
+  **Upgrading: a migration.** The key collection gains four checkbox columns. Run `migrate:create` and apply it before deploying.
+
+- 7f42a5d: Adds `create_draft` and `update_draft` to the content tools. Both write drafts only and refuse `_status`, publishing dates, the approval policy and any field off the site's allow-list. They refuse a document someone has open in the admin, naming the person (even when it's the key's own person, whose tab would autosave over the change). They also refuse a block the field doesn't offer, a layout that breaks the composition rules, and a slug that's taken, including one held in the trash. Each write is recorded in the audit log with the caller's `_meta`.
+
+  **Upgrading: a migration.** The key collection gains two checkbox columns, one per new tool. Run `migrate:create` and apply it before deploying.
+
+### Patch Changes
+
+- @forumone/throughline-design-system@1.4.0
+
 ## 1.3.0
 
 ### Minor Changes
