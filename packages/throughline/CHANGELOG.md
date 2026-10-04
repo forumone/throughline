@@ -1,5 +1,12 @@
 # @forumone/throughline
 
+## 1.9.1
+
+### Patch Changes
+
+- d7c2c22: `trigger_sync`'s description now says what the tool does: it runs a real sync, the same as the admin's "Sync now" button. It used to say the tool "sends a test payload", which could lead an agent to start a live sync while thinking it was only checking connectivity. It now points to `test_integration` for that.
+  - @forumone/throughline-design-system@1.9.1
+
 ## 1.9.0
 
 ### Minor Changes
