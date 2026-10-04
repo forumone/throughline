@@ -24,7 +24,7 @@ export const INTEGRATIONS_TOOLS = {
   triggerSync: {
     name: 'trigger_sync',
     description:
-      'Manually triggers an integration to send a test payload. Useful for verifying connectivity after a config change or after the integration has been failing. Admin-only because triggering an external POST is a write-side action.',
+      'Runs a real sync of one integration now, exactly as the admin\'s "Sync now" button does: it reads from or writes to the external system as a scheduled sync would. Not a test. To check that an integration is reachable and configured without syncing, use test_integration. Admin-only.',
   },
   testIntegration: {
     name: 'test_integration',
