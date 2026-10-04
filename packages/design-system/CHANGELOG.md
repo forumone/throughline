@@ -1,5 +1,7 @@
 # @forumone/throughline-design-system
 
+## 1.9.1
+
 ## 1.9.0
 
 ## 1.8.0

@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-reference-ds",
-  "version": "0.3.18",
+  "version": "0.3.19",
   "description": "The reference design system: twelve brand-neutral components with contracts, stories and tokens. Private. It is the source create-throughline vendors into a scaffolded project's design-system/, and the manifest Throughline's components tests run against.",
   "type": "module",
   "main": "./dist/index.js",
