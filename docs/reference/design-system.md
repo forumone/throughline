@@ -10,6 +10,7 @@ The design-system side of Throughline. A design system describes its components 
 | `/lint`     | `lintManifest`, `formatLintIssues`, `assertManifestClean`                                                                                                                               |
 | `/generate` | `generateBlocks` and friends, manifest to Payload blocks, and `fieldOverride` for a site's exceptions; see [generating blocks](design-system/generate.md)                               |
 | `/render`   | `RenderBlocks` and `coerceBlock`: stored blocks back to React                                                                                                                           |
+| `/recipes`  | `lintRecipe` and `RenderRecipe`: composed sections stored as data, checked against the manifest and drawn from its primitives; see [recipes](design-system/recipes.md)                  |
 | `/client`   | `BlockSummary`, `BlockGuidance`, `RowSummary`: admin components named in Payload's import map                                                                                           |
 | `/testing`  | `describeBlockInvariants`, `checkUntouchedBlocks`, `checkBlockProps`: invariants a site runs over its blocks                                                                            |
 | bin         | `check-block-props <manifest.json> <components-dir>…`: does each contract produce the props its component takes? See [`check-block-props`](design-system/generate.md#check-block-props) |
