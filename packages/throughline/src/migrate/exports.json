@@ -178,6 +178,7 @@
     "ManifestSource": ["@forumone/throughline/components"],
     "ManualSyncRefusal": ["@forumone/throughline/integrations"],
     "MatchingConfig": ["@forumone/throughline/components"],
+    "McpApiKeyAccessOptions": ["@forumone/throughline"],
     "McpMeta": ["@forumone/throughline"],
     "McpMetaSchema": ["@forumone/throughline"],
     "McpToolCollector": ["@forumone/throughline"],

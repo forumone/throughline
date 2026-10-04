@@ -25,7 +25,7 @@ export {
   signedIn,
   withMeta,
 } from './mcp/index.js'
-export type { AuditContextFields, McpMeta } from './mcp/index.js'
+export type { AuditContextFields, McpApiKeyAccessOptions, McpMeta } from './mcp/index.js'
 
 // The shape of `suite.mcpTools`, and of the collector each plugin's `mcpTools`
 // option takes. `throughline()` builds the collector; nothing else needs to.
