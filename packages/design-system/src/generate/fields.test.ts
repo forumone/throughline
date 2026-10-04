@@ -525,7 +525,23 @@ describe('an optional group', () => {
     it('asks for what is missing once anything is filled in', async () => {
       const refusal = await validateOf(optionalImage())({ src: '/a.jpg' })
       expect(refusal).not.toBe(true)
-      expect(String(refusal)).toContain('alt')
+      expect(String(refusal)).toBe(
+        'Alt text is needed once anything else here is filled in. Clear the rest to leave this out.',
+      )
+    })
+
+    it('names a missing child by its label, not its name (forumone-2026#805)', async () => {
+      const generated = generate({
+        type: 'group',
+        name: 'video',
+        of: [
+          field({ type: 'video', name: 'src', required: true }),
+          field({ type: 'text', name: 'caption' }),
+        ],
+      })
+      const refusal = String(await validateOf(generated)({ caption: 'typed something' }))
+      expect(refusal).toMatch(/^Video URL is needed/)
+      expect(refusal).not.toMatch(/\bsrc\b/)
     })
 
     it('names every missing child, not just the first', async () => {
@@ -539,8 +555,7 @@ describe('an optional group', () => {
         ],
       })
       const refusal = String(await validateOf(generated)({ note: 'typed something' }))
-      expect(refusal).toContain('title')
-      expect(refusal).toContain('href')
+      expect(refusal).toContain('Title and Link are needed')
     })
 
     it('passes once everything required is there', async () => {

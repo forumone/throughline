@@ -55,13 +55,23 @@ describe('callPublishingEndpoint', () => {
   it('reports a status when the error body is not JSON', async () => {
     stubFetch(() => new Response('<html>502</html>', { status: 502 }))
     const result = await callPublishingEndpoint(args)
-    expect(result).toEqual({ ok: false, message: 'Publishing server returned 502.' })
+    expect(result).toEqual({
+      ok: false,
+      message:
+        "Publishing didn't respond as expected (error 502). Try again; if it keeps happening, tell a site administrator.",
+    })
   })
 
-  it('reports a reachability failure rather than throwing', async () => {
+  it('reports a reachability failure rather than throwing, and says nothing changed', async () => {
     stubFetch(() => Promise.reject(new Error('network down')))
-    const result = await callPublishingEndpoint(args)
-    expect(result).toEqual({ ok: false, message: 'Could not reach the publishing server.' })
+    expect(await callPublishingEndpoint(args)).toEqual({
+      ok: false,
+      message:
+        "Couldn't connect to publish. Check your internet connection and try again. Nothing was changed.",
+    })
+    expect(await callPublishingEndpoint({ ...args, action: 'unschedule' })).toMatchObject({
+      message: expect.stringMatching(/^Couldn't connect to cancel the schedule\./),
+    })
   })
 
   // A pipeline block arrives as a 200 — it is an answer, not a failure.
@@ -73,29 +83,58 @@ describe('callPublishingEndpoint', () => {
 })
 
 describe('describeBlock', () => {
-  it('leads with the reason and lists the step, issues and suggestion', () => {
+  // forumone-2026#805: no step names, no paths, no "Suggestion:".
+  it('leads with the reason, lists each issue where the editor would find it, then what to do', () => {
     const { title, description } = describeBlock({
       published: false,
       failedAt: 'accessibility',
       reason: 'Two images are missing alt text.',
       issues: [
-        { field: 'layout.0.image', message: 'Image has no alt text', severity: 'error' },
+        {
+          field: 'layout.0.image',
+          where: 'Block 1 (Image Hero) › Image',
+          message: 'This image has no alt text.',
+          severity: 'error',
+        },
         { message: 'Heading level skips from h2 to h4', severity: 'error' },
+        { field: 'speakers.0.portrait', message: 'Unplaced.', severity: 'error' },
       ],
       suggestion: 'Add alt text in the Hero block.',
     })
 
     expect(title).toBe('Two images are missing alt text.')
-    expect(description).toContain('Blocked at: accessibility')
-    expect(description).toContain('• layout.0.image: Image has no alt text')
-    expect(description).toContain('• Heading level skips from h2 to h4')
-    expect(description).toContain('Suggestion: Add alt text in the Hero block.')
+    expect(description).toBe(
+      [
+        '• Block 1 (Image Hero) › Image: This image has no alt text.',
+        '• Heading level skips from h2 to h4',
+        '• Unplaced.',
+        'Add alt text in the Hero block.',
+      ].join('\n'),
+    )
+    expect(description).not.toContain('accessibility')
+    expect(description).not.toContain('layout.0')
   })
 
-  it('names the failing step when the pipeline gave no reason', () => {
+  it('says only that it cannot be published when the pipeline gave no reason', () => {
     expect(describeBlock({ published: false, failedAt: 'approval' }).title).toBe(
-      'Publish blocked at the approval check.',
+      "This can't be published yet.",
     )
+  })
+
+  it('says a date the server wrote in its zone in the editor’s own', () => {
+    const at = '2026-10-06T13:00:00.000Z'
+    const { title, description } = describeBlock(
+      {
+        published: false,
+        code: 'embargoed',
+        reason: "This can't go live until Tue 6 Oct 2026, 1:00 pm UTC.",
+        suggestion: 'Wait until Tue 6 Oct 2026, 1:00 pm UTC.',
+        when: { at, text: 'Tue 6 Oct 2026, 1:00 pm UTC' },
+      },
+      { date: { timeZone: 'America/New_York' } },
+    )
+    expect(title).toBe("This can't go live until Tue 6 Oct 2026, 9:00 am.")
+    expect(description).toBe('Wait until Tue 6 Oct 2026, 9:00 am.')
   })
 
   it('truncates a long issue list rather than flooding the toast', () => {
@@ -130,7 +169,7 @@ describe('describeBlock', () => {
     }
 
     expect(describeBlock(body, { markedFields: 1 }).description).toContain(
-      'Fields with a problem are highlighted in the form.',
+      'The fields with a problem are highlighted.',
     )
     expect(describeBlock(body, { markedFields: 0 }).description).not.toContain('highlighted')
     expect(describeBlock(body).description).not.toContain('highlighted')
@@ -207,6 +246,24 @@ describe('fieldErrorsFromBlock', () => {
       formPaths,
     )
     expect(errors).toEqual([{ path: 'layout', message: 'Two heroes' }])
+  })
+
+  // On an ancestor, the field is no longer the location, so the issue says it.
+  it('says which block a message on the block field is about', () => {
+    const errors = fieldErrorsFromBlock(
+      {
+        published: false,
+        issues: [
+          { field: 'layout[4]', where: 'Block 5 (CTA)', message: 'This block is empty.' },
+          { field: 'layout[0].image', where: 'Block 1 (Hero) › Image', message: 'No alt text.' },
+        ],
+      },
+      formPaths,
+    )
+    expect(errors).toEqual([
+      { path: 'layout', message: 'Block 5 (CTA): This block is empty.' },
+      { path: 'layout.0.image', message: 'No alt text.' },
+    ])
   })
 
   it('groups the issues that resolve to one field, because the form keeps one message per path', () => {

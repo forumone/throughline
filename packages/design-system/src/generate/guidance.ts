@@ -1,3 +1,5 @@
+import { componentDisplayName } from '../contract/display-name.js'
+
 /*
 What a block is for, in the one sentence an author reads before filling it in.
 
@@ -27,6 +29,5 @@ export function blockGuidance(intent: string, componentNames: Iterable<string>):
 
 /** `CollageHero` → `Collage Hero`. The same rule the block labels use. */
 export function humanize(name: string): string {
-  const spaced = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+  return componentDisplayName(name)
 }

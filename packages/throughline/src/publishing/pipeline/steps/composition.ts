@@ -2,7 +2,9 @@ import type { Manifest } from '@forumone/throughline-design-system/contract'
 import { lintRecipe } from '@forumone/throughline-design-system/recipes'
 import type { CollectionSlug } from 'payload'
 import type { RecipeGateOptions } from '../../options.js'
+import { PUBLISHING_UNAVAILABLE, TELL_AN_ADMINISTRATOR, plural } from '../../messages.js'
 import type { PipelineContext, PipelineIssue, PipelineStep } from '../types.js'
+import { blockLabel, fieldConfigFor } from '../where.js'
 
 /**
  * Symbol the Component Server's plugin (C5) attaches its composition
@@ -33,6 +35,8 @@ interface ValidatorBlock {
 
 type ComponentValidator = (input: {
   blocks: ValidatorBlock[]
+  /** What to call a component in a message. An older validator ignores it. */
+  label?: (type: string) => string
 }) => Promise<ComponentValidatorResult> | ComponentValidatorResult
 
 interface LayoutBlock {
@@ -77,25 +81,38 @@ export const compositionStep: PipelineStep = async (ctx) => {
     return {
       pass: false,
       code: 'components-server-missing',
-      reason:
-        'Composition step requires the components plugin to be registered before publishingPlugin',
-      suggestion:
-        'Register `componentsPlugin` in your Payload config before `publishingPlugin`. Both must share the same Payload instance.',
+      reason: PUBLISHING_UNAVAILABLE,
+      detail:
+        'The composition step requires the components plugin. Register `componentsPlugin` in your Payload config before `publishingPlugin`; both must share the same Payload instance.',
     }
   }
 
-  const result = await validator({ blocks })
+  // Each block named as the editor picked it: its label in this collection's
+  // layout field, which is where a host's renamed block shows its new name.
+  const config = fieldConfigFor(ctx)
+  const result = await validator({ blocks, label: (type) => blockLabel(config, type) })
+  const toIssue = (issue: ComponentValidatorResult['issues'][number]): PipelineIssue => {
+    const out: PipelineIssue = {
+      severity: issue.severity,
+      message: issue.message,
+      rule: issue.rule,
+    }
+    if (issue.blockIndex !== undefined) out.field = `${ctx.collection.layoutField}[${issue.blockIndex}]`
+    return out
+  }
   const errors: PipelineIssue[] = result.issues
     .filter((issue) => issue.severity === 'error')
-    .map((issue) => {
-      const out: PipelineIssue = {
-        severity: 'error',
-        message: issue.message,
-        rule: issue.rule,
-      }
-      if (issue.blockIndex !== undefined) out.field = `${ctx.collection.layoutField}[${issue.blockIndex}]`
-      return out
-    })
+    .map(toIssue)
+  /*
+  A warning does not block, and used to be dropped here — so the one rule that
+  only warns, a component missing the sibling its contract expects, reached
+  nobody (forumone-2026#805). It now rides on the result's `warnings`, which a
+  publish reports beside its success.
+  */
+  const warnings = result.issues
+    .filter((issue) => issue.severity === 'warning')
+    .map((issue) => issue.message)
+  const carried = warnings.length > 0 ? { warnings } : {}
 
   if (gate) {
     for (const [index, block] of typed.entries()) {
@@ -116,7 +133,7 @@ export const compositionStep: PipelineStep = async (ctx) => {
         errors.push({
           severity: 'error',
           rule: 'empty-block',
-          message: `The ${block.blockType} block has nothing in it (${empty.join(', ')} are all empty), so it would publish as an empty band. Fill it or remove it.`,
+          message: `This ${blockLabel(config, block.blockType)} block is empty, so it would show as a blank band on the page. Fill it in or remove it.`,
           field: `${ctx.collection.layoutField}[${index}]`,
         })
       }
@@ -125,16 +142,16 @@ export const compositionStep: PipelineStep = async (ctx) => {
 
   if (errors.length > 0) {
     return {
+      ...carried,
       pass: false,
       code: 'composition-errors',
-      reason: `${errors.length} composition error${errors.length === 1 ? '' : 's'}`,
+      reason: `${plural(errors.length, 'problem')} with the blocks to fix before this can be published.`,
       issues: errors,
-      suggestion:
-        'Fix the composition errors. Common causes: duplicate Heroes, forbidden adjacent blocks, unknown component types, or a composed section whose recipe is not approved.',
+      suggestion: 'Each problem below names the block.',
     }
   }
 
-  return { pass: true }
+  return { pass: true, ...carried }
 }
 
 /*
@@ -171,7 +188,7 @@ async function checkComposedSection(
   const id =
     reference && typeof reference === 'object' ? (reference as { id?: unknown }).id : reference
   if (typeof id !== 'string' && typeof id !== 'number') {
-    return [issue('recipe-missing', 'This composed section has no recipe.')]
+    return [issue('recipe-missing', 'This section has no recipe chosen. Choose one, or remove the block.')]
   }
 
   const recipe = (await ctx.payload.findByID({
@@ -182,7 +199,12 @@ async function checkComposedSection(
     disableErrors: true,
   })) as Record<string, unknown> | null
   if (!recipe) {
-    return [issue('recipe-missing', `The recipe this composed section uses (${id}) no longer exists.`)]
+    return [
+      issue(
+        'recipe-missing',
+        `The recipe this section was built from no longer exists (${id}). Choose another, or remove the block.`,
+      ),
+    ]
   }
 
   const name = String(recipe['name'] ?? id)
@@ -191,7 +213,7 @@ async function checkComposedSection(
     return [
       issue(
         'recipe-not-approved',
-        `The composed section uses the recipe "${name}", which has not been approved. Approve it in the admin, then publish.`,
+        `This section uses the recipe "${name}", which hasn't been approved. Approve it, or ask someone who can, then publish.`,
       ),
     ]
   }
@@ -206,7 +228,7 @@ async function checkComposedSection(
       issues.push(
         issue(
           'recipe-lint',
-          `The recipe "${name}" no longer passes against the design system: ${found.path}: ${found.message}`,
+          `The recipe "${name}" no longer matches the design system, so this section can't be published. Choose another recipe, or ${TELL_AN_ADMINISTRATOR}. (${found.path}: ${found.message})`,
         ),
       )
     }
@@ -219,7 +241,9 @@ async function checkComposedSection(
   for (const f of fields) {
     const value = content[f.name]
     if (f.required && (value === undefined || value === null || value === '')) {
-      issues.push(issue('recipe-content', `"${f.name}" is required by the recipe "${name}" and is empty.`))
+      issues.push(
+        issue('recipe-content', `"${f.name}" is empty, and the recipe "${name}" needs it. Fill it in.`),
+      )
     }
   }
   return issues

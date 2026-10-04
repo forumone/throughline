@@ -4,6 +4,8 @@
  * form, a document or a browser.
  */
 
+import { lastErrorDetail } from '../sync/status.js'
+
 export type SyncStatusValue = 'never-run' | 'success' | 'partial' | 'failed'
 
 export interface TriggerSyncBody {
@@ -133,7 +135,8 @@ export interface SyncOutcome {
  */
 export function describeSyncOutcome(status: SyncStatus, instanceName?: string): SyncOutcome {
   const subject = instanceName ? `"${instanceName}"` : 'The integration'
-  const description = status.lastError ?? undefined
+  // The title already says what the stored summary line says.
+  const description = status.lastError ? lastErrorDetail(status.lastError) : undefined
 
   switch (status.lastSyncStatus) {
     case 'success':

@@ -100,7 +100,10 @@ describe('createIntegrationsCollection', () => {
     const hook = collection.hooks!.beforeChange![0] as unknown as BeforeChangeHook
     await expect(
       hook({ data: { integrationType: 'webhook', config: {} }, operation: 'create' }),
-    ).rejects.toThrow(/Invalid config.*targetUrl is required/)
+    ).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringMatching(/aren't valid, so nothing was saved: .*targetUrl is required/),
+    })
 
     const ok = await hook({
       data: { integrationType: 'webhook', config: { targetUrl: 'https://x' } },
@@ -120,7 +123,11 @@ describe('createIntegrationsCollection', () => {
 
     await expect(
       hook({ data: { integrationType: 'salesforce', config: {} }, operation: 'create' }),
-    ).rejects.toThrow(/Unknown integration type "salesforce"/)
+    ).rejects.toMatchObject({
+      // An APIError with a status, or Payload replaces the message with "Something went wrong."
+      status: 400,
+      message: expect.stringMatching(/^"salesforce" isn't an integration this site has\./),
+    })
   })
 
   it('beforeChange is a no-op for non-write operations', async () => {

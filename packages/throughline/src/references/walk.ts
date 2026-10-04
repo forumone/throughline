@@ -58,11 +58,22 @@ export interface Reference {
   /** A human-readable path: `layout[3] › ImageHero › image`. */
   path: string
   /**
+   * The data path, `layout[3].image`, from which `findReferences` says where
+   * the reference is in the editor's words. Inside rich text, the rich-text
+   * field's own path.
+   */
+  dataPath: string
+  /**
    * Whether the reference is inside a block, and so has no foreign key.
    * A `false` is one the database will null out on delete; a `true` is one it
    * does not know exists.
    */
   viaBlock: boolean
+  /**
+   * Where it is, as the edit view labels it: `Block 4 (Image Hero) › Image`.
+   * Filled in by `findReferences`, which has the config to read labels from.
+   */
+  where?: string
 }
 
 export interface ReferencesInOptions {
@@ -386,7 +397,7 @@ export function referencesIn(
       field(field, value, _siblings, at) {
         if (!pointsAt(field, collection)) return false
         for (const id of idsIn(value, collection)) {
-          out.push({ id, path: at.path, viaBlock: at.viaBlock })
+          out.push({ id, path: at.path, dataPath: at.dataPath, viaBlock: at.viaBlock })
         }
         return true
       },
@@ -400,7 +411,12 @@ export function referencesIn(
         if (!embedded || node['relationTo'] !== collection) return
         const id = idOf(node['value'])
         if (id !== undefined) {
-          out.push({ id, path: `${at.path} › ${embedded}`, viaBlock: at.viaBlock })
+          out.push({
+            id,
+            path: `${at.path} › ${embedded}`,
+            dataPath: at.dataPath,
+            viaBlock: at.viaBlock,
+          })
         }
       },
     },

@@ -80,7 +80,7 @@ const allowed = async (opts: Parameters<typeof update>[0]) =>
   expect(update(opts).run()).resolves.toBeDefined()
 
 const blocked = async (opts: Parameters<typeof update>[0]) =>
-  expect(update(opts).run()).rejects.toThrow(/Direct writes to `_status` are not allowed/)
+  expect(update(opts).run()).rejects.toThrow(/can.t be published or unpublished from here/)
 
 const refusedAsLiveEdit = async (opts: Parameters<typeof update>[0]) =>
   expect(update(opts).run()).rejects.toThrow(/This page is live\. Save your change as a draft/)
@@ -334,7 +334,7 @@ describe('what reaches the public', () => {
           req,
           collection: { slug: 'pages' } as never,
         } as HookArgs),
-      ).rejects.toThrow(/Direct writes to `_status` are not allowed/)
+      ).rejects.toThrow(/can.t be published or unpublished from here/)
     })
   })
 })

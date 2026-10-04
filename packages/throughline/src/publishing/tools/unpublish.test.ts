@@ -42,7 +42,7 @@ describe('unpublish tool', () => {
     })) as { unpublished: boolean; reason?: string }
 
     expect(result.unpublished).toBe(false)
-    expect(result.reason).toMatch(/not currently published/)
+    expect(result.reason).toBe("This isn't live, so there's nothing to unpublish.")
     expect(deps.spies.payloadUpdate).not.toHaveBeenCalled()
     expect(deps.spies.inngestSend).not.toHaveBeenCalled()
   })

@@ -133,14 +133,14 @@ export function createBlockStatusWritesHook(): CollectionBeforeChangeHook {
     // a developer, and this is the one refusal an editor reaches from the
     // admin's own controls. Same decision, words they can act on.
     if (nextStatus === 'published' && restoresFromTrash(data, originalDoc)) {
-      throw new APIError(
-        'Restore it as a draft, then publish it. Publishing is what runs the checks a live page needs.',
-        400,
-      )
+      throw new APIError('Restore it as a draft first, then publish it from its own page.', 400)
     }
 
+    // Reached from the list view's bulk publish, and from restoring a version
+    // as published. Said for the editor who got here that way (#805); a
+    // developer writing `_status` reads the same sentence and the same answer.
     throw new APIError(
-      'Direct writes to `_status` are not allowed. Use the publishing server (publish / unpublish / rollback) so the policy pipeline runs.',
+      "This can't be published or unpublished from here. Open the document and use its Publish or Unpublish button, so the pre-publish checks run.",
       400,
     )
   }

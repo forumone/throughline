@@ -2,6 +2,7 @@ export { publishingPlugin } from './plugin.js'
 
 export type {
   AccessibilityCheck,
+  AccessibilityCheckContext,
   AccessibilityIssue,
   ActiveApproval,
   ApprovalResolver,

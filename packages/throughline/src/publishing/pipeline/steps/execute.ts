@@ -1,4 +1,6 @@
+import type { CollectionSlug } from 'payload'
 import { sendEventSafely } from '../../events.js'
+import { plural } from '../../messages.js'
 import type { PipelineIssue, PipelineStep } from '../types.js'
 
 /**
@@ -83,12 +85,15 @@ export const executeStep: PipelineStep = async (ctx) => {
     // Somebody is in the document. Not a failure to investigate — a state that
     // resolves itself, and one the caller can act on: wait, or ask them.
     if (isLocked(error)) {
+      const holder = await lockHolder(ctx)
       return {
         pass: false,
         code: 'document-locked',
-        reason: 'Somebody is editing this document right now',
+        reason: `${holder ?? 'Someone else'} is editing this right now.`,
+        // It resolves itself, and has to say so, or it reads as a failure to
+        // investigate.
         suggestion:
-          'A lock is released when the editor closes the document, and expires on its own a few minutes after they stop. Try again, or ask them to finish.',
+          "Try again once they've closed it, or ask them to finish. If they've left it open, it frees up on its own a few minutes after they stop.",
       }
     }
 
@@ -99,27 +104,31 @@ export const executeStep: PipelineStep = async (ctx) => {
     if (!issues) throw error
     return {
       pass: false,
+      // No suggestion: Payload's own messages say what each field needs, and
+      // the admin marks the fields and says so.
       code: 'field-validation-failed',
-      reason: `${issues.length} field${issues.length === 1 ? '' : 's'} the collection will not accept`,
+      reason: `${plural(issues.length, 'field')} ${issues.length === 1 ? 'needs' : 'need'} fixing before this can be published.`,
       issues,
-      suggestion:
-        'These are required by the collection rather than by a policy check, so they must be filled before this document can be published.',
     }
   }
 
   // The write has landed. From here the publish has happened, so nothing
   // below may turn it back into a failure.
-  const warning = await sendEventSafely(ctx.inngest, {
-    name: 'content/page.published',
-    data: {
-      collection: ctx.collection.slug,
-      id: ctx.documentId,
-      slug: String(ctx.document[ctx.collection.slugField] ?? ctx.documentId),
-      publishedBy: ctx.actor.user?.id ?? 'system',
-      previousPublishedAt,
-      isFirstPublish: wasFirstPublish,
+  const warning = await sendEventSafely(
+    ctx.inngest,
+    {
+      name: 'content/page.published',
+      data: {
+        collection: ctx.collection.slug,
+        id: ctx.documentId,
+        slug: String(ctx.document[ctx.collection.slugField] ?? ctx.documentId),
+        publishedBy: ctx.actor.user?.id ?? 'system',
+        previousPublishedAt,
+        isFirstPublish: wasFirstPublish,
+      },
     },
-  })
+    ctx.payload.logger,
+  )
 
   return { pass: true, ...(warning ? { warnings: [warning] } : {}) }
 }
@@ -149,6 +158,41 @@ function fieldIssues(error: unknown): PipelineIssue[] | undefined {
     issues.push({ field: path, message, severity: 'error' })
   }
   return issues
+}
+
+/**
+ * The name of whoever holds the document's lock, or `undefined` when it cannot
+ * be read. Payload's `Locked` carries only a sentence naming the document's id;
+ * the lock row names the user, and "Sam is editing this" is something an
+ * editor can act on — they can ask Sam.
+ *
+ * Best effort, and past access control: the holder's name is what the admin's
+ * own lock modal shows anybody who opens the document.
+ */
+async function lockHolder(ctx: Parameters<typeof executeStep>[0]): Promise<string | undefined> {
+  try {
+    const found = await ctx.payload.find({
+      collection: 'payload-locked-documents' as CollectionSlug,
+      where: {
+        and: [
+          { 'document.relationTo': { equals: ctx.collection.slug } },
+          { 'document.value': { equals: ctx.documentId } },
+        ],
+      },
+      sort: '-updatedAt',
+      limit: 1,
+      depth: 1,
+      overrideAccess: true,
+    })
+    const user = (found.docs[0] as { user?: { value?: unknown } } | undefined)?.user?.value
+    if (!user || typeof user !== 'object') return undefined
+    const { name, email } = user as { name?: unknown; email?: unknown }
+    if (typeof name === 'string' && name.trim() !== '') return name
+    if (typeof email === 'string' && email.trim() !== '') return email
+    return undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**

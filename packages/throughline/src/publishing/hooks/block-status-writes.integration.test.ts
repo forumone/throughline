@@ -107,7 +107,7 @@ async function draftTitle(id: number | string): Promise<unknown> {
   return (await payload.findByID({ collection: 'pages', id, draft: true })).title
 }
 
-const BLOCKED = /Direct writes to `_status` are not allowed/
+const BLOCKED = /can.t be published or unpublished from here/
 
 describe('the pipeline', () => {
   it('publishes and unpublishes through the bypass', async () => {
@@ -451,7 +451,7 @@ describe('the trash', () => {
 
     await expect(
       update(id, { trash: true, data: { deletedAt: null, _status: 'published' } }),
-    ).rejects.toThrow(/Restore it as a draft, then publish it/)
+    ).rejects.toThrow(/Restore it as a draft first, then publish it/)
     expect(await isTrashed(id)).toBe(true)
   })
 
@@ -468,7 +468,7 @@ describe('the trash', () => {
 
     await expect(
       update(id, { trash: true, data: { deletedAt: null, _status: 'published' } }),
-    ).rejects.toThrow(/Restore it as a draft, then publish it/)
+    ).rejects.toThrow(/Restore it as a draft first, then publish it/)
     expect(await isTrashed(id)).toBe(true)
   })
 

@@ -142,7 +142,7 @@ describe('schedule_publish tool', () => {
     })) as { scheduled: boolean; failedAt?: string; reason?: string }
     expect(refused.scheduled).toBe(false)
     expect(refused.failedAt).toBe('embargo')
-    expect(refused.reason).toMatch(/after the scheduled time/)
+    expect(refused.reason).toMatch(/^The embargo lasts until .*, after the time you chose\.$/)
     expect(inside.spies.payloadUpdate).not.toHaveBeenCalled()
   })
 
@@ -153,7 +153,7 @@ describe('schedule_publish tool', () => {
       id: 'missing',
       publishAt: futureIso,
     })) as { scheduled: boolean; reason?: string }
-    expect(result).toEqual({ scheduled: false, reason: 'Document not found' })
+    expect(result).toMatchObject({ scheduled: false, code: 'not-found' })
   })
 
   it('refuses a caller with no user, like every other publishing tool', async () => {

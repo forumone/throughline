@@ -1,4 +1,11 @@
 import type { Block, CollectionSlug, Field, Payload, PayloadRequest } from 'payload'
+import {
+  type BlockLike,
+  type FieldLike,
+  describeFieldPath,
+  humanizeName,
+  labelText,
+} from '../utils/field-path.js'
 import { couldReference, referencesIn, type Reference } from './walk.js'
 
 /*
@@ -49,6 +56,11 @@ the admin panel renders nothing.
 export interface DocumentReferences {
   /** The collection's slug, or the global's slug when `global` is true. */
   collection: string
+  /**
+   * What an editor calls it: the collection's singular label, `Case Study`,
+   * or the global's label.
+   */
+  collectionLabel?: string
   id: number | string
   /** The document's title, name, slug or heading, or its id. */
   label: string
@@ -90,6 +102,8 @@ export function blockRegistry(payload: Payload, extra: readonly Block[] = []): M
 
 interface Source {
   collection: string
+  /** The collection's singular label, or the global's label. */
+  collectionLabel: string
   id: number | string
   label: string
   fields: readonly Field[]
@@ -121,9 +135,13 @@ async function eachSource(
         ...(draft ? { draft: true } : {}),
         ...(req ? { req } : {}),
       })
+      const collectionLabel =
+        labelText((collection.labels as { singular?: unknown } | undefined)?.singular) ??
+        humanizeName(collection.slug)
       for (const doc of result.docs as unknown as Record<string, unknown>[]) {
         visit({
           collection: collection.slug,
+          collectionLabel,
           id: doc['id'] as number | string,
           label: labelOf(doc),
           fields: collection.fields,
@@ -141,9 +159,10 @@ async function eachSource(
       overrideAccess: true,
       ...(req ? { req } : {}),
     })) as unknown as Record<string, unknown>
-    const label = typeof global.label === 'string' ? global.label : global.slug
+    const label = labelText(global.label) ?? global.slug
     visit({
       collection: global.slug,
+      collectionLabel: labelText(global.label) ?? humanizeName(global.slug),
       id: global.slug,
       label,
       fields: global.fields,
@@ -174,10 +193,16 @@ export async function findReferences(
     ) {
       return
     }
+    const config = { fields: source.fields as readonly FieldLike[], blocks: blocks as ReadonlyMap<string, BlockLike> }
     const references = referencesIn(source.fields, source.data, {
       collection: target.collection,
       blocks,
-    }).filter((reference) => String(reference.id) === String(target.id))
+    })
+      .filter((reference) => String(reference.id) === String(target.id))
+      .map((reference) => {
+        const where = describeFieldPath(reference.dataPath, config, source.data)
+        return where ? { ...reference, where } : reference
+      })
     if (references.length === 0) return
 
     const key = `${source.global ? 'global' : 'collection'}:${source.collection}:${String(source.id)}`
@@ -193,6 +218,7 @@ export async function findReferences(
     }
     found.set(key, {
       collection: source.collection,
+      collectionLabel: source.collectionLabel,
       id: source.id,
       label: source.label,
       references,
@@ -229,11 +255,18 @@ export async function findReferencedIds(
   return used
 }
 
-/** One line per document: `pages › Homepage (layout[2] › ImageHero › image)`. */
+/**
+ * One line per document, in the editor's words:
+ * `• Page › Homepage (Block 3 (Image Hero) › Image)`. forumone-2026#805: it
+ * printed the collection's slug and the walk's path, `pages › Homepage
+ * (layout[2] › ImageHero › image)`, which is what an entry built without the
+ * labels still falls back to.
+ */
 export function describeReferences(found: readonly DocumentReferences[], limit = 5): string {
   const lines = found.map((entry) => {
-    const where = entry.references[0]?.path
-    return `• ${entry.collection} › ${entry.label}${where ? ` (${where})` : ''}`
+    const first = entry.references[0]
+    const where = first?.where ?? first?.path
+    return `• ${entry.collectionLabel ?? entry.collection} › ${entry.label}${where ? ` (${where})` : ''}`
   })
   const named = lines.slice(0, limit).join('\n')
   return lines.length > limit ? `${named}\n…and ${lines.length - limit} more.` : named

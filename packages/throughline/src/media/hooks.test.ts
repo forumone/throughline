@@ -61,6 +61,56 @@ describe('refuseStorageKeyMismatch', () => {
     ).toThrow(ValidationError)
   })
 
+  // forumone-2026#805: what happened and whose it is to fix; the paths go to the log.
+  describe('what the editor reads', () => {
+    const refusal = (data: Record<string, unknown>, prefix: string) => {
+      const warn = vi.fn()
+      // Payload asks for `error:followingFieldsInvalid` with a count.
+      const t = vi.fn((_key: string, options?: { count?: number }) =>
+        options?.count === 1 ? 'Fix this field:' : 'Fix these fields:',
+      )
+      try {
+        hook({
+          data,
+          operation: 'create',
+          req: {
+            file: { name: 'hero.mp4', clientUploadContext: { prefix } },
+            payload: { logger: { warn } },
+            t,
+          },
+        } as never)
+      } catch (error) {
+        return { error: error as ValidationError, warn }
+      }
+      throw new Error('expected a refusal')
+    }
+
+    it('says a name is taken, and what to do', () => {
+      const { error, warn } = refusal({ prefix: 'abc', filename: 'hero-1.mp4' }, 'abc')
+      expect(error.data.errors[0]!.message).toBe(
+        "There's already a file called hero.mp4 in the Media library. Rename your file and upload it again.",
+      )
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ written: expect.stringContaining('abc'), recorded: expect.any(String) }),
+        expect.any(String),
+      )
+    })
+
+    it('says a fault in the upload path is not the editor’s, and who can fix it', () => {
+      const { error } = refusal({ prefix: 'def', filename: 'hero.mp4' }, 'abc')
+      const message = error.data.errors[0]!.message
+      expect(message).toBe(
+        "This file couldn't be added because of a problem with uploads. It isn't your file; every upload will fail until it's fixed. Please tell a site administrator.",
+      )
+      expect(message).not.toMatch(/abc|def/)
+    })
+
+    it('translates Payload’s own prefix with the request’s `t`', () => {
+      const { error } = refusal({ prefix: 'def', filename: 'hero.mp4' }, 'abc')
+      expect(error.message).toMatch(/^Fix this field:/)
+    })
+  })
+
   it('leaves a server-side write alone: it is stored under the name Payload chose', () => {
     const data = { prefix: 'abc', filename: 'hero-1.mp4' }
     expect(run(data, { name: 'hero.mp4' })).toBe(data)

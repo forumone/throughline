@@ -29,11 +29,26 @@ export interface AccessibilityIssue {
   severity: 'error' | 'warning'
 }
 
+/** What a check may know beyond the document. Everything in it is optional. */
+export interface AccessibilityCheckContext {
+  /**
+   * The design system's components, by name, when the components plugin is
+   * registered — so a check can ask what a block *is* (its contract's
+   * `category`) rather than guess from its `blockType`.
+   */
+  components?: Readonly<Record<string, { category?: string | undefined }>> | undefined
+}
+
 export interface AccessibilityCheck {
   name: string
+  /**
+   * Report each issue's `field` as a path into the document; the pipeline adds
+   * where that is in the editor's words, so `message` need not say it.
+   */
   run: (
     doc: Record<string, unknown>,
     collection: ResolvedCollection,
+    context?: AccessibilityCheckContext,
   ) => Promise<AccessibilityIssue[]> | AccessibilityIssue[]
 }
 
@@ -116,6 +131,17 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
   adminComponents?: boolean
 
   /**
+   * The IANA time zone a date is written in when the server writes it into a
+   * message — an embargo's end, an expiry: `America/New_York`. Default `UTC`.
+   * The zone is always named after the time.
+   *
+   * The admin shows those dates in each editor's own zone regardless, from the
+   * result's `when`; this is what an MCP caller, a log and an audit row read.
+   * Set it to the zone the site's editors work in.
+   */
+  timeZone?: string
+
+  /**
    * Where to put this server's MCP tools so Payload's own MCP plugin can serve
    * them.
    *
@@ -159,6 +185,15 @@ export function validateOptions(options: PublishingPluginOptions): PublishingPlu
   }
   if (!options.inngest) {
     throw new Error('publishingPlugin requires an Inngest client in options.inngest')
+  }
+  if (options.timeZone !== undefined) {
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: options.timeZone })
+    } catch {
+      throw new Error(
+        `publishingPlugin's timeZone "${options.timeZone}" is not an IANA time zone, e.g. "America/New_York".`,
+      )
+    }
   }
   for (const collection of options.collections) {
     const result = PublishableCollectionSchema.safeParse(collection)

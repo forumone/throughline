@@ -143,9 +143,8 @@ describe('link-targets against a database', () => {
       ['trash', 'layout[1].href.reference'],
       ['deleted', 'layout[2].href.reference'],
     ])
-    expect(result.issues?.[0]?.message).toContain(
-      'block 1 (Call to Action) goes to "Annual report"',
-    )
+    expect(result.issues?.[0]?.where).toBe('Block 1 (Call to Action)')
+    expect(result.issues?.[0]?.message).toContain('This link goes to "Annual report"')
     expect(result.issues?.[1]?.message).toContain('"Old news", which is in the trash')
   })
 

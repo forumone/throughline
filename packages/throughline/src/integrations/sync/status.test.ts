@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createStatusWriter, statusUpdateData } from './status.js'
+import { createStatusWriter, lastErrorDetail, lastErrorText, statusUpdateData } from './status.js'
 import { statusFromProblems } from './problems.js'
 import type { IntegrationStatusUpdate } from '../types.js'
 
@@ -37,14 +37,14 @@ describe('updateStatus', () => {
     )
 
     expect(row['lastSyncStatus']).toBe('partial')
-    expect(row['lastError']).toBe('event 4: no name')
+    expect(row['lastError']).toBe(lastErrorText('partial', 'event 4: no name'))
   })
 
   it('writes the message of a failed run', async () => {
     const { payload, row } = fakePayload({ lastError: 'older reason' })
     await createStatusWriter(payload as never, 'integrations')('inst-1', 'failed', 'HTTP 502')
 
-    expect(row['lastError']).toBe('HTTP 502')
+    expect(row['lastError']).toBe(lastErrorText('failed', 'HTTP 502'))
   })
 
   it('leaves lastError alone when a partial run reaches it with no message', async () => {
@@ -67,11 +67,28 @@ describe('updateStatus', () => {
       ...statusFromProblems(['job 7: no title']),
     )
     expect(row['lastSyncStatus']).toBe('partial')
-    expect(row['lastError']).toBe('job 7: no title')
+    expect(row['lastError']).toBe(lastErrorText('partial', 'job 7: no title'))
   })
 
   it('does not write an empty message over the previous one', () => {
     expect(statusUpdateData('failed', '')).not.toHaveProperty('lastError')
+  })
+
+  // forumone-2026#805: editors read Last Error, and the detail is for an administrator.
+  it('leads with a line anybody can read, and keeps the detail below it', () => {
+    expect(statusUpdateData('failed', 'HubSpot 401 on /marketing/v3/forms')['lastError']).toBe(
+      'The last sync failed. The details below are for a site administrator.\n\nHubSpot 401 on /marketing/v3/forms',
+    )
+    expect(statusUpdateData('partial', 'form abc: no fields')['lastError']).toMatch(
+      /^The last sync finished, but some items weren't updated\. .*\n\nform abc: no fields$/,
+    )
+  })
+
+  it('never stacks a second summary on a message that already has one', () => {
+    const once = lastErrorText('failed', 'HTTP 502')
+    expect(statusUpdateData('partial', once)['lastError']).toBe(lastErrorText('partial', 'HTTP 502'))
+    expect(lastErrorDetail(once)).toBe('HTTP 502')
+    expect(lastErrorDetail('written before the summary')).toBe('written before the summary')
   })
 
   it('requires a message for non-success statuses at the type level', () => {

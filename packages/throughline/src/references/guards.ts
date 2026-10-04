@@ -66,7 +66,7 @@ export function referenceRefusal(
   const blocks = found.filter((entry) => entry.viaBlock).length
   const note =
     blocks > 0
-      ? `\n\n${blocks} of these use it inside a block, where nothing would have warned you and it would simply have stopped appearing.`
+      ? `\n\n${blocks} of these ${blocks === 1 ? 'uses' : 'use'} it inside a block, where nothing would have warned you and it would simply have stopped appearing.`
       : ''
 
   return `This ${noun} is still used by ${count} document${count === 1 ? '' : 's'}. Remove it there first, then ${then}${consequence}.\n\n${describeReferences(found)}${note}`
@@ -95,9 +95,18 @@ async function refuseIfReferenced(
       { event: 'references.scan-failed', collection, id, err: error },
       `Could not check whether this ${noun} is in use; refusing to ${verb} it`,
     )
+    /*
+    Public, or nobody reads it. Payload's `routeError` replaces the message of
+    any error that is not public with "Something went wrong.", and a 500 is not
+    public unless it says so — which is what editors saw instead of this
+    (forumone-2026#805). 503 too, because it is the truer status: the check
+    could not run, and trying again is the advice.
+    */
     throw new APIError(
-      `Could not check whether this ${noun} is still in use, so nothing has changed. Try again; if it keeps happening, this needs a developer.`,
-      500,
+      `Could not check whether this ${noun} is still in use, so nothing has changed. Try again; if it keeps happening, tell a site administrator.`,
+      503,
+      undefined,
+      true,
     )
   }
 

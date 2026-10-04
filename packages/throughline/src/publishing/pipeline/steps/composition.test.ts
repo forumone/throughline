@@ -55,5 +55,52 @@ describe('compositionStep', () => {
     expect(result.code).toBe('composition-errors')
     expect(result.issues).toHaveLength(1)
     expect(result.issues?.[0]?.field).toBe('layout[1]')
+    // forumone-2026#805: a warning no longer vanishes here.
+    expect(result.warnings).toEqual(['CardGrid expects Card'])
+  })
+
+  it('carries a warning on a composition that passes, so the publish can report it', async () => {
+    const ctx = makeContext({ document: { layout: [{ blockType: 'CardGrid' }] } })
+    attachComponentValidator(ctx.payload, async () => ({
+      valid: true,
+      issues: [{ severity: 'warning', rule: 'required-sibling-missing', message: 'Lonely.' }],
+    }))
+    expect(await compositionStep(ctx)).toEqual({ pass: true, warnings: ['Lonely.'] })
+  })
+
+  it('asks the validator to name each block by its label in the collection', async () => {
+    const ctx = makeContext({ document: { layout: [{ blockType: 'ImageHero' }] } })
+    Object.assign(ctx.payload, {
+      collections: {
+        pages: {
+          config: {
+            fields: [
+              {
+                name: 'layout',
+                type: 'blocks',
+                blocks: [{ slug: 'ImageHero', labels: { singular: 'Big Picture' } }],
+              },
+            ],
+          },
+        },
+      },
+    })
+    const validator = vi.fn(async () => ({ valid: true, issues: [] }))
+    attachComponentValidator(ctx.payload, validator)
+    await compositionStep(ctx)
+    const { label } = (validator.mock.calls[0] as unknown as [{ label: (t: string) => string }])[0]
+    expect(label('ImageHero')).toBe('Big Picture')
+    expect(label('VideoHero')).toBe('Video Hero')
+  })
+
+  it('tells the editor to tell a site administrator when the components plugin is missing, and keeps the setup for the log', async () => {
+    const result = await compositionStep(makeContext({ document: { layout: [{ blockType: 'x' }] } }))
+    expect(result).toMatchObject({
+      pass: false,
+      code: 'components-server-missing',
+      reason: "Publishing isn't working right now. Nothing was changed. Please tell a site administrator.",
+      detail: expect.stringContaining('Register `componentsPlugin`'),
+    })
+    expect(result.suggestion).toBeUndefined()
   })
 })

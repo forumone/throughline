@@ -120,6 +120,6 @@ describe('accessibilityStep', () => {
     })
     const result = await accessibilityStep(ctx)
     expect(result.pass).toBe(true)
-    expect(result.warnings).toEqual(['seo-length: Over 160 characters (seo.description)'])
+    expect(result.warnings).toEqual(['Over 160 characters'])
   })
 })

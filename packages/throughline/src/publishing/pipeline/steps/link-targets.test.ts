@@ -146,12 +146,13 @@ describe('the verdicts', () => {
     const result = await linkTargetsStep(ctx)
     expect(result.pass).toBe(false)
     expect(result.code).toBe('link-targets')
-    expect(result.reason).toBe("1 link goes to a page readers can't see")
+    expect(result.reason).toBe("1 link goes to a page readers can't see.")
     expect(result.issues).toEqual([
       {
         field: 'layout[2].items[0].href.reference',
+        where: 'Block 3 (Card Grid)',
         message:
-          'A link in block 3 (Card Grid) goes to "Annual report", which is a draft, so readers would get a page that doesn\'t exist. Publish "Annual report" first, or change the link.',
+          'This link goes to "Annual report", which is a draft, so readers would get a page that doesn\'t exist. Publish "Annual report" first, or change the link.',
         severity: 'error',
         rule: 'draft',
       },
@@ -167,8 +168,9 @@ describe('the verdicts', () => {
     })
     const result = await linkTargetsStep(ctx)
     expect(result.issues?.[0]?.message).toBe(
-      'A link in the Primary link field goes to "Old news", which is in the trash. Restore it, or change the link.',
+      'This link goes to "Old news", which is in the trash. Restore it, or change the link.',
     )
+    expect(result.issues?.[0]?.where).toBe('Primary link')
     expect(result.issues?.[0]?.field).toBe('primary.reference')
   })
 
@@ -177,8 +179,9 @@ describe('the verdicts', () => {
     const { ctx } = contextFor(document, { 'case-studies': [] })
     const result = await linkTargetsStep(ctx)
     expect(result.issues?.[0]?.message).toBe(
-      'A link in block 1 (Card Grid) goes to a Case Study that has been deleted. Change the link.',
+      'This link goes to a Case Study that has been deleted. Change the link.',
     )
+    expect(result.issues?.[0]?.where).toBe('Block 1 (Card Grid)')
     expect(result.issues?.[0]?.rule).toBe('deleted')
   })
 
@@ -262,7 +265,8 @@ describe('reading', () => {
     const result = await linkTargetsStep(ctx)
     expect(result.issues?.[0]).toMatchObject({
       field: 'body',
-      message: 'A link in the Body field goes to a Page that has been deleted. Change the link.',
+      where: 'Body',
+      message: 'This link goes to a Page that has been deleted. Change the link.',
     })
   })
 
@@ -291,7 +295,7 @@ describe('reading', () => {
     const document = { id: 'p1', layout: [cardLink('pages', 8), cardLink('pages', 9)] }
     const { ctx } = contextFor(document, { pages: [] })
     const result = await linkTargetsStep(ctx)
-    expect(result.reason).toBe("2 links go to pages readers can't see")
+    expect(result.reason).toBe("2 links go to pages readers can't see.")
     expect(result.issues).toHaveLength(2)
   })
 

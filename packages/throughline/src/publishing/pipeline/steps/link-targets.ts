@@ -107,12 +107,33 @@ function placeOf(link: LinkTarget): string {
   return 'this page'
 }
 
+/**
+ * The same place as an issue's `where`, which the admin prints before the
+ * message: "Block 3 (Card Grid)", "Body". `undefined` when there is no place
+ * more particular than the page.
+ */
+function whereOf(link: LinkTarget): string | undefined {
+  const { block, top } = link.at
+  if (block) return `Block ${block.index + 1} (${blockLabel(block.block)})`
+  if (top) return textOf(top.label) ?? humanize(top.name)
+  return undefined
+}
+
 function quoted(title: string | undefined): string | undefined {
   return title ? `"${title}"` : undefined
 }
 
-function messageFor(link: LinkTarget, verdict: Verdict, singular: string): string {
-  const where = `A link in ${placeOf(link)}`
+/**
+ * An issue's message, which goes out beside its `where` and so starts "This
+ * link"; a warning is a line on its own, and says where the link is itself.
+ */
+function messageFor(
+  link: LinkTarget,
+  verdict: Verdict,
+  singular: string,
+  placed: boolean,
+): string {
+  const where = placed ? 'This link' : `A link in ${placeOf(link)}`
   switch (verdict.kind) {
     case 'deleted':
       return `${where} goes to ${article(singular)} ${singular} that has been deleted. Change the link.`
@@ -277,16 +298,19 @@ export const linkTargetsStep: PipelineStep = async (ctx) => {
   for (const link of links) {
     const verdict = verdicts.get(keyOf(link.relationTo, link.id))
     if (!verdict || verdict.kind === 'published') continue
-    const message = messageFor(
-      link,
-      verdict,
-      singularOf(configOf(ctx.payload, link.relationTo), link.relationTo),
-    )
+    const singular = singularOf(configOf(ctx.payload, link.relationTo), link.relationTo)
     if (verdict.kind === 'scheduled') {
-      warnings.push(message)
+      warnings.push(messageFor(link, verdict, singular, false))
       continue
     }
-    errors.push({ field: link.at.dataPath, message, severity: 'error', rule: verdict.kind })
+    const where = whereOf(link)
+    errors.push({
+      field: link.at.dataPath,
+      message: messageFor(link, verdict, singular, where !== undefined),
+      severity: 'error',
+      rule: verdict.kind,
+      ...(where ? { where } : {}),
+    })
   }
 
   const carried = warnings.length ? { warnings } : {}
@@ -298,8 +322,8 @@ export const linkTargetsStep: PipelineStep = async (ctx) => {
     code: CODE,
     reason:
       errors.length === 1
-        ? "1 link goes to a page readers can't see"
-        : `${errors.length} links go to pages readers can't see`,
+        ? "1 link goes to a page readers can't see."
+        : `${errors.length} links go to pages readers can't see.`,
     issues: errors,
   }
 }

@@ -35,19 +35,21 @@ export function createSendScheduledEventHook(args: {
     const id = (doc as { id?: unknown }).id
     if (id === undefined || id === null) return doc
 
-    const warning = await sendEventSafely(args.inngest, {
-      name: 'content/page.scheduled',
-      data: {
-        collection: collection.slug,
-        id: String(id),
-        scheduledFor: new Date(next).toISOString(),
+    // A failure is logged and goes no further: the schedule is saved, and only
+    // the on-time wake-up is lost. The daily backstop still finds the document
+    // once it is overdue.
+    await sendEventSafely(
+      args.inngest,
+      {
+        name: 'content/page.scheduled',
+        data: {
+          collection: collection.slug,
+          id: String(id),
+          scheduledFor: new Date(next).toISOString(),
+        },
       },
-    })
-    if (warning) {
-      // The schedule is saved; only the on-time wake-up is lost. The daily
-      // backstop still finds the document once it is overdue.
-      req.payload.logger.warn({ collection: collection.slug, id }, `[publishing] ${warning}`)
-    }
+      req.payload.logger,
+    )
     return doc
   }
 }

@@ -45,7 +45,7 @@ What you get:
 - **No API key in the editorial publish path.** The endpoint authenticates off the Payload session cookie.
 - **The person is the actor.** The audit event records the logged-in editor, with `mcpTool` set to `admin:publish` so admin publishes are distinguishable from MCP ones.
 - **Access control still applies.** The write runs with `overrideAccess: false` as that user. Bypassing the status hook is not bypassing permissions.
-- **Real feedback, on the field that caused it.** A blocked publish renders the failing step, its issues, and its suggestion — and every issue naming a field is marked on that field, with an error count on the collapsed block row containing it. An issue with no field (an embargo, a missing approval) stays in the toast, which is where the full list still appears.
+- **Real feedback, on the field that caused it.** A blocked publish renders its reason, its issues (each led by where it is: `Block 3 (Image Hero) › Image`) and what to do — and every issue naming a field is marked on that field, with an error count on the collapsed block row containing it. An issue with no field (an embargo, a missing approval) stays in the toast, which is where the full list still appears.
 - **One notice per action.** The interim draft save the button performs does not announce itself; publishing says "published" once.
 
 The Publish button is hidden on the create view: the pipeline's first step is `exist`, so there is nothing to evaluate until the draft is saved. Use Payload's Save Draft button, then publish from the edit view.
@@ -191,13 +191,29 @@ A publish or unpublish writes the document first, then emits its Inngest event. 
 {
   "published": true,
   "publishedAt": "…",
-  "warnings": ["The content/page.published event could not be sent, …"],
+  "warnings": [
+    "The live site may take a while to show this change, and connected services may not have been updated. If it still hasn't changed in 15 minutes, tell a site administrator.",
+  ],
 }
 ```
 
-The admin shows these as a warning toast on an otherwise successful publish. Reporting failure for a write that landed would tell an editor their change isn't live when it is, and the obvious response to that is to publish again over live content.
+The admin shows these as a warning toast on an otherwise successful publish. Reporting failure for a write that landed would tell an editor their change isn't live when it is, and the obvious response to that is to publish again over live content. Which event failed, and why, goes to the log.
 
 `rollback` and `schedule_publish` behave the same way.
+
+A check can warn without blocking, too: an accessibility check with `severity: 'warning'`, a link to a page that is scheduled but not yet live, and the composition rule that a component's `requiredSiblings` are missing. Each reaches `warnings`, one line apiece.
+
+## What the messages say
+
+Everything a publish says — `reason`, `suggestion`, each issue's `message` — is written for the person publishing, whether they are in the admin or asking Claude, in their terms (forumone-2026#805):
+
+- **Where, as the edit view names it.** Each issue's `field` is a path for software; the pipeline adds `where`, the same path as the collection's labels say it — `Block 3 (Image Hero) › Image`, `SEO › Title` — and the admin prints it before the message. A component is named by its block's label, not its contract name.
+- **Who can fix it.** A block nobody but a developer can fix — the components plugin or an approval resolver not registered — reads "Publishing isn't working right now. Nothing was changed. Please tell a site administrator." The setup instruction is in `detail`, which is logged and returned to an MCP caller beside `code`, and never shown in the admin.
+- **Dates as a person writes them.** An embargo's end or an expiry is written into `reason` as `Tue 6 Oct 2026, 1:00 pm UTC`, in the zone set by `timeZone` (an IANA zone, default `UTC`), and returned as `when: { at, text }`. The admin replaces `text` with the same instant in each editor's own zone, so set `timeZone` to the zone your editors work in for what MCP callers and the log read.
+
+```ts
+throughline({ /* … */ publishing: { timeZone: 'America/New_York' } })
+```
 
 ## Composed sections
 

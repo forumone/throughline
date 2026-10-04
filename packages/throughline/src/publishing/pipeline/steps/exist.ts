@@ -1,5 +1,9 @@
 import type { PipelineStep } from '../types.js'
 
+/** Also what unpublish, schedule and unschedule say for a document that is not there. */
+export const NOT_FOUND =
+  "This document couldn't be found. It may have been deleted or moved to the trash."
+
 /**
  * Verifies the document exists and isn't already published with no
  * outstanding draft changes. The publish operation should be idempotent
@@ -8,7 +12,7 @@ import type { PipelineStep } from '../types.js'
  */
 export const existStep: PipelineStep = async (ctx) => {
   if (!ctx.document || Object.keys(ctx.document).length === 0) {
-    return { pass: false, code: 'not-found', reason: 'Document not found' }
+    return { pass: false, code: 'not-found', reason: NOT_FOUND }
   }
 
   const isPublished = ctx.document['_status'] === 'published'
@@ -16,8 +20,8 @@ export const existStep: PipelineStep = async (ctx) => {
     return {
       pass: false,
       code: 'already-published',
-      reason: 'Document is already published with no unpublished changes',
-      suggestion: 'Make a draft change first, then publish.',
+      reason: "There's nothing new to publish.",
+      suggestion: 'Make a change first, then publish.',
     }
   }
 

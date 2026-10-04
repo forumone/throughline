@@ -52,11 +52,17 @@ export function createActionEndpoint(deps: CreateActionEndpointDeps): Endpoint {
     handler: async (req) => {
       const url = new URL(req.url ?? 'http://localhost')
       const token = url.searchParams.get('token')
-      if (!token) return htmlResponse(renderError('Missing action token'), 400)
+      if (!token) return htmlResponse(renderError(LINK_INVALID), 400)
 
+      /*
+      The person reading these clicked a link in an email (forumone-2026#805).
+      Why a token failed — its format, its signature — is for the log; what
+      they need is whether the link is any good and what to do instead.
+      */
       const verification = await verifyActionToken(token, deps.options.tokenSecret)
       if (!verification.ok) {
-        return htmlResponse(renderError(verification.error), 401)
+        req.payload.logger.warn(`[approvals] refused an action link: ${verification.error}`)
+        return htmlResponse(renderError(verification.expired ? LINK_EXPIRED : LINK_INVALID), 401)
       }
 
       const collectionSlug = deps.options.collectionSlug ?? DEFAULT_APPROVALS_SLUG
@@ -65,16 +71,24 @@ export function createActionEndpoint(deps: CreateActionEndpointDeps): Endpoint {
         id: verification.token.approvalId,
       })) as Record<string, unknown> | null
 
-      if (!approval) return htmlResponse(renderError('Approval not found'), 404)
+      if (!approval) {
+        return htmlResponse(
+          renderError('This approval request no longer exists. It may have been withdrawn.'),
+          404,
+        )
+      }
 
       const status = String(approval['status'])
       if (status !== 'pending') {
-        return htmlResponse(renderInfo(`This request was already ${status}.`))
+        return htmlResponse(renderInfo(alreadyDecided(status)))
       }
 
       const consumed = (approval['consumedTokens'] as string[] | undefined) ?? []
       if (consumed.includes(token)) {
-        return htmlResponse(renderError('This action link has already been used'), 400)
+        return htmlResponse(
+          renderError('This link has already been used, so your answer is already recorded.'),
+          400,
+        )
       }
 
       const expiresAtRaw = approval['expiresAt']
@@ -82,7 +96,9 @@ export function createActionEndpoint(deps: CreateActionEndpointDeps): Endpoint {
         typeof expiresAtRaw === 'string' &&
         Date.parse(expiresAtRaw) < Date.now()
       ) {
-        return htmlResponse(renderInfo('This approval request has expired.'))
+        return htmlResponse(renderInfo(
+            "This approval request has expired, so it can't be answered any more. Ask the person who requested approval to send it again.",
+          ),)
       }
 
       const action = verification.token.action
@@ -239,8 +255,26 @@ function renderSuccess(label: string, title: string): string {
   return htmlPage(`<h1>${escape(label)}</h1><p>Your decision on <em>${escape(title)}</em> has been recorded.</p>`)
 }
 
+const LINK_INVALID =
+  "This approval link isn't valid. Use the link in the most recent email about this request, or ask the person who sent it to send it again."
+
+const LINK_EXPIRED =
+  'This approval link has expired. Ask the person who requested approval to send a new one.'
+
+const DECIDED: Record<string, string> = {
+  granted: 'approved',
+  declined: 'declined',
+  'changes-requested': 'sent back for changes',
+  expired: 'closed because it expired',
+}
+
+/** "This request has already been approved." — the stored status, in words. */
+function alreadyDecided(status: string): string {
+  return `This request has already been ${DECIDED[status] ?? status.replace(/-/g, ' ')}.`
+}
+
 function renderError(message: string): string {
-  return htmlPage(`<h1>Action could not be completed</h1><p>${escape(message)}</p>`)
+  return htmlPage(`<h1>We couldn't record that</h1><p>${escape(message)}</p>`)
 }
 
 function renderInfo(message: string): string {

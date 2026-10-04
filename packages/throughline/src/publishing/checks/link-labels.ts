@@ -18,7 +18,7 @@ export const linkLabelsCheck: AccessibilityCheck = {
       if (hasUrl && !hasLabel) {
         issues.push({
           field: path,
-          message: `Link at "${path}" has a URL but no label`,
+          message: 'This link has no text. Add the words people will click.',
           severity: 'error',
         })
       }

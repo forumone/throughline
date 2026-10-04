@@ -290,7 +290,12 @@ function checkTool(deps: AuthoringDeps) {
             pendingApproval: pending,
             next: 'An approval request is already pending; it goes live once an approver grants it. Do not request another.',
           }
-        : status
+        : {
+            ...status,
+            // The block's own suggestion is written for an editor in the
+            // admin; this is the same advice in this surface's terms.
+            next: 'This needs approval before it can go live. Call publish with action "request_approval" to ask for it.',
+          }
     },
   } satisfies McpToolDefinition<typeof inputSchema>
 }
