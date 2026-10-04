@@ -1,4 +1,5 @@
 export * from './schema.js'
+export * from './primitive.js'
 export * from './manifest.js'
 export * from './loader.js'
 export type { LintIssue, LintOptions } from './lint.js'

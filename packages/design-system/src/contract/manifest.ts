@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { CONTRACT_VERSION, ComponentContractSchema } from './schema.js'
+import { PrimitiveContractSchema } from './primitive.js'
+import { ComponentContractSchema, SUPPORTED_CONTRACT_VERSIONS } from './schema.js'
 
 const TokenDefinitionSchema = z.object({
   name: z.string(),
@@ -11,7 +12,7 @@ export type TokenDefinition = z.infer<typeof TokenDefinitionSchema>
 
 export const ManifestSchema = z.object({
   /** The contract schema version this manifest satisfies. */
-  contractVersion: z.literal(CONTRACT_VERSION),
+  contractVersion: z.enum(SUPPORTED_CONTRACT_VERSIONS),
 
   /** Metadata about the design system. */
   designSystem: z.object({
@@ -27,6 +28,14 @@ export const ManifestSchema = z.object({
 
   /** Components keyed by name. */
   components: z.record(z.string(), ComponentContractSchema),
+
+  /**
+   * Building blocks a composed section may be made of, keyed by name: layout
+   * primitives and small content pieces. Never blocks on their own, which is
+   * why they are not in `components`. Since 1.1.0; a manifest without them has
+   * none.
+   */
+  primitives: z.record(z.string(), PrimitiveContractSchema).default({}),
 
   /** Build metadata. */
   build: z.object({

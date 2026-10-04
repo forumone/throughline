@@ -102,6 +102,57 @@ export function lintManifest(manifest: Manifest, options: LintOptions = {}): Lin
     }
   }
 
+  issues.push(...lintPrimitives(manifest, tokenNames))
+  return issues
+}
+
+/*
+A primitive's props are closed sets, and the safety of everything built from
+them rests on those sets being real: a token a primitive offers that the token
+table does not have would reach a page as `var(--nothing)`. So every allowed
+token must exist, and must be in the group the prop says it draws from — a
+spacing prop offering a colour is a mistake in the primitive, not a choice.
+
+A primitive may not share a name with a component either: a recipe node names
+one or the other, and an ambiguous name is a node nobody can resolve.
+*/
+function lintPrimitives(manifest: Manifest, tokenNames: Set<string>): LintIssue[] {
+  const issues: LintIssue[] = []
+  const categoryOf = new Map(manifest.tokens.map((t) => [t.name, t.category]))
+
+  for (const [name, primitive] of Object.entries(manifest.primitives ?? {})) {
+    if (name in manifest.components) {
+      issues.push({
+        severity: 'error',
+        component: name,
+        rule: 'primitives.name',
+        message: `"${name}" is both a component and a primitive`,
+      })
+    }
+    for (const [propName, prop] of Object.entries(primitive.props)) {
+      if (prop.type !== 'token') continue
+      for (const token of prop.allowed) {
+        if (!tokenNames.has(token)) {
+          issues.push({
+            severity: 'error',
+            component: name,
+            rule: 'primitives.props.tokens',
+            message: `Prop "${propName}" allows unknown token "${token}"`,
+          })
+          continue
+        }
+        const category = categoryOf.get(token)
+        if (category !== undefined && category !== prop.tokenGroup) {
+          issues.push({
+            severity: 'error',
+            component: name,
+            rule: 'primitives.props.tokenGroup',
+            message: `Prop "${propName}" draws from "${prop.tokenGroup}" but allows "${token}", a ${category} token`,
+          })
+        }
+      }
+    }
+  }
   return issues
 }
 
