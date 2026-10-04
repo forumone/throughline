@@ -3,6 +3,8 @@
  * can be tested without a form.
  */
 
+import { formatHumanDate } from '../messages.js'
+
 export type ScheduleState =
   | { kind: 'none' }
   | { kind: 'upcoming'; at: Date; label: string }
@@ -33,19 +35,40 @@ export function scheduleState(value: unknown, now: number, locale?: string): Sch
 }
 
 /**
- * The time in the editor's own zone, with the zone named. An editor in London
- * and one in New York looking at the same post see different wall-clock
- * times, and each needs to know which one they are reading.
+ * The time in the editor's own zone, with the zone named: `Tue 6 Oct 2026,
+ * 9:00 am EDT`. An editor in London and one in New York looking at the same
+ * post see different wall-clock times, and each needs to know which one they
+ * are reading. The same form as every other date the admin shows
+ * (forumone-2026#805); `_locale` is no longer read.
  */
-export function formatScheduledTime(at: Date, locale?: string): string {
-  // Spelled out rather than `dateStyle`/`timeStyle`, which the spec forbids
-  // alongside `timeZoneName` — the constructor throws, in browsers too.
-  return new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short',
-  }).format(at)
+export function formatScheduledTime(at: Date, _locale?: string, timeZone?: string): string {
+  return formatHumanDate(at, { zoneName: true, ...(timeZone ? { timeZone } : {}) })
+}
+
+/** What the Schedule control says after a cancel, and whether the field empties. */
+export type UnscheduleOutcome =
+  | { kind: 'success'; message: string; clear: true }
+  | { kind: 'info'; message: string; clear: true }
+  | { kind: 'error'; message: string; clear: false }
+
+/**
+ * A cancel that found nothing to cancel is not a cancellation, and used to
+ * say "Schedule cancelled" anyway (forumone-2026#805). The field still empties
+ * — nothing scheduled is what the editor asked for — but the toast says what
+ * was true.
+ */
+export function unscheduleOutcome(body: {
+  unscheduled?: boolean
+  code?: string
+  reason?: string
+}): UnscheduleOutcome {
+  if (body.unscheduled) return { kind: 'success', message: 'Schedule cancelled.', clear: true }
+  if (body.code === 'not-scheduled') {
+    return { kind: 'info', message: body.reason ?? 'There was nothing scheduled.', clear: true }
+  }
+  return {
+    kind: 'error',
+    message: body.reason ?? "The schedule couldn't be cancelled. Nothing was changed.",
+    clear: false,
+  }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatScheduledTime, scheduleState } from './schedule-state.js'
+import { formatScheduledTime, scheduleState, unscheduleOutcome } from './schedule-state.js'
 
 const NOW = Date.parse('2026-10-01T12:00:00.000Z')
 
@@ -30,5 +30,39 @@ describe('formatScheduledTime', () => {
     const label = formatScheduledTime(new Date('2026-10-03T13:00:00.000Z'), 'en-US')
     expect(label).toMatch(/2026/)
     expect(label).toMatch(/[A-Z]{2,5}|GMT|UTC/)
+  })
+
+  // forumone-2026#805: the one date form, everywhere.
+  it('writes the date as a person does', () => {
+    expect(formatScheduledTime(new Date('2026-10-06T13:00:00.000Z'), undefined, 'UTC')).toBe(
+      'Tue 6 Oct 2026, 1:00 pm UTC',
+    )
+  })
+})
+
+describe('unscheduleOutcome', () => {
+  it('says cancelled when it was', () => {
+    expect(unscheduleOutcome({ unscheduled: true })).toEqual({
+      kind: 'success',
+      message: 'Schedule cancelled.',
+      clear: true,
+    })
+  })
+
+  // forumone-2026#805: it said "Schedule cancelled" for this too.
+  it('says there was nothing to cancel, not that it cancelled something', () => {
+    expect(
+      unscheduleOutcome({
+        unscheduled: false,
+        code: 'not-scheduled',
+        reason: 'There was nothing scheduled.',
+      }),
+    ).toEqual({ kind: 'info', message: 'There was nothing scheduled.', clear: true })
+  })
+
+  it('reports any other refusal as an error, and leaves the field as it is', () => {
+    expect(
+      unscheduleOutcome({ unscheduled: false, code: 'not-found', reason: 'Gone.' }),
+    ).toEqual({ kind: 'error', message: 'Gone.', clear: false })
   })
 })

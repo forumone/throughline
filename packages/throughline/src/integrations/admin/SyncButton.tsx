@@ -7,6 +7,7 @@ import {
   fetchSyncStatus,
   formatSyncTime,
   syncHasFinished,
+  syncToastId,
   triggerSync,
   type SyncStatus,
 } from './sync-client.js'
@@ -76,13 +77,16 @@ export function SyncButton(props: ThroughlineSyncButtonProps = {}): React.ReactN
 
     const result = await triggerSync({ serverURL, apiRoute: api, collectionSlug, id })
 
+    // One toast per instance, replaced rather than stacked; an error stays
+    // until it is closed (forumone-2026#805).
+    const toastId = syncToastId(collectionSlug, id)
     if (!result.ok) {
-      toast.error(result.message)
+      toast.error(result.message, { id: toastId, duration: Infinity })
       setPhase('idle')
       return
     }
 
-    toast.success(result.body.message ?? 'Sync queued.')
+    toast.success(result.body.message ?? 'Sync queued.', { id: toastId })
     setBaseline(result.body.lastSyncAt ?? null)
     setPhase('waiting')
   }, [api, collectionSlug, id, phase, serverURL])
@@ -108,10 +112,13 @@ export function SyncButton(props: ThroughlineSyncButtonProps = {}): React.ReactN
         setOutcome(status)
         setPhase('idle')
         const described = describeSyncOutcome(status, instanceNameRef.current)
-        const options = described.description ? { description: described.description } : {}
+        const options = {
+          id: syncToastId(collectionSlug, id),
+          ...(described.description ? { description: described.description } : {}),
+        }
         if (described.severity === 'success') toast.success(described.title, options)
         else if (described.severity === 'warning') toast.warning(described.title, options)
-        else toast.error(described.title, { ...options, duration: 10_000 })
+        else toast.error(described.title, { ...options, duration: Infinity })
         return
       }
 

@@ -47,6 +47,10 @@ What you get:
 - **Access control still applies.** The write runs with `overrideAccess: false` as that user. Bypassing the status hook is not bypassing permissions.
 - **Real feedback, on the field that caused it.** A blocked publish renders its reason, its issues (each led by where it is: `Block 3 (Image Hero) › Image`) and what to do — and every issue naming a field is marked on that field, with an error count on the collapsed block row containing it. An issue with no field (an embargo, a missing approval) stays in the toast, which is where the full list still appears.
 - **One notice per action.** The interim draft save the button performs does not announce itself; publishing says "published" once.
+- **Errors stay, and do not stack.** Every error toast the Publish, Unpublish, Schedule and Sync controls raise stays until it is closed, and has one id per document, so pressing Publish twice replaces the toast rather than adding a second. A success clears it.
+- **Straight to the first error.** After a Save, Publish or Schedule that fails — never after an autosave — the admin opens the tab or collapsed block row the first invalid field is in, scrolls it into view below the sticky header (smoothly, unless the editor prefers reduced motion) and focuses it. A publish or schedule toast with marked fields has a **Show me** action that does it again. This is `FirstErrorProvider`, which the plugin registers in `admin.components.providers`; set `goToFirstError: false` to leave it out. Payload's own save errors are covered by watching for its error toast after a click on its save buttons or the save shortcut.
+
+**Regenerate the import map when you upgrade.** A provider Payload cannot find in the import map renders nothing — and a provider wraps the whole admin, so the admin renders blank. The dev server regenerates it for you; a production build uses the committed one.
 
 The Publish button is hidden on the create view: the pipeline's first step is `exist`, so there is nothing to evaluate until the draft is saved. Use Payload's Save Draft button, then publish from the edit view.
 

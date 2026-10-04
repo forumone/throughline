@@ -131,6 +131,14 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
   adminComponents?: boolean
 
   /**
+   * Whether a failed Save, Publish or Schedule takes the editor to the first
+   * invalid field — switching tab and opening a collapsed row if it must — by
+   * an admin provider this plugin registers. Default: `true` (with
+   * `adminComponents`). Never after an autosave.
+   */
+  goToFirstError?: boolean
+
+  /**
    * The IANA time zone a date is written in when the server writes it into a
    * message — an embargo's end, an expiry: `America/New_York`. Default `UTC`.
    * The zone is always named after the time.

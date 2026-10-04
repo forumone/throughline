@@ -19,6 +19,10 @@ export type { ThroughlineUnpublishButtonProps } from '../publishing/admin/Unpubl
 export { SchedulePublishField } from '../publishing/admin/SchedulePublishField.js'
 export type { ThroughlineSchedulePublishFieldProps } from '../publishing/admin/SchedulePublishField.js'
 
+export { FirstErrorProvider } from '../publishing/admin/FirstErrorProvider.js'
+export { goToFirstError } from '../publishing/admin/first-error.js'
+export type { GoToFirstErrorOptions } from '../publishing/admin/first-error.js'
+
 export { callPublishingEndpoint, describeBlock } from '../publishing/admin/publishing-client.js'
 export type {
   CallPublishingEndpointArgs,

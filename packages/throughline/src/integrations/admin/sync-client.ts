@@ -160,6 +160,11 @@ export function describeSyncOutcome(status: SyncStatus, instanceName?: string): 
   }
 }
 
+/** One toast per instance: a second sync's notices replace the first's. */
+export function syncToastId(collectionSlug: string, id: number | string): string {
+  return `throughline:sync:${collectionSlug}:${id}`
+}
+
 /** `2026-08-29T14:03:00.000Z` as something an operator reads at a glance. */
 export function formatSyncTime(value: null | string): string {
   if (!value) return 'Never'

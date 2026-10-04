@@ -3,6 +3,7 @@
  * No JSX here so the message formatting can be unit tested directly.
  */
 
+import { goToFirstError } from './first-error.js'
 import {
   type HumanDateOptions,
   type MessageDate,
@@ -237,6 +238,19 @@ export function describeBlock(
   }
 
   return { title, description: lines.join('\n') }
+}
+
+/**
+ * The "Show me" action on an error toast whose problems are marked on fields:
+ * takes the editor to the first of them again, for one who has scrolled away.
+ * The toast stays open, since it is still the list of what to fix.
+ */
+export const SHOW_ME = {
+  label: 'Show me',
+  onClick: (event: { preventDefault: () => void }) => {
+    event.preventDefault()
+    void goToFirstError()
+  },
 }
 
 /**
