@@ -216,7 +216,7 @@ async function operate(
       }
     }
   }
-  const issues = await compositionErrors(deps.payload, changed.rows)
+  const issues = await compositionErrors(deps.payload, changed.rows, deps.composedBlockType)
   if (issues && issues.length > 0) {
     return {
       error: `${input.field} would break ${issues.length} composition rule${issues.length === 1 ? '' : 's'}. Nothing was saved.`,

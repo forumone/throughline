@@ -53,6 +53,8 @@ export interface ContentToolDeps {
   payload: Payload
   collections: Readonly<Record<string, ContentCollectionOptions>>
   related: Readonly<Record<string, RelatedKindOptions>>
+  /** A composed section's block type (forumone-2026#801), which the composition check keeps but does not check. */
+  composedBlockType?: string
   canUse?: (ctx: McpToolContext) => boolean
 }
 

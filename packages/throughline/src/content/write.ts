@@ -151,7 +151,7 @@ async function checkWrite(
         disallowed,
       }
     }
-    const issues = await compositionErrors(deps.payload, rows)
+    const issues = await compositionErrors(deps.payload, rows, deps.composedBlockType)
     if (issues && issues.length > 0) {
       return {
         error: `${field.name} breaks ${issues.length} composition rule${issues.length === 1 ? '' : 's'}. Nothing was saved.`,

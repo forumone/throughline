@@ -214,7 +214,7 @@ export interface CompositionIssue {
 }
 
 type ComponentValidator = (input: {
-  blocks: Array<{ type: string; variant?: string }>
+  blocks: Array<{ type: string; variant?: string; composed?: boolean }>
 }) =>
   | Promise<{ issues: Array<{ severity: string; rule: string; message: string; blockIndex?: number }> }>
   | { issues: Array<{ severity: string; rule: string; message: string; blockIndex?: number }> }
@@ -228,14 +228,17 @@ type ComponentValidator = (input: {
 export async function compositionErrors(
   payload: Payload,
   rows: readonly unknown[],
+  /** A composed section's block type: kept in the order, not checked as a component. */
+  composedBlockType?: string,
 ): Promise<CompositionIssue[] | undefined> {
   const validator = (payload as unknown as Record<symbol, unknown>)[COMPONENTS_VALIDATOR_SYMBOL] as
     | ComponentValidator
     | undefined
   if (!validator) return undefined
-  const blocks = rows.flatMap((row) => {
+  const blocks = rows.flatMap((row): { type: string; variant?: string; composed?: boolean }[] => {
     const r = row as { blockType?: unknown; variant?: unknown } | null
     if (typeof r?.blockType !== 'string') return []
+    if (r.blockType === composedBlockType) return [{ type: r.blockType, composed: true }]
     return [typeof r.variant === 'string' ? { type: r.blockType, variant: r.variant } : { type: r.blockType }]
   })
   if (blocks.length === 0) return []

@@ -30,6 +30,18 @@ export interface ComponentsPluginOptions extends Omit<BaseCorePluginOptions, 'ro
   manifest: ManifestSource
   /** Optional: how the plugin matches intents to components. Defaults to TF-IDF. */
   matching?: MatchingConfig
+  /**
+   * Optional: composed sections (forumone-2026#801). With it, the plugin adds
+   * `get_recipe_vocabulary`, `validate_recipe` and `save_recipe`, and
+   * `validate_composition` treats `blockType` as a composed section rather than
+   * an unknown component.
+   */
+  recipes?: {
+    /** The block a composed section is stored as. */
+    blockType: string
+    /** The collection `save_recipe` writes drafts to. */
+    collection: string
+  }
 
   /**
    * Where to put this server's MCP tools so Payload's own MCP plugin can serve

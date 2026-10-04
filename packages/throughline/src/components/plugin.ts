@@ -6,6 +6,12 @@ import { type ComponentsPluginOptions, validateOptions } from './options.js'
 import { createManifestLoader, type ManifestLoader } from './manifest-source.js'
 import { createTfidfMatcher } from './matching/index.js'
 import {
+  RECIPE_TOOL_DESCRIPTORS,
+  createGetRecipeVocabularyTool,
+  createSaveRecipeTool,
+  createValidateRecipeTool,
+} from './tools/recipes.js'
+import {
   COMPONENTS_TOOL_DESCRIPTORS,
   createFindAntiPatternTool,
   createGetContractTool,
@@ -48,7 +54,12 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
     denies any tool it has no checkbox for. This plugin must therefore come
     before `mcpPlugin` in the host's array.
     */
-    options.mcpTools?.declare(COMPONENTS_TOOL_DESCRIPTORS, { serverName: 'components' })
+    options.mcpTools?.declare(
+      options.recipes
+        ? [...COMPONENTS_TOOL_DESCRIPTORS, ...RECIPE_TOOL_DESCRIPTORS]
+        : COMPONENTS_TOOL_DESCRIPTORS,
+      { serverName: 'components' },
+    )
 
     return {
       ...incomingConfig,
@@ -81,8 +92,24 @@ export const componentsPlugin: CorePlugin<ComponentsPluginOptions> =
           createGetVariantsTool(loader),
           createGetTokensTool(loader),
           createSuggestForIntentTool({ loader, matcher, auditWriter, maxRecommendations }),
-          createValidateCompositionTool({ loader, auditWriter }),
+          createValidateCompositionTool({
+            loader,
+            auditWriter,
+            ...(options.recipes ? { composedBlockType: options.recipes.blockType } : {}),
+          }),
           createFindAntiPatternTool({ loader, auditWriter }),
+          ...(options.recipes
+            ? [
+                createGetRecipeVocabularyTool({ loader }),
+                createValidateRecipeTool({ loader, auditWriter }),
+                createSaveRecipeTool({
+                  payload,
+                  loader,
+                  auditWriter,
+                  collection: options.recipes.collection,
+                }),
+              ]
+            : []),
         ]
 
         // Payload's own MCP plugin, and the only transport these tools have.
