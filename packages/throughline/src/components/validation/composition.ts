@@ -3,6 +3,12 @@ import type { LoadedManifest } from '@forumone/throughline-design-system/contrac
 export interface CompositionBlock {
   type: string
   variant?: string
+  /**
+   * A composed section (forumone-2026#801): a recipe, not a component, so it
+   * has no contract here. The publish step checks the recipe itself; this only
+   * keeps its place in the order, so every block's index stays right.
+   */
+  composed?: boolean
 }
 
 export interface CompositionInput {
@@ -42,7 +48,7 @@ export function validateComposition(
 
   for (let i = 0; i < input.blocks.length; i++) {
     const block = input.blocks[i]
-    if (!block) continue
+    if (!block || block.composed) continue
     counts.set(block.type, (counts.get(block.type) ?? 0) + 1)
 
     const contract = manifest.getComponent(block.type)
@@ -54,6 +60,21 @@ export function validateComposition(
         blockIndex: i,
       })
       continue
+    }
+
+    /*
+    A component placed only `inline` lives inside another one — a Button in a
+    hero, a Card in a grid — and on a page by itself it is a fragment of a
+    layout with nothing around it. Nothing checked this before.
+    */
+    const placement = contract.composition.placement
+    if (!placement.includes('page') && !placement.includes('section')) {
+      issues.push({
+        severity: 'error',
+        rule: 'placement',
+        message: `"${block.type}" is placed inside other components, not on a page by itself`,
+        blockIndex: i,
+      })
     }
 
     if (block.variant && contract.content.variants) {

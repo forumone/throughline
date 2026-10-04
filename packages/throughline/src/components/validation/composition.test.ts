@@ -36,6 +36,37 @@ describe('validateComposition (against reference DS)', () => {
     expect(result.issues[0]?.rule).toBe('unknown-component')
   })
 
+  // forumone-2026#801: the placement rule, and composed sections.
+  it('flags a component placed only inline when it stands on a page by itself', () => {
+    // The reference DS places Card in a section or inline; narrowed here to inline only.
+    const raw = structuredClone(referenceManifest) as {
+      components: Record<string, { composition: { placement: string[] } }>
+    }
+    raw.components['Card']!.composition.placement = ['inline']
+    const result = validateComposition(
+      { blocks: [{ type: 'Hero' }, { type: 'Card' }] },
+      loadManifest(raw),
+    )
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ severity: 'error', rule: 'placement', blockIndex: 1 }),
+    )
+  })
+
+  it('does not flag a component that may also sit in a section', () => {
+    const result = validateComposition({ blocks: [{ type: 'Card' }] }, manifest)
+    expect(result.issues.filter((i) => i.rule === 'placement')).toEqual([])
+  })
+
+  it('skips a composed section rather than calling it unknown, keeping the indexes', () => {
+    const result = validateComposition(
+      { blocks: [{ type: 'ComposedSection', composed: true }, { type: 'Nope' }] },
+      manifest,
+    )
+    expect(result.issues).toEqual([
+      expect.objectContaining({ rule: 'unknown-component', blockIndex: 1 }),
+    ])
+  })
+
   it('flags unknown variants', () => {
     const result = validateComposition(
       { blocks: [{ type: 'Hero', variant: 'mega' }] },
