@@ -58,7 +58,9 @@ export interface PayloadMcpRequest {
     _mcpClient?: unknown
   } | null
   payloadAPI?: string
-  payload?: { logger?: Logger }
+  /** The request's own URL, whose origin makes a returned link absolute. */
+  url?: string
+  payload?: { logger?: Logger; config?: { serverURL?: string } }
 }
 
 export interface ToPayloadMcpToolOptions {
@@ -139,6 +141,55 @@ function isRefusal(result: unknown): boolean {
   return typeof error === 'string' && error.trim() !== ''
 }
 
+/*
+The links a tool hands back, made absolute.
+
+`previewUrl` and `adminUrl` are for a person to open, from a chat in another
+app, where `/next/preview?…` goes nowhere. The tools build them from the
+collection's own `admin.preview` and the admin route, which are paths unless
+the site sets Payload's `serverURL` — and a site may well not, because
+`serverURL` also points the admin's own API calls somewhere, which on a preview
+deployment is the wrong place.
+
+So the origin is the one this request arrived at: whatever host the person's
+app was given, which is the host they can open. `serverURL` wins when it is set.
+Only those two keys, at any depth, and only a value that is a path: a
+document's own fields come back in the shape `save_draft` takes, and a relative
+link stored in one must stay relative. forumone-2026#840.
+*/
+const LINK_KEYS = new Set(['previewUrl', 'adminUrl'])
+
+function originOf(req: PayloadMcpRequest): string | undefined {
+  const configured = req.payload?.config?.serverURL
+  if (typeof configured === 'string' && configured !== '') return configured.replace(/\/+$/, '')
+  if (typeof req.url !== 'string') return undefined
+  try {
+    return new URL(req.url).origin
+  } catch {
+    return undefined
+  }
+}
+
+export function absoluteLinks<T>(value: T, origin: string | undefined): T {
+  if (!origin) return value
+  const walk = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(walk)
+    if (!node || typeof node !== 'object') return node
+    return Object.fromEntries(
+      Object.entries(node as Record<string, unknown>).map(([key, child]) => [
+        key,
+        LINK_KEYS.has(key) &&
+        typeof child === 'string' &&
+        child.startsWith('/') &&
+        !child.startsWith('//')
+          ? `${origin}${child}`
+          : walk(child),
+      ]),
+    )
+  }
+  return walk(value) as T
+}
+
 export function toPayloadMcpTool(
   tool: McpToolDefinition,
   options: ToPayloadMcpToolOptions = {},
@@ -152,7 +203,7 @@ export function toPayloadMcpTool(
     handler: async (args, req) => {
       const context = contextFrom(req, options)
       try {
-        const result = await tool.handler(args, context)
+        const result = absoluteLinks(await tool.handler(args, context), originOf(req))
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
           ...(isRefusal(result) ? { isError: true } : {}),
