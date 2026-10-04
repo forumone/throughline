@@ -59,7 +59,9 @@ export function formatHumanDate(at: Date, options: HumanDateOptions = {}): strin
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true,
+    // `h12`, not `hour12: true`: some ICU builds read the latter for `en-GB` as
+    // `h11` and write midnight as `0:05 am`.
+    hourCycle: 'h12',
     ...(options.timeZone ? { timeZone: options.timeZone } : {}),
     ...(options.zoneName ? { timeZoneName: 'short' as const } : {}),
   }).formatToParts(at)
