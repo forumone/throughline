@@ -1,5 +1,15 @@
 # @forumone/throughline
 
+## 1.5.0
+
+### Minor Changes
+
+- 4218ae9: Lets the content tools write a rich-text field as `{ markdown }` or `{ html }`. Each collection's `richText` option maps a field to a site converter, which returns an editor state or refuses with what would be lost, and nothing is saved on a refusal. `describe_content_type` says what each rich-text field accepts. A field without a converter still takes only an editor state. No migration.
+
+### Patch Changes
+
+- @forumone/throughline-design-system@1.5.0
+
 ## 1.4.0
 
 ### Minor Changes
