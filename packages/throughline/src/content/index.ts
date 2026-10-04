@@ -40,3 +40,17 @@ export {
   refusedFields,
 } from './guards.js'
 export type { CompositionIssue, LockHolder, RefusedField } from './guards.js'
+export {
+  CONTENT_BLOCK_TOOLS,
+  CONTENT_BLOCK_TOOL_DESCRIPTORS,
+  blockFieldPaths,
+  createContentBlockTools,
+  createInsertBlockTool,
+  createMoveBlockTool,
+  createRemoveBlockTool,
+  createUpdateBlockTool,
+  newBlockId,
+} from './blocks.js'
+export { validateBlock } from './validate.js'
+export type { FieldProblem } from './validate.js'
+export { openForWrite, saveDraft } from './write.js'

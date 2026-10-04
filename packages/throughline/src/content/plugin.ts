@@ -4,6 +4,7 @@ import { unknownFieldNames } from './describe.js'
 import type { ContentPluginOptions } from './options.js'
 import { CONTENT_READ_TOOL_DESCRIPTORS, createContentReadTools } from './tools.js'
 import { CONTENT_WRITE_TOOL_DESCRIPTORS, createContentWriteTools } from './write.js'
+import { CONTENT_BLOCK_TOOL_DESCRIPTORS, createContentBlockTools } from './blocks.js'
 
 /**
  * The content tools: what an agent reads before it writes a draft, and — in
@@ -30,7 +31,11 @@ export function contentPlugin(options: ContentPluginOptions): Plugin {
 
     // Declared at config time so `mcpPlugin` makes a checkbox per tool; bound at `onInit`.
     options.mcpTools?.declare(
-      [...CONTENT_READ_TOOL_DESCRIPTORS, ...CONTENT_WRITE_TOOL_DESCRIPTORS],
+      [
+        ...CONTENT_READ_TOOL_DESCRIPTORS,
+        ...CONTENT_WRITE_TOOL_DESCRIPTORS,
+        ...CONTENT_BLOCK_TOOL_DESCRIPTORS,
+      ],
       { serverName: 'content' },
     )
 
@@ -54,6 +59,7 @@ export function contentPlugin(options: ContentPluginOptions): Plugin {
           [
             ...createContentReadTools(deps),
             ...createContentWriteTools({ ...deps, ...(audit ? { audit } : {}) }),
+            ...createContentBlockTools({ ...deps, ...(audit ? { audit } : {}) }),
           ],
           { serverName: 'content', ...(audit ? { audit } : {}) },
         )

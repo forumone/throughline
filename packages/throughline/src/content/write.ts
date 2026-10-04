@@ -335,23 +335,9 @@ export function createUpdateDraftTool(
         }
       }
 
-      const lock = await lockHolder(deps.payload, input.collection, input.id, ctx.user?.id)
-      if (lock) return lockRefusal(input.collection, input.id, lock)
-
-      const req = await requestAs(deps.payload, ctx)
-      const current = (await deps.payload.findByID({
-        collection: input.collection as CollectionSlug,
-        id: input.id,
-        depth: 0,
-        draft: true,
-        overrideAccess: false,
-        user: userOf(ctx),
-        disableErrors: true,
-        req,
-      })) as Record<string, unknown> | null
-      if (!current) {
-        return { error: `No ${input.collection} document ${input.id} that you can read.` }
-      }
+      const opened = await openForWrite(deps, ctx, input.collection, input.id)
+      if ('error' in opened) return opened
+      const { current } = opened
 
       const data = mergePatch(
         current,
@@ -367,43 +353,96 @@ export function createUpdateDraftTool(
         data['slug'] = slugify(data['slug'])
       }
 
-      let doc: Record<string, unknown>
-      try {
-        doc = (await deps.payload.update({
-          collection: input.collection as CollectionSlug,
-          id: input.id,
-          data: data as never,
-          draft: true,
-          depth: 0,
-          overrideAccess: false,
-          overrideLock: false,
-          user: userOf(ctx),
-          req,
-        })) as unknown as Record<string, unknown>
-      } catch (error) {
-        const answer = saveRefusal(error)
-        if (answer) return answer
-        throw error
-      }
-
-      await record(deps, ctx, {
-        action: 'content.update',
-        tool: CONTENT_WRITE_TOOLS.updateDraft.name,
+      return saveDraft(deps, ctx, {
         collection: input.collection,
         id: input.id,
-        title: titleIn(deps.payload, input.collection, doc),
+        data,
+        tool: CONTENT_WRITE_TOOLS.updateDraft.name,
         changed: Object.keys(input.patch),
         meta: input._meta,
       })
-      return {
-        collection: input.collection,
-        id: doc['id'],
-        status: typeof doc['_status'] === 'string' ? doc['_status'] : 'draft',
-        changed: Object.keys(input.patch),
-        adminUrl: adminUrl(deps.payload, input.collection, doc['id'] as number | string),
-        previewUrl: await previewUrl(deps.payload, input.collection, doc, req),
-      }
     },
+  }
+}
+
+/**
+ * The document's current draft, as the caller may read it — or why not: it is
+ * open in the admin, or there is nothing they can read.
+ */
+export async function openForWrite(
+  deps: ContentWriteDeps,
+  ctx: McpToolContext,
+  collection: string,
+  id: number | string,
+): Promise<{ current: Record<string, unknown> } | Checked> {
+  const lock = await lockHolder(deps.payload, collection, id, ctx.user?.id)
+  if (lock) return lockRefusal(collection, id, lock)
+  const current = (await deps.payload.findByID({
+    collection: collection as CollectionSlug,
+    id,
+    depth: 0,
+    draft: true,
+    overrideAccess: false,
+    user: userOf(ctx),
+    disableErrors: true,
+    req: await requestAs(deps.payload, ctx),
+  })) as Record<string, unknown> | null
+  if (!current) return { error: `No ${collection} document ${id} that you can read.` }
+  return { current }
+}
+
+/**
+ * Saves `data` to the document's draft as the caller, records it, and answers
+ * with the links. `data` holds only the top-level fields that change.
+ */
+export async function saveDraft(
+  deps: ContentWriteDeps,
+  ctx: McpToolContext,
+  write: {
+    collection: string
+    id: number | string
+    data: Record<string, unknown>
+    tool: string
+    changed: readonly string[]
+    meta: McpMeta
+  },
+): Promise<Record<string, unknown>> {
+  const req = await requestAs(deps.payload, ctx)
+  let doc: Record<string, unknown>
+  try {
+    doc = (await deps.payload.update({
+      collection: write.collection as CollectionSlug,
+      id: write.id,
+      data: write.data as never,
+      draft: true,
+      depth: 0,
+      overrideAccess: false,
+      overrideLock: false,
+      user: userOf(ctx),
+      req,
+    })) as unknown as Record<string, unknown>
+  } catch (error) {
+    const answer = saveRefusal(error)
+    if (answer) return answer
+    throw error
+  }
+
+  await record(deps, ctx, {
+    action: 'content.update',
+    tool: write.tool,
+    collection: write.collection,
+    id: write.id,
+    title: titleIn(deps.payload, write.collection, doc),
+    changed: write.changed,
+    meta: write.meta,
+  })
+  return {
+    collection: write.collection,
+    id: doc['id'],
+    status: typeof doc['_status'] === 'string' ? doc['_status'] : 'draft',
+    changed: write.changed,
+    adminUrl: adminUrl(deps.payload, write.collection, doc['id'] as number | string),
+    previewUrl: await previewUrl(deps.payload, write.collection, doc, req),
   }
 }
 

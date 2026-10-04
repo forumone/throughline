@@ -1,6 +1,6 @@
 # Content tools
 
-`@forumone/throughline/content` gives an agent the MCP tools it uses to write drafts of a site's content types. There are read tools, which an agent uses before it writes anything, and two tools that write drafts. Operations on individual blocks come next.
+`@forumone/throughline/content` gives an agent the MCP tools it uses to write drafts of a site's content types. There are read tools, which an agent uses before it writes anything, tools that write drafts, and tools that change one block at a time.
 
 Turn it on through `throughline()`:
 
@@ -42,6 +42,13 @@ Everything else comes from the live config. That includes field types, limits, w
 | `get_document` | Returns one document, the latest draft by default, in the shape the write tools accept |
 | `create_draft` | Creates a new draft. A slug is made from the title when none is given |
 | `update_draft` | Changes some fields of a draft and leaves the rest. A group is merged; an array or a blocks field is replaced whole |
+
+| `insert_block` | Adds a block to a blocks field (at the start, at the end, or after a given block) and returns its new id |
+| `update_block` | Changes fields of one block by id. A group inside the block is merged, and the block's type can't change |
+| `move_block` | Moves a block to the start, to the end, or after another block |
+| `remove_block` | Removes a block by id |
+
+A blocks field is named by its path: `layout`, or `approach.blocks` for one inside an allow-listed group. A block operation reads the current draft and makes one change. Before saving, it checks the new or changed block against the blocks the field offers and against the block's own validation (each field's `validate`, called as Payload calls it on a full save), and checks the whole field against the composition rules. It then saves the draft the same way `update_draft` does.
 
 ### What a write may not do
 
