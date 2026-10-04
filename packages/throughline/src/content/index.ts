@@ -23,3 +23,20 @@ export {
   toWriteShape,
 } from './tools.js'
 export type { ContentToolDeps } from './tools.js'
+export {
+  CONTENT_WRITE_TOOLS,
+  CONTENT_WRITE_TOOL_DESCRIPTORS,
+  createContentWriteTools,
+  createCreateDraftTool,
+  createUpdateDraftTool,
+} from './write.js'
+export type { ContentWriteDeps } from './write.js'
+export {
+  compositionErrors,
+  disallowedBlocks,
+  lockHolder,
+  lockRefusal,
+  mergePatch,
+  refusedFields,
+} from './guards.js'
+export type { CompositionIssue, LockHolder, RefusedField } from './guards.js'

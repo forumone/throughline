@@ -1,6 +1,6 @@
 # Content tools
 
-`@forumone/throughline/content` gives an agent the MCP tools it uses to write drafts of a site's content types. This release has the read half, which the agent uses before it writes anything. The write tools come next: `create_draft`, `update_draft` and operations on individual blocks.
+`@forumone/throughline/content` gives an agent the MCP tools it uses to write drafts of a site's content types. There are read tools, which an agent uses before it writes anything, and two tools that write drafts. Operations on individual blocks come next.
 
 Turn it on through `throughline()`:
 
@@ -40,6 +40,18 @@ Everything else comes from the live config. That includes field types, limits, w
 | `find_documents` | Searches by title or slug, drafts included, newest first, and returns the id, status, and admin and preview links |
 | `find_related` | Looks up an author, client, term or image by name, to get the id a field needs |
 | `get_document` | Returns one document, the latest draft by default, in the shape the write tools accept |
+| `create_draft` | Creates a new draft. A slug is made from the title when none is given |
+| `update_draft` | Changes some fields of a draft and leaves the rest. A group is merged; an array or a blocks field is replaced whole |
+
+### What a write may not do
+
+- **Publish.** Every write is `draft: true`, and `_status`, `publishedAt` and `scheduledPublishAt` are refused. A document goes live only through `publish`, `schedule_publish` or `request_approval`, with the same gates an editor's publish goes through.
+- **Set a field off the allow-list.** This includes the approval `policy`, so an agent can't lower a document's approval requirement. The refusal says why for each field.
+- **Overwrite somebody's work.** While anyone has the document open in the admin, writes are refused and the refusal names them. That includes the key's own person: their open tab autosaves every couple of seconds, and a Payload update deletes the lock it finds, so their tab wouldn't even notice.
+- **Add a block the field doesn't offer, or break the composition rules.** A draft save skips Payload's field validation, in the admin and through the Local API alike, so these two checks from the block picker are made explicitly. The blocks come from the field's `filterOptions` (so blocks a document already holds stay allowed), and composition uses the same validator the publish pipeline runs. Required fields are checked at publish, as they are for an editor.
+- **Take a slug that's in use**, including one held by a document in the trash. The refusal suggests a free one.
+
+Every write is recorded in the audit log as `content.create` or `content.update`, under the person's name, with the caller's `_meta`: `userPrompt`, `reasoning` and `changesSummary`.
 
 Every call runs as the person the API key belongs to, with `overrideAccess: false`. A key with nobody behind it is refused, and so is anyone without the `admin` or `editor` role, unless the site passes its own `canUse`.
 

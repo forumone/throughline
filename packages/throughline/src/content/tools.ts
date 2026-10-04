@@ -56,7 +56,7 @@ export interface ContentToolDeps {
   canUse?: (ctx: McpToolContext) => boolean
 }
 
-function defaultCanUse(ctx: McpToolContext): boolean {
+export function defaultCanUse(ctx: McpToolContext): boolean {
   const roles = ctx.user?.roles ?? []
   return roles.includes('admin') || roles.includes('editor')
 }
@@ -68,7 +68,7 @@ Two refusals before any query. No user means a key with nobody behind it, and
 reading as nobody would read past every rule the person is subject to; the role
 check is the same line `check_slug` and `find_references` draw.
 */
-function refusal(ctx: McpToolContext, canUse: (ctx: McpToolContext) => boolean) {
+export function refusal(ctx: McpToolContext, canUse: (ctx: McpToolContext) => boolean) {
   if (!ctx.user) {
     return deniedEnvelope(
       'This key is not tied to a person, and content is read with that person\'s access.',
@@ -79,22 +79,22 @@ function refusal(ctx: McpToolContext, canUse: (ctx: McpToolContext) => boolean) 
 }
 
 /** `ctx.user` as Payload's own user, the cast the publishing tools make for the same reason. */
-function userOf(ctx: McpToolContext): PayloadRequest['user'] {
+export function userOf(ctx: McpToolContext): PayloadRequest['user'] {
   return ctx.user as unknown as PayloadRequest['user']
 }
 
-function unknownCollection(deps: ContentToolDeps, collection: string) {
+export function unknownCollection(deps: ContentToolDeps, collection: string) {
   return {
     error: `"${collection}" is not a content type these tools write. They write: ${Object.keys(deps.collections).join(', ')}.`,
   }
 }
 
-function titleFieldOf(payload: Payload, collection: string): string {
+export function titleFieldOf(payload: Payload, collection: string): string {
   const config = payload.collections[collection as CollectionSlug]?.config
   return config?.admin?.useAsTitle ?? 'id'
 }
 
-function adminUrl(payload: Payload, collection: string, id: number | string): string {
+export function adminUrl(payload: Payload, collection: string, id: number | string): string {
   return `${payload.config.routes.admin}/collections/${collection}/${encodeURIComponent(String(id))}`
 }
 
@@ -102,7 +102,7 @@ function adminUrl(payload: Payload, collection: string, id: number | string): st
  * The collection's own Preview link, absolute. `null` when it has none, or has
  * none for this document yet — a draft with no slug, for instance.
  */
-async function previewUrl(
+export async function previewUrl(
   payload: Payload,
   collection: string,
   doc: Record<string, unknown>,
@@ -119,11 +119,11 @@ async function previewUrl(
   }
 }
 
-async function requestAs(payload: Payload, ctx: McpToolContext): Promise<PayloadRequest> {
+export async function requestAs(payload: Payload, ctx: McpToolContext): Promise<PayloadRequest> {
   return createLocalReq({ user: userOf(ctx) ?? undefined } as never, payload)
 }
 
-function blockRegistry(payload: Payload): Map<string, Block> {
+export function blockRegistry(payload: Payload): Map<string, Block> {
   return new Map((payload.config.blocks ?? []).map((block) => [block.slug, block]))
 }
 

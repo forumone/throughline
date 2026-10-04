@@ -3,6 +3,7 @@ import { findAuditWriter } from '../audit/plugin.js'
 import { unknownFieldNames } from './describe.js'
 import type { ContentPluginOptions } from './options.js'
 import { CONTENT_READ_TOOL_DESCRIPTORS, createContentReadTools } from './tools.js'
+import { CONTENT_WRITE_TOOL_DESCRIPTORS, createContentWriteTools } from './write.js'
 
 /**
  * The content tools: what an agent reads before it writes a draft, and — in
@@ -28,7 +29,10 @@ export function contentPlugin(options: ContentPluginOptions): Plugin {
     if (options.enabled === false) return incoming
 
     // Declared at config time so `mcpPlugin` makes a checkbox per tool; bound at `onInit`.
-    options.mcpTools?.declare(CONTENT_READ_TOOL_DESCRIPTORS, { serverName: 'content' })
+    options.mcpTools?.declare(
+      [...CONTENT_READ_TOOL_DESCRIPTORS, ...CONTENT_WRITE_TOOL_DESCRIPTORS],
+      { serverName: 'content' },
+    )
 
     return {
       ...incoming,
@@ -40,13 +44,17 @@ export function contentPlugin(options: ContentPluginOptions): Plugin {
         )
         if (!options.mcpTools) return
         const audit = findAuditWriter(payload)
+        const deps = {
+          payload,
+          collections: options.collections,
+          related: options.related ?? {},
+          ...(options.canUse ? { canUse: options.canUse } : {}),
+        }
         options.mcpTools.add(
-          createContentReadTools({
-            payload,
-            collections: options.collections,
-            related: options.related ?? {},
-            ...(options.canUse ? { canUse: options.canUse } : {}),
-          }),
+          [
+            ...createContentReadTools(deps),
+            ...createContentWriteTools({ ...deps, ...(audit ? { audit } : {}) }),
+          ],
           { serverName: 'content', ...(audit ? { audit } : {}) },
         )
       },

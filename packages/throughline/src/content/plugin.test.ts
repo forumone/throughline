@@ -4,6 +4,7 @@ import { createMcpToolCollector } from '../mcp/collector.js'
 import { withPublishRequirements } from '../throughline.js'
 import { assertContentOptions, contentPlugin } from './plugin.js'
 import { CONTENT_READ_TOOL_DESCRIPTORS } from './tools.js'
+import { CONTENT_WRITE_TOOL_DESCRIPTORS } from './write.js'
 
 const config = {
   collections: [
@@ -20,11 +21,11 @@ const config = {
 const collections = config.collections as NonNullable<Config['collections']>
 
 describe('contentPlugin', () => {
-  it('declares its four tools as the config is built, so every key gets a checkbox for each', async () => {
+  it('declares its tools as the config is built, so every key gets a checkbox for each', async () => {
     const mcpTools = createMcpToolCollector()
     await contentPlugin({ collections: { pages: { fields: ['title', 'slug'] } }, mcpTools })(config)
     expect(mcpTools.tools.map((tool) => tool.name)).toEqual(
-      CONTENT_READ_TOOL_DESCRIPTORS.map((tool) => tool.name),
+      [...CONTENT_READ_TOOL_DESCRIPTORS, ...CONTENT_WRITE_TOOL_DESCRIPTORS].map((tool) => tool.name),
     )
     expect(mcpTools.servers).toEqual(['content'])
   })
