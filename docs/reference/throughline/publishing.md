@@ -6,7 +6,7 @@ Policy-gated publishing server for Throughline. The trust boundary that decides 
 
 ## What this package provides
 
-- **A publish pipeline** — `exist` → `composition` → `accessibility` → `required-fields` → `embargo` → `approval` → `execute`. The first step to object stops the publish and reports which one, why, and what to do about it.
+- **A publish pipeline** — `exist` → `composition` → `accessibility` → `required-fields` → `link-targets` → `embargo` → `approval` → `execute`. The first step to object stops the publish and reports which one, why, and what to do about it.
 - **A trust boundary** — a `beforeChange` hook on every configured collection that rejects direct writes to `_status`. The pipeline is the only sanctioned way to publish.
 - **Admin controls** — Publish and Unpublish buttons that run the pipeline as the logged-in editor, and a Schedule control. Installed automatically; no host-side code.
 - **Scheduled publishing** — declare a `date` field named `scheduledPublishAt` (or your `scheduledPublishField`) on a collection and the plugin renders it as a Schedule control, runs the pipeline's checks when a time is picked, and sends `content/page.scheduled` whenever the time changes. Pair it with `createPublishAtScheduledTimeFunction` from `@forumone/throughline/publishing`, which publishes at that time. A publish or unpublish clears the field.
@@ -162,7 +162,7 @@ await payload.update({
 })
 ```
 
-It skips composition, accessibility, required-field, embargo, and approval checks. Nothing in the admin path uses it.
+It skips composition, accessibility, required-field, link-target, embargo, and approval checks. Nothing in the admin path uses it.
 
 A create carrying `bypassPublishingServer` may be published at once, for a seed.
 
@@ -223,6 +223,46 @@ The recipe is read past access control, so a draft recipe fails for not being ap
 The composition step also refuses an **empty block** (`empty-block`): one whose contract has content to fill (text, rich text, a link, an image, a video, an array or a group), every piece of which is empty. Without it, a call to action with no heading, label or link publishes as an empty band. It doesn't apply to a component with no content fields, or one that fetches its own data. Settings such as a select or a checkbox don't count as content.
 
 The composition step also checks **placement** for every block. A component whose contract places it only `inline` (inside another component) can't stand on a page by itself.
+
+## Links to pages readers can't see
+
+An internal link stores a relationship, and the page resolves it when it is read. If the page it goes to is a draft, in the trash, or deleted, the link renders as nothing or as a 404. The `link-targets` step refuses that publish (`code: 'link-targets'`) and names each link (forumone-2026#756).
+
+It reads the document's links, looks up every target (one query per collection, past access control, including the trash), and decides:
+
+| The target | Result | `rule` |
+| --- | --- | --- |
+| doesn't exist | error | `deleted` |
+| is in the trash | error | `trash` |
+| has drafts and isn't published | error | `draft` |
+| isn't published, but has a scheduled publish time | warning | — |
+| is published, or its collection has no drafts | passes | — |
+
+A schedule only counts in a collection this plugin publishes, because that is where it knows the `scheduledPublishField`. A warning doesn't block. It reaches the publish result's `warnings`, because a page that goes live with the page it links to is fine. A link back to the document being published is skipped.
+
+Each issue's `field` is the link's data path, such as `layout[2].items[0].href.reference`, so the admin marks the field. For a link in rich text, it is the rich-text field's path. The messages are for editors. They name the block by position and label, or the field by its label, and the target by its title (`admin.useAsTitle`) or its collection's singular label:
+
+> A link in block 3 (Card Grid) goes to "Annual report", which is a draft, so readers would get a page that doesn't exist. Publish "Annual report" first, or change the link.
+
+### What counts as a link
+
+The step uses the same structural walk as `/media`'s reference finder, through groups, arrays, tabs, blocks (including `blocksAsJSON` and `blockReferences`) and Lexical blocks. A link is one of these:
+
+- **A relationship field marked as a link target**, with `custom: { throughlineLinkTarget: true }`. Every link the design-system generator builds marks its `reference` like this. Mark your own hand-written link fields with `markLinkTarget`:
+
+  ```ts
+  import { markLinkTarget } from '@forumone/throughline/publishing'
+
+  markLinkTarget({ name: 'reference', type: 'relationship', relationTo: ['pages', 'posts'] })
+  ```
+
+  A marked field counts only when it is the live branch of its link. It is skipped when a sibling `mode` is set to anything other than `internal`, because a link switched to "Another site" keeps its old reference. If your link group uses a different shape, pass the rule yourself: `markLinkTarget(field, { when: (siblings) => siblings.type === 'reference' })`.
+
+- **An internal link in rich text**: a Lexical `link` or `autolink` node with `linkType: 'internal'`.
+
+Other relationships, such as an author or a list of related items, are not links.
+
+To switch the step off, use `linkTargets: { enabled: false }`. `linkTargetsIn(fields, data)` is exported too, if you want to list a document's links yourself.
 
 ## Custom accessibility checks
 

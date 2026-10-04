@@ -2,6 +2,7 @@ import { existStep } from './steps/exist.js'
 import { compositionStep } from './steps/composition.js'
 import { accessibilityStep } from './steps/accessibility.js'
 import { requiredFieldsStep } from './steps/required-fields.js'
+import { linkTargetsStep } from './steps/link-targets.js'
 import { embargoStep } from './steps/embargo.js'
 import { approvalStep } from './steps/approval.js'
 import { executeStep } from './steps/execute.js'
@@ -17,6 +18,8 @@ const PREFLIGHT_STEPS: OrderedStep[] = [
   { name: 'composition', step: compositionStep },
   { name: 'accessibility', step: accessibilityStep },
   { name: 'required-fields', step: requiredFieldsStep },
+  // The last content check, and the first to read other documents.
+  { name: 'link-targets', step: linkTargetsStep },
   { name: 'embargo', step: embargoStep },
   { name: 'approval', step: approvalStep },
 ]
@@ -38,13 +41,10 @@ const ORDERED_STEPS: OrderedStep[] = [
  * differs between the two callers, and that difference is the only reason there
  * are still two.
  *
- * One thing worth knowing before adding a step: a warning cannot currently reach
- * a *failure* envelope. `execute` is the only step that warns, it runs last, and
- * its two failure returns carry none — so `runPublishPipeline` spreading
- * warnings onto a failure is unreachable today. It is kept because the moment a
- * step both warns and fails, or an earlier step learns to warn, dropping them
- * would be silent. That is also why there is no test for it: the pipeline has no
- * way to produce the case.
+ * A warning can reach a *failure* envelope: `link-targets` warns about a link
+ * to a scheduled page and can fail on another link in the same run, and an
+ * earlier step's warnings are carried past a later failure. `runPublishPipeline`
+ * spreads them onto the failure so neither is dropped silently.
  */
 async function runSteps(
   context: PipelineContext,

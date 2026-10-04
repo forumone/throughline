@@ -17,6 +17,8 @@ It is published as part of `@forumone/throughline-design-system`, built to JavaS
 
 The overrides are the hand-written part. They cover the few places where a contract's content model and the component's props disagree, and the generator and the renderer read the same object, so a field renamed there is renamed in both.
 
+Every link the generator builds (`linkField`) is a group with a `mode`, a `reference` relationship to the site's `linkCollections`, and a `url`. The `reference` carries `custom: { throughlineLinkTarget: true }`. That marker is how Throughline's publish pipeline tells a link from any other relationship, and its `link-targets` step refuses a publish whose links go to a draft, trashed or deleted page. See [publishing](../throughline/publishing.md#links-to-pages-readers-cant-see).
+
 ## Testing a site's blocks
 
 A site's blocks can be wrong in ways no typecheck sees, and the first site on this package found each of these in production.

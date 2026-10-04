@@ -133,6 +133,11 @@ export function linkField(
         // this project's slugs; `CollectionSlug` is generated per app.
         relationTo: ctx.linkCollections as CollectionSlug[],
         admin: { condition: (_d, sibling) => sibling?.mode === 'internal' },
+        // Marks this as a link, so Throughline's publish pipeline checks that
+        // the page it goes to is published (`link-targets`). The key is
+        // `LINK_TARGET_KEY` in `@forumone/throughline`, written out here because
+        // this package does not depend on that one.
+        custom: { throughlineLinkTarget: true },
       },
       {
         name: 'url',

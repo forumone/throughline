@@ -660,6 +660,16 @@ describe('a link', () => {
     expect(reference.relationTo).toEqual(['pages', 'posts'])
   })
 
+  /*
+  forumone-2026#756. The marker is how Throughline's publish pipeline tells a
+  link from any other relationship, so a link to a draft or trashed page is
+  refused at publish rather than rendering as a 404.
+  */
+  it('marks the relationship as a link target', () => {
+    const reference = childNamed(linkField('href', context()), 'reference')
+    expect(reference.custom).toEqual({ throughlineLinkTarget: true })
+  })
+
   it('shows each destination field only for the mode that uses it', () => {
     const generated = linkField('href', context())
     const conditionOf = (name: string) =>

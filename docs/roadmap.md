@@ -196,7 +196,7 @@ Goal: The framework's trust boundary. Policy-gated publish pipeline wrapping Pay
 
 - [x] `packages/publishing/` scaffolded with options surface (PublishableCollection / AccessibilityCheck / ApprovalResolver), Zod-validated config, and resolveCollection helper
 - [x] Three built-in accessibility checks (alt text / heading hierarchy / link labels) + `accessibilityChecks` option for client extensions
-- [x] Seven-step pipeline (exist / composition / accessibility / required-fields / embargo / approval / execute) with `runPublishPipeline` and `runPreflightPipeline`
+- [x] Seven-step pipeline (exist / composition / accessibility / required-fields / embargo / approval / execute; `link-targets` since forumone-2026#756) with `runPublishPipeline` and `runPreflightPipeline`
 - [x] Composition step calls the components plugin's validator in-process via `Symbol.for('@forumone/throughline/components-validator')`
 - [x] `beforeChange` hook injected on every publishable collection rejects direct `_status` writes unless the request carries the bypass context flag
 - [x] Five MCP tools: `publish`, `unpublish`, `schedule_publish`, `get_publish_status` (read-only), `rollback`. Each takes `_meta` and writes `publishing.*` audit records (except `get_publish_status`).
