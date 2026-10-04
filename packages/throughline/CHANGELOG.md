@@ -1,5 +1,52 @@
 # @forumone/throughline
 
+## 2.2.0
+
+### Minor Changes
+
+- 623d42c: Messages an editor can read now make sense to an editor: they say what happened in the editor's terms, what to do next, and to "tell a site administrator" when only somebody else can fix it. (forumone-2026#805)
+
+  - **The publish-blocked notification lists issues where the editor finds them.** It no longer starts "Blocked at: composition", lists `layout[2]: …` or `(root): …`, or prefixes "Suggestion:". Every pipeline issue gains `where`, its `field` as the collection's labels say it — `Block 3 (Image Hero) › Image`, `SEO › Title` — computed from the field config for built-in and custom checks alike, and the admin prints it before the message. An issue marked on an ancestor field (three blocks' problems on `layout`) says which block it is about.
+  - **Components are named by their block's label,** not their contract name. The composition validator takes a `label` function; the publish step passes each block's `labels.singular`, and the `validate_composition` MCP tool keeps contract names. `componentDisplayName` (`ImageHero` → `Image Hero`) is exported from `@forumone/throughline-design-system/contract`.
+  - **Every step's wording is rewritten** — not found, already published, composition, accessibility, required fields, embargo, expiry, approval, document locked (now naming who holds the lock), field validation — as are the individual checks (alt text, link text, SEO title and description, slug) and the composition rules (unknown component, unknown variant, forbidden neighbours, maximum per page, placement, recipes, empty block). Tests and hosts asserting the old strings need updating; `code`, `rule`, `failedAt` and `field` are unchanged.
+  - **Setup problems no editor can fix** (`components-server-missing`, `approval-resolver-missing`, a collection not registered as publishable) say to tell a site administrator. The setup instruction moves to a new `detail` field, which is logged and still returned to MCP callers.
+  - **Dates read like dates.** An embargo's end or an expiry is written `Tue 6 Oct 2026, 1:00 pm UTC` in the zone set by the new `publishing.timeZone` option (IANA, default `UTC`), and returned as `when: { at, text }`; the admin rewrites it into each editor's own zone.
+  - **Connection and server problems** in the admin say whether anything changed and what to do. A malformed request to the publishing endpoints reads as an unexpected problem, with the specifics in `detail`.
+  - **Unpublish, schedule and cancel** results carry a `code` (`not-found`, `not-published`, `not-scheduled`, `invalid-time`, `time-in-past`), and cancelling a schedule when nothing was scheduled no longer reports success. The trust boundary's refusal of a direct `_status` write (bulk publish, restore as published) tells the editor to use the document's own Publish or Unpublish button.
+  - **A failed event after a publish** warns in terms of what the editor will see; which event and why go to the log.
+  - **Composition warnings are no longer dropped.** A component missing the sibling its contract `requiredSiblings` names now reaches the publish result's `warnings`.
+  - **The one-hero check fires.** `heading-hierarchy` matched only a block typed `hero`, which no design system has, so it never ran. It now counts blocks whose contract `category` is `hero` (custom checks receive a third `context` argument with the components), falling back to the old match without the components plugin.
+  - **The in-use refusal reaches the editor.** It was a non-public 500, which Payload replaces with "Something went wrong."; it is now a public 503. Its list names each document's collection by its singular label and the place by its field labels: `• Case Study › Acme rebrand (Layout › Block 2 (Card Grid) › Card 1 › Image)`. References carry `dataPath` and `where`.
+  - **`refuseSlugHeldInTrash`, `refuseMimeTypesOutside` and `refuseStorageKeyMismatch`** pass `req.t` to `ValidationError`, so a site's translation of "The following field is invalid:" applies. The upload-path refusals are rewritten, and the two storage paths are logged instead of shown.
+  - **Integrations:** an unknown type or invalid settings is now an `APIError` 400, which Payload shows, instead of an `Error` it replaced with "Something went wrong.". `lastError` opens with a one-line summary anybody can read before the integration's own detail.
+  - **Approval links:** an invalid, expired or withdrawn link says so in plain words and what to do; why a token failed goes to the log.
+  - **Generated blocks:** the "needed once anything else here is filled in" message names fields by their label ("Video URL"), not their name (`src`).
+
+- 623d42c: Error toasts stay until they are read, and a failed save takes the editor to the field that is wrong. (forumone-2026#805)
+
+  - **Go to the first error.** After a Save, Publish or Schedule that fails — never after an autosave — the admin opens the tab or collapsed block or array row the first invalid field is in, scrolls it into view below the sticky header (a jump instead of a smooth scroll under `prefers-reduced-motion`) and focuses its input. The publishing plugin registers it as `FirstErrorProvider` in `admin.components.providers`; `publishing.goToFirstError: false` leaves it out. `goToFirstError()` is exported from `@forumone/throughline/client` for a host's own controls.
+  - **Run `payload generate:importmap` after upgrading.** A provider missing from the import map renders nothing, and since a provider wraps the whole admin, the admin would render blank.
+  - **Errors stay until closed, and replace rather than stack.** The Publish, Unpublish, Schedule and Sync controls' error toasts last until dismissed and carry a stable id per document, so a second click replaces the first toast. A blocked publish or schedule with marked fields has a **Show me** action. A success clears the error.
+  - **Cancelling a schedule when nothing was scheduled** says "There was nothing scheduled." rather than "Schedule cancelled". The Schedule control's other text is rewritten too, and its times use the same `Tue 6 Oct 2026, 9:00 am EDT` form as every other date.
+
+- 332baf9: Publishing refuses a page whose internal links go to a draft, trashed or deleted document (forumone-2026#756). A new pipeline step, `link-targets`, runs after `required-fields` and looks up every link's target. A deleted target, a trashed one, or an unpublished one in a collection with drafts blocks the publish (`code: 'link-targets'`). Each issue names the block or field and the target's title, and its `field` is the link's own path, so the admin marks it. An unpublished target with a scheduled publish time is a warning, not a block.
+
+  **This is a new blocking step, and it's on by default.** After upgrading, a page that already links to a draft or trashed page can't be published until the link is fixed. `get_publish_status` and `check` report it like any other blocker. To switch it off, set `publishing: { linkTargets: { enabled: false } }`.
+
+  A link is either an internal link in Lexical rich text, or a relationship field marked with `custom: { throughlineLinkTarget: true }`. The design-system generator's `linkField` now marks its `reference`, so every generated link is covered without changes. To cover a hand-written link field, wrap it in `markLinkTarget` from `@forumone/throughline/publishing`. A marked reference whose sibling `mode` isn't `internal` is ignored, and `markLinkTarget(field, { when })` takes a different rule. The structural walk behind `referencesIn` is now `walkDocument`, exported from `/media` along with `linkTargetsIn`.
+
+- a9d4873: The `link-targets` publish step now checks links inside composed sections (forumone-2026#756). A composed section stores its content as JSON, one value per field its recipe declares, so before this change a landing page whose composed-section link went to a draft, trashed or deleted page published without a warning. With `publishing.recipes` configured, the step reads every recipe the document uses in one query. It then walks each block's content by the recipe's `contract.content.fields`: a `link` (`{ mode, reference: { relationTo, value } }`, with the same `mode` rule as a generated link), internal links in a `richtext` field, and both of those inside a `group` or `array`. The verdicts and messages are the same as for any other link. The issue's `field` is the content field's path (`layout[2].content`), and its `where` is the block (`Block 3 (Composed section)`). `composedRecipeIds` and the `composed` option of `linkTargetsIn` are exported from `/media`.
+
+  A new subpath, `@forumone/throughline/links`, exports `markLinkTarget`, `LINK_TARGET_KEY` and `linkTargetMarker`. It imports nothing at run time, so a link-field helper that a `'use client'` module also imports can mark its reference. `/publishing` still exports `markLinkTarget` and `LINK_TARGET_KEY`.
+
+  `/integrations` now exports `LAST_ERROR_SUMMARY`, `lastErrorText`, `lastErrorDetail` and `statusUpdateData`, so a site can test what an integration's `lastError` will say.
+
+### Patch Changes
+
+- Updated dependencies [623d42c]
+- Updated dependencies [332baf9]
+  - @forumone/throughline-design-system@2.2.0
+
 ## 2.1.0
 
 ### Minor Changes
