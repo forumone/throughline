@@ -82,7 +82,12 @@ export function createOverrideAuth(runtime: McpOAuthRuntime): OverrideAuth {
 
       const tools = toolsFor(result.user, policy, runtime)
       return {
-        user: { ...result.user, collection: runtime.users, _strategy: MCP_OAUTH_STRATEGY },
+        user: {
+          ...result.user,
+          collection: runtime.users,
+          _strategy: MCP_OAUTH_STRATEGY,
+          _mcpClient: String(result.grant['clientName'] ?? ''),
+        },
         'payload-mcp-tool': Object.fromEntries(tools.map((name) => [toCamelCase(name), true])),
         'payload-mcp-prompt': Object.fromEntries(
           runtime.prompts.map((prompt) => [toCamelCase(prompt.name), true]),

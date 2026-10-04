@@ -128,6 +128,8 @@ export function grantsCollection(runtime: McpOAuthRuntime, group: string): Colle
       defaultColumns: ['clientName', 'user', 'status', 'lastUsedAt', 'connectedAt'],
       description:
         'Every app somebody has connected over MCP, as them. Revoking one signs that app out at once.',
+      // Everybody else sees their own on Connect MCP, which is where they look.
+      hidden: ({ user }) => !(user && runtime.isAdmin(user as unknown as UserDoc)),
     },
     access: {
       read: ownOrAdmin(runtime),
