@@ -1,6 +1,6 @@
 {
   "name": "@forumone/throughline-design-system",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "The design-system side of Throughline: the component contract and manifest a design system publishes, its linter, and the Payload blocks, rendering and admin components generated from it.",
   "type": "module",
   "exports": {
