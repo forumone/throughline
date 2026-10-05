@@ -8,6 +8,8 @@ import { formatZodIssues } from '../utils/zod-issues.js'
 import { editBlocksInput } from '../content/blocks.js'
 import { AUTHORING_TOOLS } from './descriptors.js'
 import { valueShapes } from '../content/values.js'
+import { describeFields, type FieldDescription } from '../content/describe.js'
+import { requestAs } from '../content/tools.js'
 
 /*
 The eight authoring tools. Each picks the module tool that does what it was
@@ -25,6 +27,11 @@ export interface AuthoringDeps {
   contentTypes: readonly string[]
   /** What `find` can look up with `kind`, e.g. people, media. */
   kinds: readonly string[]
+  /**
+   * Collection slug → the `find` kind that searches it, so `design_guide` can
+   * say how to fill a relationship a site adds to a block.
+   */
+  findWith?: ReadonlyMap<string, string>
   /** The approver groups a request may go to. Empty when approvals are off. */
   approverGroups: readonly { slug: string; name: string }[]
   /** Who may take something live. Default: an admin or an editor. */
@@ -42,6 +49,46 @@ export function defaultCanPublish(ctx: McpToolContext): boolean {
 }
 
 type Result = Record<string, unknown>
+
+/*
+The fields a site adds to a block, beyond the component's contract.
+
+The contract is the design system's; the block is the site's, and a site can
+give a block fields no contract has. forumone-2026's form blocks carry
+`source.form`, the HubSpot form they submit to. `design_guide` returned the
+contract alone, so an agent never learned that field existed. It added a form
+block, filled the heading and intro, and left the form empty, which saves and
+publishes as a section with no form. forumone-2026#840.
+
+Described the way `get` describes a content type, `findWith` included, so the
+agent knows what goes in a field and where to look it up. Hidden fields are left
+out: they are the site's to fill.
+*/
+async function blockSiteFields(
+  deps: AuthoringDeps,
+  component: string,
+  contract: Result,
+  ctx: McpToolContext,
+): Promise<FieldDescription[]> {
+  const blocks = deps.payload.config?.blocks ?? []
+  const block = blocks.find((each) => each.slug === component)
+  if (!block) return []
+  const content = (contract['content'] ?? {}) as { fields?: { name?: unknown }[] }
+  const declared = new Set((content.fields ?? []).map((field) => field.name))
+  const extra = block.fields.filter(
+    (field) =>
+      'name' in field &&
+      typeof field.name === 'string' &&
+      !declared.has(field.name) &&
+      !(field.admin as { hidden?: boolean } | undefined)?.hidden,
+  )
+  if (extra.length === 0) return []
+  return describeFields(extra, {
+    blocks: new Map(blocks.map((each) => [each.slug, each])),
+    req: await requestAs(deps.payload, ctx),
+    findWith: deps.findWith ?? new Map(),
+  })
+}
 
 /** Calls a module tool's handler, parsing the input against its own schema. */
 export async function delegate(
@@ -281,7 +328,8 @@ function checkTool(deps: AuthoringDeps) {
         { collection: input.collection, id: String(input.id) },
         ctx,
       )
-      const blockers = ((status['wouldPublish'] as Result | undefined)?.['blockers'] ?? []) as Result[]
+      const blockers = ((status['wouldPublish'] as Result | undefined)?.['blockers'] ??
+        []) as Result[]
       if (!blockers.some((b) => b['code'] === 'approval-required')) return status
       const pending = await pendingApproval(deps, input.collection, input.id, ctx)
       return pending
@@ -487,9 +535,13 @@ function designGuideTool(deps: AuthoringDeps) {
     handler: async (input: z.infer<typeof inputSchema>, ctx: McpToolContext) => {
       if (input.component) {
         const contract = await delegate(deps.inner, 'get_contract', { name: input.component }, ctx)
-        return 'error' in contract
-          ? contract
-          : { ...contract, valueShapes: valueShapes({ blockRichText: Boolean(deps.blockRichText) }) }
+        if ('error' in contract) return contract
+        const siteFields = await blockSiteFields(deps, input.component, contract, ctx)
+        return {
+          ...contract,
+          valueShapes: valueShapes({ blockRichText: Boolean(deps.blockRichText) }),
+          ...(siteFields.length > 0 ? { siteFields } : {}),
+        }
       }
       if (input.intent) {
         return delegate(
