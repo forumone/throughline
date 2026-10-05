@@ -141,6 +141,8 @@ export function lintRecipe(input: unknown, manifest: Manifest): RecipeIssue[] {
     error(walk, 'tree', 'tree.size', `${walk.nodes} nodes; a recipe has at most ${MAX_NODES}.`)
   }
 
+  lintRhythm(recipe.tree, 'tree', new Map(), walk)
+
   let previous = 1
   for (const heading of walk.headings) {
     if (heading.level > previous + 1) {
@@ -373,4 +375,61 @@ function bound(name: string, path: string, walk: Walk): ContentField | undefined
   }
   walk.used.add(name)
   return field
+}
+
+/*
+Things that belong together sit closer than the things around them.
+
+A Stack inside a Stack is a group inside a larger arrangement: a column's
+heading and text, inside a section's heading, columns and button. If the inner
+gap is as wide as the outer one, the eye cannot tell which text belongs to
+which heading, and the section reads as an even list of lines. That is the
+failure in forumone-2026#847, where it was the margins rather than the gaps,
+and it is the one an agent choosing gaps one Stack at a time can make on its
+own. A layout nested in one of the same kind, spaced along the same axis, must
+use a smaller gap than the one around it.
+
+Only the same kind is compared: a Cluster's gap runs across, a Stack's down,
+and a Grid's is the site's gutter. Gaps are compared by their step on the
+spacing scale, the number at the end of the token's name; a token without one
+is not compared.
+*/
+function gapStep(value: unknown): number | undefined {
+  if (typeof value !== 'string') return undefined
+  const match = /-(\d+)$/.exec(value)
+  return match ? Number(match[1]) : undefined
+}
+
+function lintRhythm(
+  node: RecipeNode,
+  path: string,
+  around: ReadonlyMap<string, { gap: string; step: number; path: string }>,
+  walk: Walk,
+): void {
+  if (isComponentNode(node)) return
+  const primitive = walk.manifest.primitives?.[node.primitive]
+  if (!primitive) return
+
+  let inner = around
+  const gapProp = primitive.props['gap']
+  if (gapProp && gapProp.type === 'token') {
+    const gap = String(node.props?.['gap'] ?? gapProp.default ?? '')
+    const step = gapStep(gap)
+    if (step !== undefined) {
+      const outer = around.get(primitive.name)
+      if (outer && step >= outer.step) {
+        error(
+          walk,
+          `${path}.props.gap`,
+          'spacing.rhythm',
+          `This ${primitive.name}'s ${gap} is as wide as or wider than the ${outer.gap} of the ${primitive.name} around it, so nothing in it reads as belonging together. Make it smaller than ${outer.gap}: a heading and its text are usually spacing-2.`,
+        )
+      }
+      inner = new Map(around).set(primitive.name, { gap, step, path })
+    }
+  }
+
+  for (const [name, children] of Object.entries(node.slots ?? {})) {
+    children.forEach((child, index) => lintRhythm(child, `${path}.slots.${name}[${index}]`, inner, walk))
+  }
 }
