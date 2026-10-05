@@ -661,6 +661,7 @@
     "FieldOverride": ["@forumone/throughline-design-system/generate"],
     "GenerateOptions": ["@forumone/throughline-design-system/generate"],
     "GeneratedBlock": ["@forumone/throughline-design-system/generate"],
+    "IncompleteBlock": ["@forumone/throughline-design-system/render"],
     "LinkValue": ["@forumone/throughline-design-system/render"],
     "LintIssue": [
       "@forumone/throughline-design-system/contract",
@@ -738,6 +739,7 @@
     "lintRecipe": ["@forumone/throughline-design-system/recipes"],
     "loadManifest": ["@forumone/throughline-design-system/contract"],
     "loadManifestFromUrl": ["@forumone/throughline-design-system/contract"],
+    "missingRequiredImages": ["@forumone/throughline-design-system/render"],
     "pairTitle": ["@forumone/throughline-design-system/generate"],
     "storedObject": ["@forumone/throughline-design-system/testing"],
     "storedValue": ["@forumone/throughline-design-system/testing"],

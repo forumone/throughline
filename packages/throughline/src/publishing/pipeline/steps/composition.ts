@@ -4,7 +4,9 @@ import type { CollectionSlug } from 'payload'
 import type { RecipeGateOptions } from '../../options.js'
 import { PUBLISHING_UNAVAILABLE, TELL_AN_ADMINISTRATOR, plural } from '../../messages.js'
 import type { PipelineContext, PipelineIssue, PipelineStep } from '../types.js'
-import { blockLabel, fieldConfigFor } from '../where.js'
+import { blockLabel, describeFieldPath, fieldConfigFor } from '../where.js'
+import { findBlock, findField } from '../../../utils/field-path.js'
+import { emptyRequiredFields } from './required-in-blocks.js'
 
 /**
  * Symbol the Component Server's plugin (C5) attaches its composition
@@ -124,19 +126,34 @@ export const compositionStep: PipelineStep = async (ctx) => {
   const manifest = (ctx.payload as unknown as Record<symbol, unknown>)[COMPONENTS_MANIFEST_SYMBOL] as
     | (() => Promise<Manifest>)
     | undefined
-  if (manifest) {
-    const components = (await manifest()).components
-    for (const [index, block] of typed.entries()) {
-      if (gate && block.blockType === gate.blockType) continue
-      const empty = emptyBlock(components[block.blockType], block)
-      if (empty) {
-        errors.push({
-          severity: 'error',
-          rule: 'empty-block',
-          message: `This ${blockLabel(config, block.blockType)} block is empty, so it would show as a blank band on the page. Fill it in or remove it.`,
-          field: `${ctx.collection.layoutField}[${index}]`,
-        })
-      }
+  const components = manifest ? (await manifest()).components : undefined
+  const layout = config ? findField(config.fields, ctx.collection.layoutField)?.field : undefined
+  for (const [index, block] of typed.entries()) {
+    if (gate && block.blockType === gate.blockType) continue
+    const at = `${ctx.collection.layoutField}[${index}]`
+    const component = components?.[block.blockType]
+    if (components && emptyBlock(component, block)) {
+      errors.push({
+        severity: 'error',
+        rule: 'empty-block',
+        message: `This ${blockLabel(config, block.blockType)} block is empty, so it would show as a blank band on the page. Fill it in or remove it.`,
+        field: at,
+      })
+      continue
+    }
+    /*
+    Started but not finished: a required field inside it is empty. See
+    `required-in-blocks.ts` (forumone-2026#840).
+    */
+    const blockConfig = layout && config ? findBlock(layout, block.blockType, config) : undefined
+    for (const path of emptyRequiredFields(blockConfig?.fields, component?.content.fields, block, at)) {
+      const where = config ? describeFieldPath(path, config, ctx.document) : undefined
+      errors.push({
+        severity: 'error',
+        rule: 'required-field',
+        message: `${where ?? path} is required before this can be published.`,
+        field: path,
+      })
     }
   }
 
