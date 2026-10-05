@@ -9,6 +9,7 @@ import { slugify } from '../fields/slug.js'
 import { topLevelFields, writableFields } from './describe.js'
 import type { RichTextSource } from './options.js'
 import { checkValues, valueRefusal } from './values.js'
+import { materializeImages, type CreatedImage, type ImageRequest } from './images.js'
 import {
   compositionErrors,
   disallowedBlocks,
@@ -97,6 +98,7 @@ async function checkWrite(
   collection: string,
   data: Record<string, unknown>,
   current: Record<string, unknown>,
+  images: ImageRequest[],
 ): Promise<Checked | undefined> {
   const options = deps.collections[collection]!
   const refused = refusedFields(data, options.fields)
@@ -144,6 +146,7 @@ async function checkWrite(
   // Every value below the top level, in the shape its field takes. #832.
   const problems = await checkValues(fields, data, {
     registry,
+    images,
     ...(deps.blockRichText ? { blockRichText: deps.blockRichText } : {}),
   })
   if (problems.length > 0) return valueRefusal(problems)
@@ -169,6 +172,33 @@ async function checkWrite(
     }
   }
   return undefined
+}
+
+/**
+ * The write's image instructions, turned into media documents just before it
+ * is saved — after every check, so a refused write uploads nothing. #845.
+ */
+export async function createImages(
+  deps: ContentToolDeps,
+  ctx: McpToolContext,
+  images: readonly ImageRequest[],
+): Promise<{ created: CreatedImage[] } | Checked> {
+  if (images.length === 0) return { created: [] }
+  const made = await materializeImages(deps.payload, images, {
+    user: userOf(ctx) as Record<string, unknown> | undefined,
+    placeholders: deps.placeholderImages,
+  })
+  if ('error' in made) {
+    return made.created.length > 0
+      ? { error: made.error, imagesAlreadyInLibrary: made.created }
+      : { error: made.error }
+  }
+  return made
+}
+
+/** A saved draft's result, with the images the write added to the library. */
+function withImages(result: Record<string, unknown>, created: readonly CreatedImage[]) {
+  return created.length > 0 && !('error' in result) ? { ...result, imagesCreated: created } : result
 }
 
 /** `{ markdown }` or `{ html }`, and nothing beside it. */
@@ -288,7 +318,8 @@ export function createCreateDraftTool(
       if (!options || !config) return unknownCollection(deps, input.collection)
 
       const data = { ...input.data }
-      const checked = await checkWrite(deps, ctx, input.collection, data, {})
+      const images: ImageRequest[] = []
+      const checked = await checkWrite(deps, ctx, input.collection, data, {}, images)
       if (checked) return checked
 
       if (hasSlugField(config.fields) && options.fields.includes('slug')) {
@@ -304,6 +335,9 @@ export function createCreateDraftTool(
         if (taken) return taken
         data['slug'] = slugify(slug)
       }
+
+      const made = await createImages(deps, ctx, images)
+      if ('error' in made) return made
 
       const req = await requestAs(deps.payload, ctx)
       let doc: Record<string, unknown>
@@ -340,6 +374,7 @@ export function createCreateDraftTool(
         ...(typeof doc['slug'] === 'string' ? { slug: doc['slug'] } : {}),
         adminUrl: adminUrl(deps.payload, input.collection, id),
         previewUrl: await previewUrl(deps.payload, input.collection, doc, req),
+        ...(made.created.length > 0 ? { imagesCreated: made.created } : {}),
         next: 'Run `check` before offering to publish.',
       }
     },
@@ -379,7 +414,8 @@ export function createUpdateDraftTool(
         input.patch,
         writableFields(config.fields, options.fields),
       )
-      const checked = await checkWrite(deps, ctx, input.collection, data, current)
+      const images: ImageRequest[] = []
+      const checked = await checkWrite(deps, ctx, input.collection, data, current, images)
       if (checked) return checked
 
       if (typeof data['slug'] === 'string' && slugify(data['slug']) !== current['slug']) {
@@ -388,14 +424,20 @@ export function createUpdateDraftTool(
         data['slug'] = slugify(data['slug'])
       }
 
-      return saveDraft(deps, ctx, {
-        collection: input.collection,
-        id: input.id,
-        data,
-        tool: CONTENT_WRITE_TOOLS.updateDraft.name,
-        changed: Object.keys(input.patch),
-        meta: input._meta,
-      })
+      const made = await createImages(deps, ctx, images)
+      if ('error' in made) return made
+
+      return withImages(
+        await saveDraft(deps, ctx, {
+          collection: input.collection,
+          id: input.id,
+          data,
+          tool: CONTENT_WRITE_TOOLS.updateDraft.name,
+          changed: Object.keys(input.patch),
+          meta: input._meta,
+        }),
+        made.created,
+      )
     },
   }
 }

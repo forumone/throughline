@@ -32,6 +32,11 @@ const ALWAYS = [
   'Nothing goes live without my say-so: save drafts, run `check`, show me the preview link, and ask before calling `publish`.',
   'Use only fields and blocks `get` lists for the content type, and fill each block from its contract in `design_guide`.',
   'If `check` reports blockers, fix them all, then run it again.',
+  /*
+  An empty image slot no longer publishes, and an agent with no image used to
+  leave it empty and say nothing. forumone-2026#845.
+  */
+  'When a block needs an image, look for one with `find` (kind "media"). If there is none that fits, ask me rather than leave it empty, and offer three choices: I upload it (give me `uploadUrl` from `get`, then ask for the address of the saved image), I give you a link to it (use { importUrl, alt }), or you put in a placeholder ({ placeholder: { alt, label } }), which I replace before it can be published.',
 ].join(' ')
 
 export const AUTHORING_PROMPTS: PayloadMcpPrompt[] = [

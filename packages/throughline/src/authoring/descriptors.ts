@@ -26,7 +26,7 @@ export const AUTHORING_TOOLS = {
   saveDraft: {
     name: 'save_draft',
     description:
-      'Saves a draft. Without `id` it creates one: a new document from `data`, with a slug made from the title if none is given. With `id` it changes only the fields in `data` (a group is merged, an array or blocks field is replaced) and leaves the published version alone. Never publishes. Rich text takes { markdown } or { html }. Returns the id and a preview link.',
+      'Saves a draft. Without `id` it creates one: a new document from `data`, with a slug made from the title if none is given. With `id` it changes only the fields in `data` (a group is merged, an array or blocks field is replaced) and leaves the published version alone. Never publishes. Rich text takes { markdown } or { html }. An image takes a media id, or { importUrl, alt }, { file: { base64, filename }, alt } or { placeholder: { alt, label } }, which become media. Returns the id and a preview link.',
   },
   editBlocks: {
     name: 'edit_blocks',

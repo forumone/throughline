@@ -278,6 +278,9 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
         ...rest,
         ...logger,
         ...(options.recipes ? { recipes: options.recipes } : {}),
+        ...(options.content?.placeholderImages
+          ? { placeholderImages: options.content.placeholderImages }
+          : {}),
         collections: collections.map((slug) => ({
           slug,
           ...(seoField ? { seoField } : {}),

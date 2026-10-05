@@ -1,5 +1,6 @@
 import type { Block, Field } from 'payload'
 import { describe, expect, it, vi } from 'vitest'
+import type { ImageRequest } from './images.js'
 import { checkValues, linkShape, valueRefusal, valueShapes } from './values.js'
 
 /*
@@ -158,5 +159,59 @@ describe('shapes', () => {
     expect(valueShapes({ blockRichText: true }).richtext).toContain('{ markdown: "…" }')
     expect(valueShapes({ blockRichText: false }).richtext).toContain('not a string or Markdown')
     expect(valueShapes({ blockRichText: false }).link).toContain('Never a plain string')
+  })
+})
+
+describe('an image the agent does not have (#845)', () => {
+  const card: Block = {
+    slug: 'Card',
+    fields: [{ name: 'image', type: 'upload', relationTo: 'media' }],
+  }
+  const withImages: Field[] = [{ name: 'layout', type: 'blocks', blocks: [card] }]
+
+  it('collects an instruction, checked but not acted on', async () => {
+    const images: ImageRequest[] = []
+    const row = { blockType: 'Card', image: { placeholder: { alt: 'The team' } } }
+    const problems = await checkValues(withImages, { layout: [row] }, { registry, images })
+    expect(problems).toEqual([])
+    expect(images).toEqual([
+      expect.objectContaining({
+        path: 'layout[0].image',
+        collection: 'media',
+        holder: row,
+        name: 'image',
+      }),
+    ])
+  })
+
+  it('refuses a malformed one, and an object that is neither an id nor an instruction', async () => {
+    const images: ImageRequest[] = []
+    const problems = await checkValues(
+      withImages,
+      {
+        layout: [
+          { blockType: 'Card', image: { importUrl: 'https://example.com/a.jpg' } },
+          { blockType: 'Card', image: { url: '/a.jpg' } },
+        ],
+      },
+      { registry, images },
+    )
+    expect(problems.map((p) => p.path)).toEqual(['layout[0].image', 'layout[1].image'])
+    expect(problems[1]?.message).toContain('placeholder')
+    expect(images).toEqual([])
+  })
+
+  it('leaves an id, and a populated document, alone', async () => {
+    const problems = await checkValues(
+      withImages,
+      {
+        layout: [
+          { blockType: 'Card', image: 4 },
+          { blockType: 'Card', image: { id: 4, url: '/a.jpg' } },
+        ],
+      },
+      { registry, images: [] },
+    )
+    expect(problems).toEqual([])
   })
 })

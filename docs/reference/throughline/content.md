@@ -67,6 +67,22 @@ A blocks field is named by its path: `layout`, or `approach.blocks` for one insi
 - **Add a block the field doesn't offer, or break the composition rules.** A draft save skips Payload's field validation, in the admin and through the Local API alike, so these two checks from the block picker are made explicitly. The blocks come from the field's `filterOptions` (so blocks a document already holds stay allowed), and composition uses the same validator the publish pipeline runs. Required fields are checked at publish, as they are for an editor.
 - **Take a slug that's in use**, including one held by a document in the trash. The refusal suggests a free one.
 
+### An image the agent doesn't have
+
+An image field takes a media document's id. Where the agent has none, a write also takes one of three instructions. Each becomes a media document, created as the person, after every other check has passed and just before the save (forumone-2026#845):
+
+| Value | What happens |
+| --- | --- |
+| `{ importUrl, alt }` | Fetches a public `https://` image: no address on the local network, 15 MB at most, and only JPEG, PNG, WebP, GIF or AVIF. Then saves it to the image field's collection |
+| `{ file: { base64, filename }, alt }` | Uploads a file the agent can read, such as Claude Code with a path on the person's machine. The same types and limit apply |
+| `{ placeholder: { alt, label? } }` | Makes a gray, hatched PNG that says PLACEHOLDER and the label, with alt `Placeholder: …`, and marks it as a placeholder. This needs `placeholderImages` and Payload's `sharp` |
+
+The write's result lists what it made, under `imagesCreated`. A malformed instruction is refused with the rest of the write's values, and nothing is uploaded.
+
+Claude on the web and in Desktop can see an image pasted into a chat, but can't pass its bytes to a tool. So `describe_content_type` (`get`) also returns `uploadUrl`: the media collection's create screen, as a full URL. The person uploads the image there and pastes back the saved image's address, and the agent uses the id at the end of it. The authoring prompts tell the agent to offer all three choices instead of leaving a slot empty.
+
+**`placeholderImages: { collection, field? }`** turns placeholders on. The content plugin adds the checkbox (`placeholder` by default) to that collection, and `throughline()` passes the option to publishing. There, the `placeholder-images` step refuses a page that uses one and names each place: "Block 3 (Featured Work) › Item 2 › Image is a placeholder." The checkbox is a new column, so it needs a migration.
+
 Every write is recorded in the audit log as `content.create` or `content.update`, under the person's name, with the caller's `_meta`: `userPrompt`, `reasoning` and `changesSummary`.
 
 Every call runs as the person the API key belongs to, with `overrideAccess: false`. A key with nobody behind it is refused, and so is anyone without the `admin` or `editor` role, unless the site passes its own `canUse`.

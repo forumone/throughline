@@ -60,6 +60,13 @@ export interface ContentToolDeps {
   /** See `ContentPluginOptions.blockRichText`. */
   blockRichText?: RichTextConverter
   canUse?: (ctx: McpToolContext) => boolean
+  /** See `ContentPluginOptions.placeholderImages`, with its field resolved. */
+  placeholderImages?: { collection: string; field: string }
+}
+
+/** The collection a person uploads images to: the placeholder one, or the `media` kind's. */
+export function uploadCollection(deps: Pick<ContentToolDeps, 'placeholderImages' | 'related'>) {
+  return deps.placeholderImages?.collection ?? deps.related['media']?.collection
 }
 
 export function defaultCanUse(ctx: McpToolContext): boolean {
@@ -167,6 +174,16 @@ export function createDescribeContentTypeTool(
             : field,
         ),
         valueShapes: valueShapes({ blockRichText: Boolean(deps.blockRichText) }),
+        /*
+        Where a person uploads an image the agent does not have: the media
+        collection's create screen, made absolute on the way out. They save it
+        and give back its address; the id is its last part. #845.
+        */
+        ...(uploadCollection(deps)
+          ? {
+              uploadUrl: `${deps.payload.config.routes.admin}/collections/${uploadCollection(deps)}/create`,
+            }
+          : {}),
         ...(options.templateDraws?.length
           ? {
               templateDraws: options.templateDraws,

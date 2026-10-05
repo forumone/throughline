@@ -3,6 +3,7 @@ import { compositionStep } from './steps/composition.js'
 import { accessibilityStep } from './steps/accessibility.js'
 import { requiredFieldsStep } from './steps/required-fields.js'
 import { linkTargetsStep } from './steps/link-targets.js'
+import { placeholderImagesStep } from './steps/placeholder-images.js'
 import { embargoStep } from './steps/embargo.js'
 import { approvalStep } from './steps/approval.js'
 import { executeStep } from './steps/execute.js'
@@ -21,6 +22,7 @@ const PREFLIGHT_STEPS: OrderedStep[] = [
   { name: 'required-fields', step: requiredFieldsStep },
   // The last content check, and the first to read other documents.
   { name: 'link-targets', step: linkTargetsStep },
+  { name: 'placeholder-images', step: placeholderImagesStep },
   { name: 'embargo', step: embargoStep },
   { name: 'approval', step: approvalStep },
 ]

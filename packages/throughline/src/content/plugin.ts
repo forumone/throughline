@@ -39,8 +39,24 @@ export function contentPlugin(options: ContentPluginOptions): Plugin {
       { serverName: 'content' },
     )
 
+    const placeholders = options.placeholderImages
+      ? {
+          collection: options.placeholderImages.collection,
+          field: options.placeholderImages.field ?? 'placeholder',
+        }
+      : undefined
+
     return {
       ...incoming,
+      ...(placeholders && incoming.collections
+        ? {
+            collections: incoming.collections.map((collection) =>
+              collection.slug === placeholders.collection
+                ? withPlaceholderField(collection, placeholders.field)
+                : collection,
+            ),
+          }
+        : {}),
       onInit: async (payload) => {
         if (incoming.onInit) await incoming.onInit(payload)
         assertContentOptions(
@@ -56,6 +72,7 @@ export function contentPlugin(options: ContentPluginOptions): Plugin {
           ...(options.canUse ? { canUse: options.canUse } : {}),
           ...(options.composedBlockType ? { composedBlockType: options.composedBlockType } : {}),
           ...(options.blockRichText ? { blockRichText: options.blockRichText } : {}),
+          ...(placeholders ? { placeholderImages: placeholders } : {}),
         }
         options.mcpTools.add(
           [
@@ -99,5 +116,35 @@ export function assertContentOptions(
   }
   if (problems.length > 0) {
     throw new Error(`contentPlugin: ${problems.join('; ')}. Name fields as they are stored.`)
+  }
+}
+
+/*
+The checkbox that marks a placeholder image an agent made (#845). Read-only:
+it is set when the placeholder is made and is the publish pipeline's to read,
+and an image that replaces one is a new upload, not this one unticked. In the
+sidebar, where a person browsing the library sees why the image looks as it
+does.
+*/
+function withPlaceholderField(collection: CollectionConfig, name: string): CollectionConfig {
+  if (collection.fields.some((field) => 'name' in field && field.name === name)) return collection
+  return {
+    ...collection,
+    fields: [
+      ...collection.fields,
+      {
+        name,
+        type: 'checkbox',
+        label: 'Placeholder',
+        defaultValue: false,
+        index: true,
+        admin: {
+          position: 'sidebar',
+          readOnly: true,
+          description:
+            'A stand-in an agent made for an image nobody had yet. A page using it cannot be published until the image is replaced.',
+        },
+      },
+    ],
   }
 }
