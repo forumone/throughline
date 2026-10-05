@@ -246,3 +246,45 @@ describe('a bad recipe fails, saying where and why', () => {
     expect(errors(recipe).map((issue) => issue.rule)).toContain('tree.depth')
   })
 })
+
+/*
+Things that belong together sit closer than the things around them
+(forumone-2026#847): a Stack inside a Stack spaces its children more tightly
+than the one around it, or nothing in it reads as a group.
+*/
+describe('spacing rhythm', () => {
+  /** The good recipe's stack spaced `outer`, its heading and text in a nested stack spaced `inner`. */
+  function nested(outer: string, inner: string | undefined): Recipe {
+    return variant((r) => {
+      const stack = stackOf(r)
+      stack.props = { gap: outer }
+      const children = stack.slots!['children']!
+      stack.slots!['children'] = [
+        {
+          primitive: 'Stack',
+          ...(inner ? { props: { gap: inner } } : {}),
+          slots: { children: [children[0]!, children[1]!] },
+        },
+        children[2]!,
+      ]
+    })
+  }
+
+  it('passes a group spaced more tightly than the gaps around it', () => {
+    expect(errors(nested('spacing-8', 'spacing-2'))).toEqual([])
+  })
+
+  it.each([
+    ['as wide', 'spacing-4', 'spacing-4'],
+    ['wider', 'spacing-2', 'spacing-8'],
+    ['as wide, by default', 'spacing-2', undefined],
+  ])('refuses an inner group spaced %s', (_label, outer, inner) => {
+    expect(errors(nested(outer, inner))).toEqual([
+      expect.objectContaining({
+        rule: 'spacing.rhythm',
+        path: 'tree.slots.children[0].slots.start[0].slots.children[0].props.gap',
+        message: expect.stringContaining(`smaller than ${outer}`),
+      }),
+    ])
+  })
+})
