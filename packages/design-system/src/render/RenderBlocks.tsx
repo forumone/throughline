@@ -1,6 +1,7 @@
 import { Fragment, type ComponentType, type JSX, type ReactNode } from 'react'
 import type { ContentField } from '../generate/fields.js'
 import { coerceBlock, type CoerceContext } from './coerce.js'
+import { missingRequiredImages } from './incomplete.js'
 
 /** The shape every stored block has, whatever its type. */
 export interface StoredBlock {
@@ -57,6 +58,24 @@ export interface RenderBlocksProps {
    * Applied before `slots`, so a route still outranks a block.
    */
   resolveProps?: (block: StoredBlock) => Record<string, unknown> | undefined
+  /**
+   * What to render instead of a block whose required image did not arrive —
+   * an empty slot in a draft, or an image that no longer resolves.
+   *
+   * The component would throw on it (`item.image.src`) and take the page down
+   * with it, so it is never rendered with one missing. Defaults to rendering
+   * nothing; a host typically says what is missing in a draft and renders
+   * nothing on a published page. `missing` is the contract's paths, e.g.
+   * `items[1].image.src`. forumone-2026#840.
+   */
+  onIncompleteBlock?: (incomplete: IncompleteBlock) => ReactNode
+}
+
+export interface IncompleteBlock {
+  blockType: string
+  block: StoredBlock
+  /** The required images that did not arrive, by contract path. */
+  missing: string[]
 }
 
 /**
@@ -74,6 +93,7 @@ export function RenderBlocks({
   onUnknownBlock,
   slots,
   resolveProps,
+  onIncompleteBlock,
 }: RenderBlocksProps): JSX.Element | null {
   if (!blocks || blocks.length === 0) return null
 
@@ -96,6 +116,19 @@ export function RenderBlocks({
           ...coerceBlock(block.blockType, contractFields, block, context),
           ...resolveProps?.(block),
           ...slots?.[block.blockType],
+        }
+        const missing = missingRequiredImages(
+          block.blockType,
+          contractFields,
+          props,
+          context.overrides,
+        )
+        if (missing.length > 0) {
+          return (
+            <Fragment key={block.id ?? index}>
+              {onIncompleteBlock?.({ blockType: block.blockType, block, missing }) ?? null}
+            </Fragment>
+          )
         }
         return <Component key={block.id ?? index} {...props} />
       })}
