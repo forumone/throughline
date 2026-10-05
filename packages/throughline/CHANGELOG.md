@@ -1,5 +1,12 @@
 # @forumone/throughline
 
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies [b2ac71b]
+  - @forumone/throughline-design-system@2.6.0
+
 ## 2.5.0
 
 ### Minor Changes
