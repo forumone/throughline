@@ -356,3 +356,61 @@ describe('a tool that throws', () => {
     expect(audit).not.toHaveBeenCalled()
   })
 })
+
+describe('links a tool hands back', () => {
+  const linking = () =>
+    publishTool(
+      vi.fn(async () => ({
+        id: 5,
+        previewUrl: '/next/preview?collection=landing-pages&slug=aam',
+        adminUrl: '/admin/collections/landing-pages/5',
+        nested: { previewUrl: '/next/preview?x' },
+        document: { link: { url: '/about' }, ctaUrl: '/contact' },
+        external: { previewUrl: 'https://example.com/p', adminUrl: '//evil.example/x' },
+      })),
+    )
+
+  const call = async (req: PayloadMcpRequest) => {
+    const { tool } = linking()
+    const result = await toPayloadMcpTool(tool).handler({}, req, undefined)
+    return JSON.parse(result.content[0]?.text ?? '{}') as {
+      previewUrl: string
+      adminUrl: string
+      nested: { previewUrl: string }
+      document: unknown
+      external: unknown
+    }
+  }
+
+  it('are made absolute against the origin the request arrived at', async () => {
+    const body = await call({ ...mcpRequest, url: 'https://www.example.com/api/mcp' })
+    expect(body.previewUrl).toBe(
+      'https://www.example.com/next/preview?collection=landing-pages&slug=aam',
+    )
+    expect(body.adminUrl).toBe('https://www.example.com/admin/collections/landing-pages/5')
+    expect(body.nested.previewUrl).toBe('https://www.example.com/next/preview?x')
+  })
+
+  it('prefer serverURL when the site sets one', async () => {
+    const body = await call({
+      ...mcpRequest,
+      url: 'https://deployment.vercel.app/api/mcp',
+      payload: { config: { serverURL: 'https://www.example.com/' } },
+    })
+    expect(body.adminUrl).toBe('https://www.example.com/admin/collections/landing-pages/5')
+  })
+
+  it('leave a document’s own links, absolute links and protocol-relative ones alone', async () => {
+    const body = await call({ ...mcpRequest, url: 'https://www.example.com/api/mcp' })
+    expect(body.document).toEqual({ link: { url: '/about' }, ctaUrl: '/contact' })
+    expect(body.external).toEqual({
+      previewUrl: 'https://example.com/p',
+      adminUrl: '//evil.example/x',
+    })
+  })
+
+  it('stay paths when there is no origin to give them', async () => {
+    const body = await call(mcpRequest)
+    expect(body.previewUrl).toBe('/next/preview?collection=landing-pages&slug=aam')
+  })
+})

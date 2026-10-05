@@ -6,6 +6,12 @@ import { fakeContext } from '../publishing/tools/_test-helpers.js'
 import { createAuthoringTools, delegate, type AuthoringDeps } from './tools.js'
 import { adminOnly } from './surface.js'
 
+// `design_guide` builds a request for any `filterOptions` it meets; none here.
+vi.mock('../content/tools.js', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  requestAs: () => Promise.resolve({ user: null }),
+}))
+
 /*
 The authoring tools route; the module tools they call do the work and have
 their own tests. So these check the routing — which module tool, with what —
@@ -380,7 +386,13 @@ describe('a pending approval (#832)', () => {
       expect.objectContaining({
         collection: 'approval-requests',
         overrideAccess: false,
-        where: { and: [{ targetCollection: { equals: 'pages' } }, { targetId: { equals: '2' } }, { status: { equals: 'pending' } }] },
+        where: {
+          and: [
+            { targetCollection: { equals: 'pages' } },
+            { targetId: { equals: '2' } },
+            { status: { equals: 'pending' } },
+          ],
+        },
       }),
     )
   })
@@ -388,13 +400,19 @@ describe('a pending approval (#832)', () => {
   it('stops publish from filing a second request', async () => {
     const s = setup(
       { publish: moduleTool('publish', { published: false, code: 'approval-required' }) },
-      { approvalsCollection: 'approval-requests', payload: { find: vi.fn(async () => ({ docs: [pending] })) } as unknown as Payload },
+      {
+        approvalsCollection: 'approval-requests',
+        payload: { find: vi.fn(async () => ({ docs: [pending] })) } as unknown as Payload,
+      },
     )
     const out = await s.tool('publish')({
       collection: 'pages',
       id: 2,
       action: 'now',
-      approval: { changesSummary: 'A new page about the partner program.', approverGroups: ['comms'] },
+      approval: {
+        changesSummary: 'A new page about the partner program.',
+        approverGroups: ['comms'],
+      },
     })
     expect(out).toMatchObject({ approvalRequired: true, pendingApproval: { approvalId: 'r1' } })
     expect(s.called('request_approval')).toEqual([])
@@ -406,15 +424,67 @@ describe('a pending approval (#832)', () => {
         wouldPublish: { canPublish: false, blockers: [{ code: 'approval-required' }] },
       }),
     })
-    expect(await s.tool('check')({ collection: 'pages', id: 2 })).not.toHaveProperty('pendingApproval')
+    expect(await s.tool('check')({ collection: 'pages', id: 2 })).not.toHaveProperty(
+      'pendingApproval',
+    )
   })
 })
 
 describe('design_guide for a component (#832)', () => {
   it('says how each kind of value is written', async () => {
-    const s = setup({ get_contract: moduleTool('get_contract', { name: 'CTA' }) }, { blockRichText: true })
+    const s = setup(
+      { get_contract: moduleTool('get_contract', { name: 'CTA' }) },
+      { blockRichText: true },
+    )
     const out = await s.tool('design_guide')({ component: 'CTA' })
-    expect(out).toMatchObject({ name: 'CTA', valueShapes: { link: expect.stringContaining('Never a plain string') } })
+    expect(out).toMatchObject({
+      name: 'CTA',
+      valueShapes: { link: expect.stringContaining('Never a plain string') },
+    })
   })
 })
 
+describe('design_guide for a component (#840)', () => {
+  /*
+  A site's form block has `source.form`, which no contract has. Without it in
+  the answer, an agent added the block and left the form empty.
+  */
+  it('describes the fields the site adds to the block, and how to look one up', async () => {
+    const block = {
+      slug: 'ManagedForm',
+      fields: [
+        {
+          name: 'source',
+          type: 'group',
+          fields: [{ name: 'form', type: 'relationship', relationTo: 'hubspot-forms' }],
+        },
+        { name: 'heading', type: 'text' },
+        { name: 'fields', type: 'json', admin: { hidden: true } },
+      ],
+    }
+    const s = setup(
+      {
+        get_contract: moduleTool('get_contract', {
+          name: 'ManagedForm',
+          content: { fields: [{ name: 'heading' }] },
+        }),
+      },
+      {
+        payload: { config: { blocks: [block] } } as unknown as Payload,
+        findWith: new Map([['hubspot-forms', 'hubspot-forms']]),
+      },
+    )
+    const out = await s.tool('design_guide')({ component: 'ManagedForm' })
+    expect(out['siteFields']).toEqual([
+      expect.objectContaining({
+        name: 'source',
+        fields: [expect.objectContaining({ name: 'form', findWith: 'hubspot-forms' })],
+      }),
+    ])
+  })
+
+  it('adds nothing when the block is the contract', async () => {
+    const s = setup({ get_contract: moduleTool('get_contract', { name: 'CTA' }) })
+    expect(await s.tool('design_guide')({ component: 'CTA' })).not.toHaveProperty('siteFields')
+  })
+})

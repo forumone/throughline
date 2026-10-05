@@ -247,7 +247,12 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
 
   const plugins: Plugin[] = [
     auditPlugin({ ...options.audit, ...logger, ...adminFor(options.audit), inngest }),
-    jobFailuresPlugin({ ...options.jobFailures, ...logger, ...adminFor(options.jobFailures), mcpTools }),
+    jobFailuresPlugin({
+      ...options.jobFailures,
+      ...logger,
+      ...adminFor(options.jobFailures),
+      mcpTools,
+    }),
   ]
   if (options.components) {
     plugins.push(
@@ -343,6 +348,12 @@ export function throughline(options: ThroughlineOptions): ThroughlineSuite {
       served,
       contentTypes: Object.keys(options.content?.collections ?? {}),
       kinds: Object.keys(options.content?.related ?? {}),
+      findWith: new Map(
+        Object.entries(options.content?.related ?? {}).map(([kind, related]) => [
+          related.collection,
+          kind,
+        ]),
+      ),
       approverGroups: (options.approvals?.groups ?? []).map(({ slug, name }) => ({ slug, name })),
       ...(options.approvals ? { approvalsCollection: approvalsSlug } : {}),
       ...(options.content?.blockRichText ? { blockRichText: true } : {}),
