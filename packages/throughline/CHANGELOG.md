@@ -1,5 +1,27 @@
 # @forumone/throughline
 
+## 2.4.0
+
+### Minor Changes
+
+- c49a98b: A block with an empty required field no longer passes `check` or takes a page down (forumone-2026#840).
+
+  - **Publishing:** the composition step reports a `required-field` issue for each required field inside a block that is empty, for example "Block 3 (Featured Work) › Item 2 › Image is required before this can be published."
+    - `check`, `get_publish_status` and the admin's publish all see it before the write.
+    - Before this, only Payload's write enforced `required`, and `check` called such a page ready.
+    - The rule walks the block's Payload config. So a field the site adds counts, such as a form block's `source.form`. A field the site omits or hides doesn't. A required link counts too, because the contract says so even though a generated link enforces it with a validate.
+  - **Render:** `RenderBlocks` no longer renders a component whose required image didn't arrive, whether the slot is empty in a draft or the image no longer resolves.
+    - The component would read `item.image.src` from nothing and throw, and one card took Live Preview down to the error page.
+    - The new `onIncompleteBlock` decides what renders instead. It defaults to nothing.
+    - `missingRequiredImages` is exported for a host to ask the same question.
+
+### Patch Changes
+
+- e48f0cd: The `previewUrl` and `adminUrl` that MCP tools return are absolute, so a person can open them from a chat in another app (forumone-2026#840). They were paths whenever the site left Payload's `serverURL` unset. They are now made absolute against `serverURL` when it is set, and otherwise against the origin the MCP request arrived at. A document's own fields are left as they are.
+- e48f0cd: `design_guide` for a component also returns `siteFields`: the fields a site adds to that block beyond the component's contract, described the way `get` describes a content type, with `findWith` saying which `find` kind looks up a value. A form block's `source.form` was invisible to an agent, so it added the block and left the form empty (forumone-2026#840).
+- Updated dependencies [c49a98b]
+  - @forumone/throughline-design-system@2.4.0
+
 ## 2.3.0
 
 ### Minor Changes
