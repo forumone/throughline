@@ -9,7 +9,8 @@ import { compositionErrors, disallowedBlocks, mergePatch } from './guards.js'
 import { blockRegistry, defaultCanUse, refusal, requestAs, unknownCollection } from './tools.js'
 import { validateBlock } from './validate.js'
 import { checkValues, valueRefusal } from './values.js'
-import { openForWrite, saveDraft, type ContentWriteDeps } from './write.js'
+import type { ImageRequest } from './images.js'
+import { createImages, openForWrite, saveDraft, type ContentWriteDeps } from './write.js'
 
 /*
 One block at a time: insert, change, move or remove a block in a blocks field,
@@ -228,17 +229,29 @@ async function operate(
   const registry = blockRegistry(deps.payload)
   const kept = [...touched.values()].filter((row) => rows.some((r) => r['id'] === row['id']))
   // Each new or changed block's values in the shape their fields take, converting nested rich text. #832.
+  const images: ImageRequest[] = []
   for (const row of kept) {
     const config = blockConfig(field, String(row['blockType']), registry)
     if (!config) continue
     const problems = await checkValues(
       config.fields,
       row,
-      { registry, ...(deps.blockRichText ? { blockRichText: deps.blockRichText } : {}) },
+      {
+        registry,
+        images,
+        ...(deps.blockRichText ? { blockRichText: deps.blockRichText } : {}),
+      },
       `${input.field}[${rows.findIndex((r) => r['id'] === row['id'])}]`,
     )
     if (problems.length > 0) return valueRefusal(problems)
   }
+  /*
+  Image instructions become media here, before the blocks' own validators run:
+  Payload's upload validator would refuse an instruction where it expects an
+  id. #845.
+  */
+  const made = await createImages(deps, ctx, images)
+  if ('error' in made) return made
   for (const row of kept) {
     const disallowed = await disallowedBlocks(field, [row], before, registry, req)
     if (disallowed.length > 0) {
@@ -280,9 +293,10 @@ async function operate(
     meta: input._meta ?? { changesSummary: summaries.join(' ') },
   })
   if ('error' in saved) return saved
+  const imagesCreated = made.created.length > 0 ? { imagesCreated: made.created } : {}
   return changes.length === 1
-    ? { ...saved, field: input.field, blockId: blockIds[0] }
-    : { ...saved, field: input.field, blockIds }
+    ? { ...saved, field: input.field, blockId: blockIds[0], ...imagesCreated }
+    : { ...saved, field: input.field, blockIds, ...imagesCreated }
 }
 
 function indexOf(rows: Rows, blockId: string): number {

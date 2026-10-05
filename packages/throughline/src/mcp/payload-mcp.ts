@@ -153,11 +153,11 @@ deployment is the wrong place.
 
 So the origin is the one this request arrived at: whatever host the person's
 app was given, which is the host they can open. `serverURL` wins when it is set.
-Only those two keys, at any depth, and only a value that is a path: a
+Only those keys (and `uploadUrl`, where to upload an image, #845), at any depth, and only a value that is a path: a
 document's own fields come back in the shape `save_draft` takes, and a relative
 link stored in one must stay relative. forumone-2026#840.
 */
-const LINK_KEYS = new Set(['previewUrl', 'adminUrl'])
+const LINK_KEYS = new Set(['previewUrl', 'adminUrl', 'uploadUrl'])
 
 function originOf(req: PayloadMcpRequest): string | undefined {
   const configured = req.payload?.config?.serverURL

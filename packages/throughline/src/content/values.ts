@@ -1,5 +1,12 @@
 import type { Block, Field } from 'payload'
 import type { RichTextConverter, RichTextSource } from './options.js'
+import {
+  IMAGE_SHAPE,
+  imageDirectiveProblem,
+  isImageDirective,
+  type ImageDirective,
+  type ImageRequest,
+} from './images.js'
 
 /*
 Every value a write carries, at every depth, in the shape its field takes —
@@ -30,6 +37,13 @@ export interface ValueContext {
   registry: ReadonlyMap<string, Block>
   /** Converts Markdown or HTML for a rich-text field below the top level. */
   blockRichText?: RichTextConverter | undefined
+  /**
+   * Where an image field holds an instruction rather than an id —
+   * `{ importUrl }`, `{ file }` or `{ placeholder }` — each is collected here,
+   * checked but not acted on, for the write to turn into media once every
+   * other check has passed. forumone-2026#845. Absent: instructions are refused.
+   */
+  images?: ImageRequest[] | undefined
 }
 
 type Data = Record<string, unknown>
@@ -222,6 +236,30 @@ export async function checkValues(
         })
         break
       }
+      case 'upload': {
+        if (!isObject(value) || 'id' in value) break
+        if (!isImageDirective(value) || typeof field.relationTo !== 'string' || field.hasMany) {
+          problems.push({ path: here, message: `${here} is an image and takes ${IMAGE_SHAPE}` })
+          break
+        }
+        if (!ctx.images) {
+          problems.push({ path: here, message: `${here} takes a media document's id here.` })
+          break
+        }
+        const problem = imageDirectiveProblem(value, here)
+        if (problem) {
+          problems.push({ path: here, message: problem })
+          break
+        }
+        ctx.images.push({
+          holder: data,
+          name,
+          path: here,
+          collection: field.relationTo,
+          directive: value as ImageDirective,
+        })
+        break
+      }
       default:
         break
     }
@@ -250,7 +288,7 @@ export function valueShapes(options: { blockRichText: boolean }): Record<string,
     richtext: options.blockRichText
       ? '{ markdown: "…" } or { html: "…" }, converted; or an editor state ({ root: … }) as get returns it.'
       : 'an editor state ({ root: … }) as get returns it; not a string or Markdown.',
-    image: 'the media document\'s id, from find with kind "media".',
+    image: IMAGE_SHAPE,
     array: "a list of row objects, each with the row's own fields.",
   }
 }

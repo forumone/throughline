@@ -97,4 +97,13 @@ export interface ContentPluginOptions {
    * Top-level fields keep their own converters, in `collections[slug].richText`.
    */
   blockRichText?: RichTextConverter
+  /**
+   * The media collection an agent may make placeholder images in, and the
+   * checkbox that marks one (default `placeholder`, which this plugin adds to
+   * that collection, so a host migration follows). An image field then also
+   * takes `{ placeholder: { alt, label } }`. Pass the same to
+   * `publishingPlugin`'s `placeholderImages` so a page using one cannot
+   * publish; `throughline()` does. forumone-2026#845.
+   */
+  placeholderImages?: { collection: string; field?: string }
 }

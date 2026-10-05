@@ -117,6 +117,13 @@ export interface PublishingPluginOptions extends BaseCorePluginOptions {
    * component.
    */
   recipes?: RecipeGateOptions
+  /**
+   * The media collection placeholder images live in, and the checkbox that
+   * marks one (default `placeholder`). A page using one does not publish
+   * (forumone-2026#845). The content plugin's option of the same name makes
+   * them; `throughline()` passes it here.
+   */
+  placeholderImages?: { collection: string; field?: string }
   /** Required: Inngest client used to fire publishing events. */
   inngest: Inngest
   /**
