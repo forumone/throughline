@@ -337,6 +337,38 @@ describe('an icon field', () => {
   })
 })
 
+describe('a rich-text field’s editor', () => {
+  /*
+  The config's default editor reaches every rich-text field in the build, so a
+  host keeps it plain and names the fields that get a richer one. The override
+  is opaque here: whatever the host passed is what Payload receives.
+  */
+  const articleEditor = (() => ({})) as unknown as NonNullable<
+    Extract<Field, { type: 'richText' }>['editor']
+  >
+
+  it('takes the config default when none is named', () => {
+    expect(generate({ type: 'richtext', name: 'body' })).not.toHaveProperty('editor')
+  })
+
+  it('uses the editor the override names', () => {
+    const generated = generate(
+      { type: 'richtext', name: 'body' },
+      context({ overrides: { Example: { fields: { body: { editor: articleEditor } } } } }),
+    )
+    expect(generated.editor).toBe(articleEditor)
+  })
+
+  it('throws on an editor named for a field that is not rich text', () => {
+    expect(() =>
+      generate(
+        { type: 'text', name: 'heading' },
+        context({ overrides: { Example: { fields: { heading: { editor: articleEditor } } } } }),
+      ),
+    ).toThrow(/Example\.heading .* text field/)
+  })
+})
+
 describe('what the CMS is not offered', () => {
   it('drops an omitted field entirely', () => {
     const ctx = context({ overrides: { Example: { fields: { state: { omit: true } } } } })

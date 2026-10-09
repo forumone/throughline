@@ -236,6 +236,15 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
   const admin = description ? { admin: { description } } : {}
   const required = field.required ? { required: true } : {}
 
+  // An editor named for a field that holds no rich text would otherwise be
+  // dropped without a word, and the author would get the stock editor anyway.
+  if (override?.editor && field.type !== 'richtext') {
+    throw new Error(
+      `${ctx.component}.${path} has an \`editor\` override but is a ${field.type} field. ` +
+        `Only a richtext field takes an editor.`,
+    )
+  }
+
   if (override?.as === 'icon') {
     const options =
       override.options ??
@@ -294,8 +303,11 @@ function buildField(field: ContentField, ctx: FieldContext, path: string): Field
         ...admin,
       }
 
-    case 'richtext':
-      return { name: field.name, type: 'richText', ...required, ...admin }
+    case 'richtext': {
+      // The host's own editor, where it named one — see `FieldOverride.editor`.
+      const editor = override?.editor ? { editor: override.editor } : {}
+      return { name: field.name, type: 'richText', ...editor, ...required, ...admin }
+    }
 
     case 'image':
       return {
