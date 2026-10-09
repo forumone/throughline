@@ -1,3 +1,5 @@
+import type { RichTextField } from 'payload'
+
 /**
  * The hand-authored half of the bridge.
  *
@@ -46,6 +48,22 @@ export interface FieldOverride {
    * union type where one exists, and from here where it does not.
    */
   options?: readonly string[]
+  /**
+   * The editor a `richtext` field uses, in place of the config's default.
+   *
+   * A generated rich-text field otherwise takes whatever `editor` the Payload
+   * config sets, which a host keeps to the stock feature set for good reason:
+   * the default reaches every rich-text field in the build, including ones
+   * nested in the very blocks a richer editor would offer, and that cycle is a
+   * stack overflow in type generation. So a host builds its richer editor once
+   * — images with a width and a caption, pull quotes, a callout — and names the
+   * fields that get it. `ArticleBody.body` is the case it was added for: an
+   * article body inside a block is still an article body (forumone-2026#813).
+   *
+   * Only a `richtext` field takes one. Set on anything else, the generator
+   * throws rather than ignoring it.
+   */
+  editor?: RichTextField['editor']
 }
 
 export interface ComponentOverride {
