@@ -81,6 +81,14 @@ function registry(req: PayloadRequest): DraftWriteRegistry {
   if (!req.context) {
     req.context = {} as PayloadRequest['context']
   }
+  // A Local API call with no `req` gets the caller's `context` object itself
+  // as `req.context`, uncopied — and `DERIVED_WRITE_CONTEXT` is frozen, so
+  // writing the registry onto it threw on every such derived write. Copy it
+  // rather than unfreezing the constant: it is shared by every caller, and a
+  // registry written onto it would carry one request's flags into the next.
+  if (!Object.isExtensible(req.context)) {
+    req.context = { ...req.context } as PayloadRequest['context']
+  }
   const context = req.context as unknown as Record<string, unknown>
   if (!context[DRAFT_WRITES_KEY]) {
     context[DRAFT_WRITES_KEY] = {} satisfies DraftWriteRegistry
