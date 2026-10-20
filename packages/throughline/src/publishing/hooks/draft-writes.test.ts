@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CollectionBeforeOperationHook, PayloadRequest } from 'payload'
+import { DERIVED_WRITE_CONTEXT } from './block-status-writes.js'
 import { createRecordDraftWritesHook, isDraftWrite } from './draft-writes.js'
 
 const hook = createRecordDraftWritesHook() as CollectionBeforeOperationHook
@@ -111,6 +112,19 @@ describe('createRecordDraftWritesHook', () => {
   it('leaves the operation args untouched', () => {
     const req = newReq()
     expect(record({ req, draft: true, id: 1 })).toBeUndefined()
+  })
+
+  // A Local API call with no `req` hands Payload's `req.context` the caller's
+  // own object, and `DERIVED_WRITE_CONTEXT` is frozen. Writing onto it threw,
+  // which failed the site's narration job on every publish.
+  it('records onto a copy of a frozen context, and leaves the original alone', () => {
+    const req = { context: DERIVED_WRITE_CONTEXT as Record<string, unknown> }
+    void record({ req, draft: false, id: 1 })
+
+    expect(isDraftWrite(req as PayloadRequest, 'pages', 1)).toBe(false)
+    expect(req.context).not.toBe(DERIVED_WRITE_CONTEXT)
+    expect(req.context['throughlineDerivedWrite']).toBe(true)
+    expect(Object.keys(DERIVED_WRITE_CONTEXT)).toEqual(['throughlineDerivedWrite'])
   })
 })
 

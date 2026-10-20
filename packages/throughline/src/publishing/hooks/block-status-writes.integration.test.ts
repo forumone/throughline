@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { buildConfig, getPayload, type Payload } from 'payload'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
-import { createBlockStatusWritesHook } from './block-status-writes.js'
+import { createBlockStatusWritesHook, DERIVED_WRITE_CONTEXT } from './block-status-writes.js'
 import { createRecordDraftWritesHook } from './draft-writes.js'
 
 /**
@@ -230,7 +230,7 @@ describe('edits to a live document', () => {
   it('allows a derived write, without the pipeline', async () => {
     const id = await makePage('published')
 
-    await update(id, { data: { title: 'Annotated' }, context: { throughlineDerivedWrite: true } })
+    await update(id, { data: { title: 'Annotated' }, context: DERIVED_WRITE_CONTEXT })
 
     expect(await liveStatus(id)).toBe('published')
     expect(await liveTitle(id)).toBe('Annotated')
@@ -243,7 +243,7 @@ describe('edits to a live document', () => {
     await expect(
       update(id, {
         data: { _status: 'published' },
-        context: { throughlineDerivedWrite: true },
+        context: DERIVED_WRITE_CONTEXT,
       }),
     ).rejects.toThrow(BLOCKED)
     expect(await liveTitle(id)).toBe('A page')
