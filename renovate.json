@@ -8,7 +8,9 @@
   ],
   "timezone": "America/Chicago",
   "configMigration": true,
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "labels": ["dependencies"],
 
   "cloneSubmodules": true,
